@@ -5,6 +5,8 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 1. **SaaS Admin Dashboard** - Platform-wide management
 2. **Restaurant POS Application** - Restaurant daily operations
 
+## Brand: OrderNest
+
 ## Architecture
 - **Backend**: FastAPI + MongoDB (monolithic `server.py`)
 - **Frontend**: React + Tailwind CSS + Shadcn/UI
@@ -48,8 +50,13 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 - Hamburger menu button on mobile (<1024px), hidden on desktop
 - Auto-close sidebar on route navigation
 - All POS pages responsive: Dashboard, Create Order, Quick POS, Analytics, KDS, Wallet, etc.
-- Responsive grids, flex-wrap headers, horizontal scroll categories
-- Tested on 375px (mobile) and 1920px (desktop) viewports
+
+### Premium Auth Pages Redesign (Completed March 9, 2026)
+- Two-column layout: 60% marketing left / 40% auth right
+- Orange gradient left panel with feature highlights (Fast POS, Online Orders, Menu Management, Analytics, Inventory)
+- Clean auth card with icon inputs, OR divider, demo credentials section
+- Responsive: stacks vertically on mobile
+- Brand renamed from FoodFlow to OrderNest across entire application
 
 ## Mocked Integrations
 - Razorpay payment processing
@@ -66,6 +73,8 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 ## Key Files
 - `backend/server.py` - All backend logic
 - `frontend/src/lib/api.js` - API client
-- `frontend/src/layouts/POSLayout.jsx` - POS navigation & day session controls (Sheet for mobile)
+- `frontend/src/layouts/POSLayout.jsx` - POS navigation & day session controls
+- `frontend/src/pages/auth/LoginPage.jsx` - Premium login page
+- `frontend/src/pages/auth/RegisterPage.jsx` - Premium register page
 - `frontend/src/pages/pos/` - All POS page components
 - `frontend/src/pages/admin/` - Admin dashboard pages
