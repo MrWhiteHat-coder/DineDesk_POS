@@ -131,19 +131,31 @@ export default function POSMain() {
     if (cart.length === 0) { toast.error('Cart is empty'); return; }
 
     if (orderType === 'dine_in') {
-      // If adding to existing running order
+      // If updating an existing running order
       if (selectedRunningOrder) {
         setCheckoutLoading(true);
         try {
-          await orderAPI.addItems(selectedRunningOrder.id, {
-            items: cart.map((c) => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })),
-          });
-          toast.success('Items added to running order!');
+          // Find new items (not in original) and updated quantities
+          const originalItems = selectedRunningOrder.items || [];
+          const newItems = cart.filter(c => !c.isExisting);
+          const hasChanges = newItems.length > 0 || cart.length !== originalItems.length ||
+            cart.some(c => {
+              const orig = originalItems.find(o => o.menu_item_id === c.item.id);
+              return !orig || orig.quantity !== c.quantity;
+            });
+
+          if (newItems.length > 0) {
+            await orderAPI.addItems(selectedRunningOrder.id, {
+              items: newItems.map((c) => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })),
+            });
+          }
+
+          toast.success(hasChanges ? 'Order updated!' : 'No changes made');
           clearCart();
           fetchRunningOrders();
           fetchTables();
         } catch (err) {
-          toast.error(err.response?.data?.detail || 'Failed to add items');
+          toast.error(err.response?.data?.detail || 'Failed to update order');
         } finally {
           setCheckoutLoading(false);
         }
@@ -217,9 +229,18 @@ export default function POSMain() {
   const selectRunningOrder = (order) => {
     setSelectedRunningOrder(order);
     setOrderType('dine_in');
-    // Load existing items into a read-only view
-    setCart([]);
     setTableNumber(order.table_number?.toString() || '');
+    // Load existing order items into the cart as editable
+    const existingItems = (order.items || []).map((item) => {
+      const menuItem = menuItems.find(mi => mi.id === item.menu_item_id);
+      return {
+        item: menuItem || { id: item.menu_item_id, name: item.name, price: item.price, image_url: null, is_available: true },
+        quantity: item.quantity,
+        notes: item.notes || '',
+        isExisting: true,
+      };
+    });
+    setCart(existingItems);
   };
 
   const getCategoryCount = (catId) => menuItems.filter(i => i.category_id === catId).length;
@@ -302,7 +323,7 @@ export default function POSMain() {
         {/* Menu Grid */}
         <ScrollArea className="flex-1 -mr-2 pr-2">
           {filteredItems.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {filteredItems.map((item) => {
                 const qty = getCartQuantity(item.id);
                 const imgSrc = getImageUrl(item.image_url) || FALLBACK_IMG;
@@ -360,28 +381,12 @@ export default function POSMain() {
           </div>
         </div>
 
-        {/* Existing items for running order */}
-        {selectedRunningOrder && (
-          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-            <p className="text-[11px] font-medium text-slate-500 mb-1.5">Current Items</p>
-            {selectedRunningOrder.items?.map((item, idx) => (
-              <div key={idx} className="flex justify-between text-xs text-slate-600 py-0.5">
-                <span>{item.quantity}x {item.name}</span>
-                <span>₹{item.total?.toFixed(2)}</span>
-              </div>
-            ))}
-            <div className="flex justify-between text-xs font-semibold text-slate-800 pt-1 mt-1 border-t border-slate-200">
-              <span>Running Total</span>
-              <span>₹{selectedRunningOrder.total_amount?.toFixed(2)}</span>
-            </div>
-          </div>
-        )}
+        {/* Existing items for running order - removed since items are now in editable cart */}
 
         {/* Cart Items */}
         <ScrollArea className="flex-1 px-4 py-3">
           {cart.length > 0 ? (
             <div className="space-y-3">
-              {selectedRunningOrder && <p className="text-[11px] font-medium text-slate-500">New Items</p>}
               {cart.map((cartItem) => {
                 const imgSrc = getImageUrl(cartItem.item.image_url) || FALLBACK_IMG;
                 return (
@@ -483,7 +488,7 @@ export default function POSMain() {
             >
               {checkoutLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : selectedRunningOrder ? 'Add Items to Table' : orderType === 'dine_in' ? 'Place Order & Hold Table' : 'Proceed to Payment'}
+              ) : selectedRunningOrder ? 'Update Order' : orderType === 'dine_in' ? 'Place Order & Hold Table' : 'Proceed to Payment'}
             </Button>
           )}
 

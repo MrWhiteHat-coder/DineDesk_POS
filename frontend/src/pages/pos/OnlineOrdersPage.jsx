@@ -92,10 +92,8 @@ export default function OnlineOrdersPage() {
 
         <Card className="border-slate-200 bg-slate-50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-slate-800">
-              <svg viewBox="0 0 61 61" className="w-7 h-7" fill="white">
-                <path d="M30.5 0C13.7 0 0 13.7 0 30.5S13.7 61 30.5 61 61 47.3 61 30.5 47.3 0 30.5 0zm15.3 23.8l-4.8 18.4c-.3 1.3-1.5 2.2-2.8 2.2H22.8c-1.3 0-2.5-.9-2.8-2.2l-4.8-18.4c-.4-1.6.8-3.1 2.4-3.1h25.8c1.6 0 2.8 1.5 2.4 3.1z"/>
-              </svg>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+              <img src="/swiggy-logo.png" alt="Swiggy" className="w-10 h-10 object-cover rounded-lg" />
             </div>
             <div>
               <p className="text-sm text-slate-800">Swiggy</p>
@@ -108,8 +106,8 @@ export default function OnlineOrdersPage() {
 
         <Card className="border-red-200 bg-red-50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-red-500">
-              <span className="text-white font-bold text-xl" style={{fontFamily: 'Georgia, serif', fontStyle: 'italic'}}>z</span>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+              <img src="/zomato-logo.png" alt="Zomato" className="w-10 h-10 object-cover rounded-lg" />
             </div>
             <div>
               <p className="text-sm text-red-600">Zomato</p>
@@ -158,15 +156,11 @@ export default function OnlineOrdersPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden ${
-                          order.platform === 'swiggy' ? 'bg-slate-800' : 'bg-red-500'
-                        }`}>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden`}>
                           {order.platform === 'swiggy' ? (
-                            <svg viewBox="0 0 61 61" className="w-7 h-7" fill="white">
-                              <path d="M30.5 0C13.7 0 0 13.7 0 30.5S13.7 61 30.5 61 61 47.3 61 30.5 47.3 0 30.5 0zm15.3 23.8l-4.8 18.4c-.3 1.3-1.5 2.2-2.8 2.2H22.8c-1.3 0-2.5-.9-2.8-2.2l-4.8-18.4c-.4-1.6.8-3.1 2.4-3.1h25.8c1.6 0 2.8 1.5 2.4 3.1z"/>
-                            </svg>
+                            <img src="/swiggy-logo.png" alt="Swiggy" className="w-10 h-10 object-cover rounded-lg" />
                           ) : (
-                            <span className="text-white font-bold text-xl" style={{fontFamily: 'Georgia, serif', fontStyle: 'italic'}}>z</span>
+                            <img src="/zomato-logo.png" alt="Zomato" className="w-10 h-10 object-cover rounded-lg" />
                           )}
                         </div>
                         <div>

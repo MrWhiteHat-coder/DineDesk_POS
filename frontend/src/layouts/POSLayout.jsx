@@ -39,7 +39,7 @@ import { Label } from '../components/ui/label';
 
 const navItems = [
   { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true, feature: 'dashboard' },
-  { to: '/pos/orders', icon: ShoppingCart, label: 'Menu Order', feature: 'menu_order' },
+  { to: '/pos/orders', icon: ShoppingCart, label: 'Create Order', feature: 'menu_order' },
   { to: '/pos/analytics', icon: BarChart3, label: 'Analytics', feature: 'analytics' },
   { to: '/pos/kds', icon: ChefHat, label: 'Kitchen Display', feature: 'kds' },
   { to: '/pos/wallet', icon: Wallet, label: 'Wallet', feature: 'wallet' },
