@@ -43,7 +43,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row" data-testid="register-page">
       {/* LEFT — Product Presentation */}
-      <div className="relative lg:w-[60%] bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
+      <div className="relative lg:w-[60%] bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
         {/* Decorative shapes */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/4" />
@@ -102,7 +102,7 @@ export default function RegisterPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="John Doe"
-                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-orange-500 focus-visible:border-orange-500"
+                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-teal-600 focus-visible:border-teal-600"
                     required
                     data-testid="register-name-input"
                   />
@@ -118,7 +118,7 @@ export default function RegisterPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-orange-500 focus-visible:border-orange-500"
+                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-teal-600 focus-visible:border-teal-600"
                     required
                     data-testid="register-email-input"
                   />
@@ -134,7 +134,7 @@ export default function RegisterPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Min. 6 characters"
-                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-orange-500 focus-visible:border-orange-500"
+                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-teal-600 focus-visible:border-teal-600"
                     required
                     data-testid="register-password-input"
                   />
@@ -150,7 +150,7 @@ export default function RegisterPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repeat your password"
-                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-orange-500 focus-visible:border-orange-500"
+                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-teal-600 focus-visible:border-teal-600"
                     required
                     data-testid="register-confirm-password-input"
                   />
@@ -159,7 +159,7 @@ export default function RegisterPage() {
 
               <button
                 type="submit"
-                className="w-full h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-1"
+                className="w-full h-11 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-1"
                 disabled={loading}
                 data-testid="register-submit-btn"
               >
@@ -180,7 +180,7 @@ export default function RegisterPage() {
 
             <Link
               to="/login"
-              className="w-full h-11 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-orange-300 hover:text-orange-600 transition-colors"
+              className="w-full h-11 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-teal-300 hover:text-teal-700 transition-colors"
               data-testid="login-link"
             >
               Sign In to Existing Account

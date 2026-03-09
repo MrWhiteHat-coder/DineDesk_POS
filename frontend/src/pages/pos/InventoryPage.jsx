@@ -165,7 +165,7 @@ export default function InventoryPage() {
           </Button>
           <Button
             onClick={() => openModal()}
-            className="bg-slate-800 hover:bg-slate-900"
+            className="bg-teal-700 hover:bg-teal-800"
             data-testid="add-inventory-btn"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -243,7 +243,7 @@ export default function InventoryPage() {
         <Card className="p-12 text-center">
           <Package className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No inventory items yet</p>
-          <Button onClick={() => openModal()} className="bg-slate-800 hover:bg-slate-900">
+          <Button onClick={() => openModal()} className="bg-teal-700 hover:bg-teal-800">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>
@@ -334,7 +334,7 @@ export default function InventoryPage() {
             <Button
               onClick={handleSave}
               disabled={itemLoading}
-              className="bg-slate-800 hover:bg-slate-900"
+              className="bg-teal-700 hover:bg-teal-800"
               data-testid="save-inventory-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Add Item'}

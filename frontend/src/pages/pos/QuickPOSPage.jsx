@@ -142,9 +142,9 @@ export default function QuickPOSPage() {
             <h1 className="font-bold text-lg">Quick POS</h1>
           </div>
           <div className="flex gap-1.5 overflow-x-auto flex-1 pb-1 sm:pb-0">
-            <button onClick={() => setSelectedCat(null)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${!selectedCat ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>All</button>
+            <button onClick={() => setSelectedCat(null)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${!selectedCat ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>All</button>
             {categories.map(c => (
-              <button key={c.id} onClick={() => setSelectedCat(c.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${selectedCat === c.id ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>{c.name}</button>
+              <button key={c.id} onClick={() => setSelectedCat(c.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${selectedCat === c.id ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>{c.name}</button>
             ))}
           </div>
           <div className="relative flex-shrink-0">
@@ -164,7 +164,7 @@ export default function QuickPOSPage() {
                 <p className="text-[11px] font-semibold text-slate-900 leading-tight truncate">{item.name}</p>
                 <p className="text-[11px] font-bold text-slate-700">₹{item.price.toFixed(0)}</p>
                 {inCart && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-800 text-white rounded-full text-[10px] font-bold flex items-center justify-center">{inCart.qty}</span>
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-amber-400 text-slate-900 rounded-full text-[10px] font-bold flex items-center justify-center">{inCart.qty}</span>
                 )}
               </button>
             );
@@ -177,7 +177,7 @@ export default function QuickPOSPage() {
         {/* Order Type Toggle */}
         <div className="p-2.5 border-b border-slate-100 flex gap-1.5">
           {['takeaway', 'dine_in'].map(t => (
-            <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${orderType === t ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-600'}`}>
+            <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${orderType === t ? 'bg-teal-700 text-white' : 'bg-slate-50 text-slate-600'}`}>
               {t === 'takeaway' ? 'Takeaway' : 'Dine-in'}
             </button>
           ))}
@@ -299,7 +299,7 @@ export default function QuickPOSPage() {
               <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>
             </div>
           )}
-          <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition-colors mt-2" data-testid="print-receipt-btn">
+          <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-400 text-slate-900 text-sm font-semibold hover:bg-amber-500 transition-colors mt-2" data-testid="print-receipt-btn">
             <Printer className="w-4 h-4" /> Print Receipt
           </button>
         </DialogContent>

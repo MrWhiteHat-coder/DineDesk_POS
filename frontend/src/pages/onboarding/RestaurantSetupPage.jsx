@@ -99,7 +99,7 @@ export default function RestaurantSetupPage() {
       <div className="w-full max-w-xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-800 rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-700 rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
             <UtensilsCrossed className="w-7 h-7 text-white" />
           </div>
           <h1 className="font-heading text-2xl font-bold text-slate-900 mb-2">
@@ -114,7 +114,7 @@ export default function RestaurantSetupPage() {
             <div
               key={s}
               className={`h-2 flex-1 rounded-full transition-all ${
-                s <= step ? 'bg-slate-800' : 'bg-slate-200'
+                s <= step ? 'bg-teal-700' : 'bg-slate-200'
               }`}
             />
           ))}
@@ -229,7 +229,7 @@ export default function RestaurantSetupPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-slate-800">
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-teal-700">
                               <svg viewBox="0 0 61 61" className="w-8 h-8" fill="white">
                                 <path d="M30.5 0C13.7 0 0 13.7 0 30.5S13.7 61 30.5 61 61 47.3 61 30.5 47.3 0 30.5 0zm15.3 23.8l-4.8 18.4c-.3 1.3-1.5 2.2-2.8 2.2H22.8c-1.3 0-2.5-.9-2.8-2.2l-4.8-18.4c-.4-1.6.8-3.1 2.4-3.1h25.8c1.6 0 2.8 1.5 2.4 3.1zm-7.6 4.1c-.5-1.4-1.8-2.3-3.3-2.3h-8.8c-1.5 0-2.8.9-3.3 2.3l-2.3 6.3c-.3.9.4 1.8 1.3 1.8h17.4c.9 0 1.6-.9 1.3-1.8l-2.3-6.3z"/>
                               </svg>
@@ -359,7 +359,7 @@ export default function RestaurantSetupPage() {
               {step < 3 ? (
                 <Button
                   onClick={handleNext}
-                  className="h-12 bg-slate-800 hover:bg-slate-900"
+                  className="h-12 bg-teal-700 hover:bg-teal-800"
                   data-testid="next-btn"
                 >
                   Next
@@ -369,7 +369,7 @@ export default function RestaurantSetupPage() {
                 <Button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="h-12 bg-slate-800 hover:bg-slate-900"
+                  className="h-12 bg-teal-700 hover:bg-teal-800"
                   data-testid="submit-setup-btn"
                 >
                   {loading ? (

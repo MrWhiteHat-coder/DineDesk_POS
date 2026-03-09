@@ -195,10 +195,10 @@ export default function POSLayout() {
               to={item.to}
               end={item.exact}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-[13px] font-medium ${
                   isActive
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-teal-700 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-teal-50 hover:text-teal-800'
                 }`
               }
               data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -213,7 +213,7 @@ export default function POSLayout() {
           <div>
             <button
               onClick={() => toggleSection('tables')}
-              className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-600 hover:bg-teal-50 hover:text-teal-800 transition-all"
               data-testid="nav-manage-table"
             >
               <div className="flex items-center gap-3">
@@ -235,8 +235,8 @@ export default function POSLayout() {
                     className={({ isActive }) =>
                       `block px-3 py-2 rounded-lg text-[13px] transition-all ${
                         isActive
-                          ? 'text-slate-900 font-medium bg-slate-100'
-                          : 'text-slate-500 hover:text-slate-700'
+                          ? 'text-teal-800 font-medium bg-teal-50'
+                          : 'text-slate-500 hover:text-teal-700'
                       }`
                     }
                   >
@@ -253,7 +253,7 @@ export default function POSLayout() {
           <div>
             <button
               onClick={() => toggleSection('dishes')}
-              className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-600 hover:bg-teal-50 hover:text-teal-800 transition-all"
               data-testid="nav-manage-dish"
             >
               <div className="flex items-center gap-3">
@@ -275,8 +275,8 @@ export default function POSLayout() {
                     className={({ isActive }) =>
                       `block px-3 py-2 rounded-lg text-[13px] transition-all ${
                         isActive
-                          ? 'text-slate-900 font-medium bg-slate-100'
-                          : 'text-slate-500 hover:text-slate-700'
+                          ? 'text-teal-800 font-medium bg-teal-50'
+                          : 'text-slate-500 hover:text-teal-700'
                       }`
                     }
                   >
@@ -293,10 +293,10 @@ export default function POSLayout() {
           <NavLink
             to="/pos/staff"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-[13px] font-medium ${
                 isActive
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-teal-50 hover:text-teal-800'
               }`
             }
             data-testid="nav-staff"
@@ -314,10 +314,10 @@ export default function POSLayout() {
         <NavLink
           to="/pos/settings"
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-[13px] font-medium ${
               isActive
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                ? 'bg-teal-700 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-teal-50 hover:text-teal-800'
             }`
           }
           data-testid="nav-settings"
@@ -339,12 +339,12 @@ export default function POSLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7] flex" data-testid="pos-layout">
+    <div className="min-h-screen bg-[#F5F1EB] flex" data-testid="pos-layout">
       {/* Desktop Sidebar - hidden on mobile */}
       <aside className="hidden lg:flex w-[240px] bg-white flex-col border-r border-slate-200 flex-shrink-0">
         {/* Logo */}
         <div className="h-[68px] flex items-center gap-3 px-5 border-b border-slate-100">
-          <div className="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 bg-teal-700 rounded-xl flex items-center justify-center flex-shrink-0">
             <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -361,7 +361,7 @@ export default function POSLayout() {
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           {/* Logo */}
           <div className="h-[68px] flex items-center gap-3 px-5 border-b border-slate-100">
-            <div className="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-teal-700 rounded-xl flex items-center justify-center flex-shrink-0">
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -376,13 +376,13 @@ export default function POSLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-5 flex-shrink-0">
+        <header className="h-[56px] bg-white/80 backdrop-blur-sm border-b border-slate-200/60 flex items-center justify-between px-3 md:px-5 flex-shrink-0">
           <div className="flex items-center gap-2 md:gap-3">
             <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100" data-testid="mobile-menu-btn">
               <Menu className="w-5 h-5 text-slate-700" />
             </button>
-            <div className="flex items-center gap-2 bg-slate-50 px-2 md:px-3 py-1.5 rounded-lg border border-slate-200">
-              <div className="w-2 h-2 rounded-full bg-slate-600"></div>
+            <div className="flex items-center gap-2 bg-teal-50 px-2 md:px-3 py-1.5 rounded-xl border border-teal-200">
+              <div className="w-2 h-2 rounded-full bg-teal-600"></div>
               <span className="text-xs md:text-sm font-medium text-slate-800 truncate max-w-[120px] md:max-w-none">
                 {restaurant?.name || 'Restaurant'}
               </span>
@@ -416,7 +416,7 @@ export default function POSLayout() {
             <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
             {user && (
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-teal-700 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-xs">
                     {user.name?.charAt(0).toUpperCase()}
                   </span>

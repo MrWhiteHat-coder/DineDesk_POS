@@ -41,7 +41,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row" data-testid="login-page">
       {/* LEFT — Product Presentation */}
-      <div className="relative lg:w-[60%] bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
+      <div className="relative lg:w-[60%] bg-gradient-to-br from-teal-600 via-teal-700 to-teal-800 text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
         {/* Decorative shapes */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/4" />
@@ -100,7 +100,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-orange-500 focus-visible:border-orange-500"
+                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-teal-600 focus-visible:border-teal-600"
                     required
                     data-testid="login-email-input"
                   />
@@ -116,7 +116,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-orange-500 focus-visible:border-orange-500"
+                    className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 text-sm focus-visible:ring-teal-600 focus-visible:border-teal-600"
                     required
                     data-testid="login-password-input"
                   />
@@ -125,7 +125,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+                className="w-full h-11 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
                 disabled={loading}
                 data-testid="login-submit-btn"
               >
@@ -138,7 +138,7 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-4 text-center">
-              <a href="#" className="text-xs text-slate-400 hover:text-orange-500 transition-colors">Forgot Password?</a>
+              <a href="#" className="text-xs text-slate-400 hover:text-teal-600 transition-colors">Forgot Password?</a>
             </div>
 
             {/* Divider */}
@@ -150,7 +150,7 @@ export default function LoginPage() {
 
             <Link
               to="/register"
-              className="w-full h-11 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-orange-300 hover:text-orange-600 transition-colors"
+              className="w-full h-11 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-teal-300 hover:text-teal-700 transition-colors"
               data-testid="register-link"
             >
               Create New Account
@@ -165,14 +165,14 @@ export default function LoginPage() {
                     <p className="font-semibold text-slate-700">Admin Login</p>
                     <p className="text-slate-400">admin@foodflow.com</p>
                   </div>
-                  <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-medium">admin123</span>
+                  <span className="text-[10px] bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">admin123</span>
                 </div>
                 <div className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-slate-100">
                   <div>
                     <p className="font-semibold text-slate-700">Restaurant Owner</p>
                     <p className="text-slate-400">demo@restaurant.com</p>
                   </div>
-                  <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-medium">demo123456</span>
+                  <span className="text-[10px] bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">demo123456</span>
                 </div>
               </div>
             </div>

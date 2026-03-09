@@ -326,7 +326,7 @@ export default function POSMain() {
                 onClick={() => selectRunningOrder(ro)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition-all ${
                   selectedRunningOrder?.id === ro.id
-                    ? 'bg-slate-800 text-white border-slate-800'
+                    ? 'bg-teal-700 text-white border-teal-700'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
                 data-testid={`running-order-${ro.id}`}
@@ -349,7 +349,7 @@ export default function POSMain() {
             <button
               onClick={() => setSelectedCategory(null)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                !selectedCategory ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                !selectedCategory ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
               data-testid="category-all"
             >
@@ -360,7 +360,7 @@ export default function POSMain() {
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                  selectedCategory === cat.id ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  selectedCategory === cat.id ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                 }`}
                 data-testid={`category-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}
               >
@@ -409,7 +409,7 @@ export default function POSMain() {
                           Add More ({qty})
                         </button>
                       ) : (
-                        <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 transition-colors" data-testid={`add-item-${item.id}`}>
+                        <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-400 text-slate-900 text-xs font-semibold hover:bg-amber-500 transition-colors" data-testid={`add-item-${item.id}`}>
                           <Plus className="w-3.5 h-3.5" /> Add to Cart
                         </button>
                       )}
@@ -563,7 +563,7 @@ export default function POSMain() {
           {cart.length > 0 && (
             <Button
               onClick={handlePlaceOrder}
-              className="w-full h-11 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm"
+              className="w-full h-11 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-900 font-semibold text-sm"
               disabled={!isDayOpen || checkoutLoading}
               data-testid="place-order-btn"
             >
@@ -688,7 +688,7 @@ export default function POSMain() {
           )}
           <button
             onClick={handlePrintReceipt}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition-colors mt-2"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-400 text-slate-900 text-sm font-semibold hover:bg-amber-500 transition-colors mt-2"
             data-testid="print-receipt-btn"
           >
             <Printer className="w-4 h-4" /> Print Receipt

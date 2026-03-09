@@ -110,7 +110,7 @@ export default function StaffPage() {
         <h1 className="font-heading text-2xl font-bold text-slate-900">Staff Management</h1>
         <Button
           onClick={() => setShowModal(true)}
-          className="bg-slate-800 hover:bg-slate-900"
+          className="bg-teal-700 hover:bg-teal-800"
           data-testid="add-staff-btn"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -172,7 +172,7 @@ export default function StaffPage() {
         <Card className="p-12 text-center">
           <User className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No staff members yet</p>
-          <Button onClick={() => setShowModal(true)} className="bg-slate-800 hover:bg-slate-900">
+          <Button onClick={() => setShowModal(true)} className="bg-teal-700 hover:bg-teal-800">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Staff
           </Button>
@@ -244,7 +244,7 @@ export default function StaffPage() {
             <Button
               onClick={handleAddStaff}
               disabled={addLoading}
-              className="bg-slate-800 hover:bg-slate-900"
+              className="bg-teal-700 hover:bg-teal-800"
               data-testid="save-staff-btn"
             >
               {addLoading ? 'Adding...' : 'Add Staff'}

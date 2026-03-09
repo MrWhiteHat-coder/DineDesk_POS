@@ -36,7 +36,7 @@ import {
   Cell,
 } from 'recharts';
 
-const COLORS = ['#3B82F6', '#22C55E', '#3B82F6', '#EAB308'];
+const COLORS = ['#0F766E', '#22C55E', '#0EA5E9', '#F59E0B'];
 
 export default function POSDashboard() {
   const { restaurant } = useAuth();
@@ -114,7 +114,7 @@ export default function POSDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-teal-700 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -134,38 +134,39 @@ export default function POSDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200">
+        <Card className="bg-teal-700 border-teal-700 text-white shadow-lg shadow-teal-700/20">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500 mb-1">Today's Sales</p>
-                <p className="font-numbers text-2xl font-bold text-slate-900">
+                <p className="text-sm text-teal-100 mb-1">Today's Sales</p>
+                <p className="font-numbers text-2xl font-bold text-white">
                   ₹{todaySales.toFixed(2)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <IndianRupee className="w-6 h-6 text-green-600" />
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <IndianRupee className="w-6 h-6 text-white" />
               </div>
             </div>
+            <p className="text-[10px] text-teal-200 mt-2">Updated every new order</p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
+        <Card className="border-slate-200/60/60 bg-white cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">Today's Orders</p>
                 <p className="font-numbers text-2xl font-bold text-slate-900">{todayOrderCount}</p>
               </div>
-              <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-slate-800" />
+              <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center">
+                <ShoppingCart className="w-6 h-6 text-teal-700" />
               </div>
             </div>
             <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1">Click to view details <ChevronRight className="w-3 h-3" /></p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200/60/60 bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -174,14 +175,14 @@ export default function POSDashboard() {
                   ₹{(analytics?.weekly_sales || 0).toFixed(2)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="border-slate-200/60/60 bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -190,8 +191,8 @@ export default function POSDashboard() {
                   ₹{(analytics?.monthly_sales || 0).toFixed(2)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-teal-600" />
               </div>
             </div>
           </CardContent>
@@ -201,7 +202,7 @@ export default function POSDashboard() {
       {/* Charts Row */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Sales Trend */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200/60">
           <CardHeader>
             <CardTitle className="font-heading text-lg">Sales Trend (Last 7 Days)</CardTitle>
           </CardHeader>
@@ -211,8 +212,8 @@ export default function POSDashboard() {
                 <AreaChart data={salesChartData}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#0F766E" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
@@ -228,7 +229,7 @@ export default function POSDashboard() {
                   <Area
                     type="monotone"
                     dataKey="sales"
-                    stroke="#3B82F6"
+                    stroke="#0F766E"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorSales)"
@@ -240,7 +241,7 @@ export default function POSDashboard() {
         </Card>
 
         {/* Order Type Breakdown */}
-        <Card className="border-slate-200">
+        <Card className="border-slate-200/60">
           <CardHeader>
             <CardTitle className="font-heading text-lg">Order Types</CardTitle>
           </CardHeader>
@@ -289,7 +290,7 @@ export default function POSDashboard() {
       </div>
 
       {/* Top Selling Items */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200/60">
         <CardHeader>
           <CardTitle className="font-heading text-lg">Top Selling Items</CardTitle>
         </CardHeader>
@@ -320,7 +321,7 @@ export default function POSDashboard() {
       </Card>
 
       {/* Recent Orders */}
-      <Card className="border-slate-200">
+      <Card className="border-slate-200/60">
         <CardHeader>
           <CardTitle className="font-heading text-lg">Recent Orders Today</CardTitle>
         </CardHeader>
@@ -389,7 +390,7 @@ export default function POSDashboard() {
                 const pmIcon = order.payment_method === 'cash' ? Banknote : order.payment_method === 'card' ? CreditCard : order.payment_method === 'upi' ? Smartphone : Clock;
                 const PmIcon = pmIcon;
                 return (
-                  <div key={order.id} className="bg-slate-50 rounded-xl border border-slate-200 p-4" data-testid={`order-detail-${order.id}`}>
+                  <div key={order.id} className="bg-slate-50 rounded-xl border border-slate-200/60 p-4" data-testid={`order-detail-${order.id}`}>
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -430,7 +431,7 @@ export default function POSDashboard() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleViewReceipt(order)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 text-slate-900 text-xs font-semibold hover:bg-amber-500 transition-colors"
                         data-testid={`view-receipt-${order.id}`}
                       >
                         <Printer className="w-3.5 h-3.5" /> Print Bill
@@ -493,7 +494,7 @@ export default function POSDashboard() {
           )}
           <button
             onClick={handlePrintReceipt}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition-colors mt-2"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-400 text-slate-900 text-sm font-semibold hover:bg-amber-500 transition-colors mt-2"
             data-testid="dashboard-print-receipt-btn"
           >
             <Printer className="w-4 h-4" /> Print Receipt
