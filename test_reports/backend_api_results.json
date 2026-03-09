@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "tests_run": 27,
+    "tests_passed": 27,
+    "success_rate": 100.0,
+    "timestamp": "2026-03-09T04:57:38.398580"
+  },
+  "detailed_results": [
+    {
+      "test": "Health Check - Root",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:34.417504",
+      "status_code": 200,
+      "response_time_ms": 188.79000000000002
+    },
+    {
+      "test": "Health Check - Health Endpoint",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:34.562202",
+      "status_code": 200,
+      "response_time_ms": 143.499
+    },
+    {
+      "test": "Admin Login",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:34.959714",
+      "status_code": 200,
+      "response_time_ms": 396.11600000000004
+    },
+    {
+      "test": "User Registration",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:35.322415",
+      "status_code": 200,
+      "response_time_ms": 361.23199999999997
+    },
+    {
+      "test": "Restaurant Onboarding",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:35.441617",
+      "status_code": 200,
+      "response_time_ms": 117.831
+    },
+    {
+      "test": "Subscription Creation",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:35.562800",
+      "status_code": 200,
+      "response_time_ms": 119.801
+    },
+    {
+      "test": "Day Session - Open",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:35.701267",
+      "status_code": 200,
+      "response_time_ms": 137.056
+    },
+    {
+      "test": "Day Session - Get Current",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:35.837053",
+      "status_code": 200,
+      "response_time_ms": 134.44500000000002
+    },
+    {
+      "test": "Day Session - Close",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:35.939580",
+      "status_code": 200,
+      "response_time_ms": 101.18599999999999
+    },
+    {
+      "test": "Menu - Create Category",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:36.094207",
+      "status_code": 200,
+      "response_time_ms": 153.234
+    },
+    {
+      "test": "Menu - Create Item",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:36.197902",
+      "status_code": 200,
+      "response_time_ms": 102.43299999999999
+    },
+    {
+      "test": "Menu - Get Items",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:36.308455",
+      "status_code": 200,
+      "response_time_ms": 109.175
+    },
+    {
+      "test": "Menu - Get Categories",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:36.406993",
+      "status_code": 200,
+      "response_time_ms": 97.183
+    },
+    {
+      "test": "Order Management - Create Order",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:36.770557",
+      "status_code": 200,
+      "response_time_ms": 108.827
+    },
+    {
+      "test": "Order Management - Update Status",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:36.888676",
+      "status_code": 200,
+      "response_time_ms": 116.893
+    },
+    {
+      "test": "Order Management - Get Today Orders",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:36.991167",
+      "status_code": 200,
+      "response_time_ms": 101.01
+    },
+    {
+      "test": "Inventory - Create Item",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:37.100453",
+      "status_code": 200,
+      "response_time_ms": 107.969
+    },
+    {
+      "test": "Inventory - Get Items",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:37.210012",
+      "status_code": 200,
+      "response_time_ms": 108.313
+    },
+    {
+      "test": "Inventory - Update Item",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:37.320317",
+      "status_code": 200,
+      "response_time_ms": 109.17
+    },
+    {
+      "test": "Staff Management - Create Staff",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:37.648344",
+      "status_code": 200,
+      "response_time_ms": 326.571
+    },
+    {
+      "test": "Staff Management - Get Staff",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:37.749458",
+      "status_code": 200,
+      "response_time_ms": 99.87400000000001
+    },
+    {
+      "test": "Analytics",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:37.857295",
+      "status_code": 200,
+      "response_time_ms": 106.619
+    },
+    {
+      "test": "Tables Management",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:37.967199",
+      "status_code": 200,
+      "response_time_ms": 108.559
+    },
+    {
+      "test": "Admin - Get Stats",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:38.083167",
+      "status_code": 200,
+      "response_time_ms": 114.66
+    },
+    {
+      "test": "Admin - Get Restaurants",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:38.185932",
+      "status_code": 200,
+      "response_time_ms": 101.64
+    },
+    {
+      "test": "Admin - Get Users",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:38.296261",
+      "status_code": 200,
+      "response_time_ms": 109.059
+    },
+    {
+      "test": "Admin - Get Logs",
+      "success": true,
+      "timestamp": "2026-03-09T04:57:38.397603",
+      "status_code": 200,
+      "response_time_ms": 99.975
+    }
+  ]
+}
