@@ -422,8 +422,8 @@ async def get_admin_user(user: dict = Depends(get_current_user)):
 
 # Role-based access helpers
 ROLE_ACCESS = {
-    "owner": {"dashboard", "menu_order", "analytics", "kds", "tables", "menu", "inventory", "staff", "settings", "online_orders", "wallet", "branches"},
-    "manager": {"dashboard", "menu_order", "analytics", "kds", "tables", "menu", "inventory", "staff", "settings", "online_orders", "wallet", "branches"},
+    "owner": {"dashboard", "menu_order", "analytics", "kds", "tables", "menu", "inventory", "staff", "settings", "online_orders", "wallet", "branches", "purchase_orders"},
+    "manager": {"dashboard", "menu_order", "analytics", "kds", "tables", "menu", "inventory", "staff", "settings", "online_orders", "wallet", "branches", "purchase_orders"},
     "cashier": {"dashboard", "menu_order", "wallet", "analytics"},
     "captain": {"menu_order", "tables", "kds"},
     "chef": {"kds"},
@@ -1575,6 +1575,193 @@ async def zomato_webhook(data: ZomatoWebhook):
     await db.orders.insert_one(order)
     return {"message": "Order received", "order_id": order_id}
 
+# ============== PURCHASE ORDER ROUTES ==============
+
+class PurchaseOrderItemCreate(BaseModel):
+    inventory_item_id: str
+    inventory_item_name: Optional[str] = None
+    quantity: float
+    unit: str
+    unit_cost: float
+
+class PurchaseOrderCreate(BaseModel):
+    supplier_name: str
+    supplier_contact: Optional[str] = None
+    items: List[PurchaseOrderItemCreate]
+    notes: Optional[str] = None
+    expected_delivery: Optional[str] = None
+
+@api_router.post("/purchase-orders")
+async def create_purchase_order(data: PurchaseOrderCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "inventory")
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    po_id = str(uuid.uuid4())
+    items_data = [item.model_dump() for item in data.items]
+    total_cost = sum(i["quantity"] * i["unit_cost"] for i in items_data)
+    po = {
+        "id": po_id,
+        "restaurant_id": user["restaurant_id"],
+        "po_number": f"PO-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}",
+        "supplier_name": data.supplier_name,
+        "supplier_contact": data.supplier_contact,
+        "items": items_data,
+        "total_cost": total_cost,
+        "notes": data.notes,
+        "expected_delivery": data.expected_delivery,
+        "status": "ordered",
+        "created_by": user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.purchase_orders.insert_one(po)
+    return {k: v for k, v in po.items() if k != "_id"}
+
+@api_router.get("/purchase-orders")
+async def get_purchase_orders(status: Optional[str] = None, user: dict = Depends(get_current_user)):
+    check_role(user, "inventory")
+    if not user.get("restaurant_id"):
+        return []
+    query = {"restaurant_id": user["restaurant_id"]}
+    if status:
+        query["status"] = status
+    pos = await db.purchase_orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return pos
+
+@api_router.put("/purchase-orders/{po_id}/receive")
+async def receive_purchase_order(po_id: str, user: dict = Depends(get_current_user)):
+    """Mark a purchase order as received and update inventory quantities."""
+    check_role(user, "inventory")
+    po = await db.purchase_orders.find_one({"id": po_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not po:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    if po["status"] == "received":
+        raise HTTPException(status_code=400, detail="Already received")
+
+    # Update inventory quantities
+    for item in po["items"]:
+        inv = await db.inventory.find_one({"id": item["inventory_item_id"], "restaurant_id": user["restaurant_id"]})
+        if inv:
+            new_qty = inv["quantity"] + item["quantity"]
+            await db.inventory.update_one(
+                {"id": item["inventory_item_id"]},
+                {"$set": {"quantity": new_qty, "is_low_stock": new_qty <= inv["min_quantity"]}}
+            )
+
+    await db.purchase_orders.update_one(
+        {"id": po_id},
+        {"$set": {"status": "received", "received_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Purchase order received, inventory updated"}
+
+@api_router.put("/purchase-orders/{po_id}/cancel")
+async def cancel_purchase_order(po_id: str, user: dict = Depends(get_current_user)):
+    check_role(user, "inventory")
+    result = await db.purchase_orders.update_one(
+        {"id": po_id, "restaurant_id": user.get("restaurant_id"), "status": "ordered"},
+        {"$set": {"status": "cancelled"}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Purchase order not found or already processed")
+    return {"message": "Purchase order cancelled"}
+
+# ============== RECEIPT ROUTE ==============
+
+@api_router.get("/orders/{order_id}/receipt")
+async def get_receipt(order_id: str, user: dict = Depends(get_current_user)):
+    """Generate a receipt for a completed order."""
+    order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0, "created_by": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    return {
+        "restaurant": {
+            "name": restaurant.get("name", ""),
+            "address": restaurant.get("address", ""),
+            "city": restaurant.get("city", ""),
+            "phone": restaurant.get("contact_phone", ""),
+        },
+        "order": order,
+        "generated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+# ============== DAY CLOSE REPORT ==============
+
+@api_router.get("/day-session/{session_id}/report")
+async def get_day_close_report(session_id: str, user: dict = Depends(get_current_user)):
+    """Generate a detailed day close report."""
+    session = await db.day_sessions.find_one({"id": session_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0, "opened_by": 0})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    orders = await db.orders.find({"day_session_id": session_id}, {"_id": 0, "created_by": 0}).to_list(5000)
+
+    paid_orders = [o for o in orders if o.get("payment_status") == "paid"]
+    pending_orders = [o for o in orders if o.get("payment_status") == "pending"]
+    cancelled_orders = [o for o in orders if o.get("status") == "cancelled"]
+
+    total_sales = sum(o["total_amount"] for o in paid_orders)
+    total_tax = sum(o.get("tax_amount", 0) for o in paid_orders)
+    total_discount = sum(o.get("discount_amount", 0) for o in paid_orders)
+
+    # Payment breakdown
+    payment_methods = {}
+    for o in paid_orders:
+        pm = o.get("payment_method", "unknown")
+        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
+
+    # Order type breakdown
+    order_types = {}
+    for o in paid_orders:
+        ot = o.get("order_type", "unknown")
+        order_types[ot] = order_types.get(ot, 0) + 1
+
+    # Top selling items
+    item_counts = {}
+    item_revenue = {}
+    for o in paid_orders:
+        for item in o.get("items", []):
+            name = item.get("name", "Unknown")
+            qty = item.get("quantity", 1)
+            item_counts[name] = item_counts.get(name, 0) + qty
+            item_revenue[name] = item_revenue.get(name, 0) + item.get("total", 0)
+    top_items = sorted([{"name": k, "quantity": item_counts[k], "revenue": item_revenue.get(k, 0)} for k in item_counts], key=lambda x: -x["revenue"])[:10]
+
+    # Hourly breakdown
+    hourly = {}
+    for o in paid_orders:
+        try:
+            hour = datetime.fromisoformat(o["created_at"]).hour
+            hourly[hour] = hourly.get(hour, {"orders": 0, "revenue": 0})
+            hourly[hour]["orders"] += 1
+            hourly[hour]["revenue"] += o["total_amount"]
+        except:
+            pass
+    hourly_data = [{"hour": f"{h:02d}:00", "orders": v["orders"], "revenue": v["revenue"]} for h, v in sorted(hourly.items())]
+
+    return {
+        "session": session,
+        "summary": {
+            "total_orders": len(paid_orders),
+            "total_sales": total_sales,
+            "total_tax": total_tax,
+            "total_discount": total_discount,
+            "average_order_value": total_sales / len(paid_orders) if paid_orders else 0,
+            "pending_orders": len(pending_orders),
+            "cancelled_orders": len(cancelled_orders),
+        },
+        "payment_breakdown": payment_methods,
+        "order_type_breakdown": order_types,
+        "top_items": top_items,
+        "hourly_breakdown": hourly_data,
+        "cash_summary": {
+            "opening_cash": session.get("opening_cash", 0),
+            "cash_sales": payment_methods.get("cash", 0),
+            "expected_cash": session.get("opening_cash", 0) + payment_methods.get("cash", 0),
+            "closing_cash": session.get("closing_cash"),
+            "difference": (session.get("closing_cash") or 0) - (session.get("opening_cash", 0) + payment_methods.get("cash", 0)) if session.get("closing_cash") is not None else None,
+        }
+    }
+
 # ============== UTILITY ROUTES ==============
 
 @api_router.get("/")
@@ -1623,6 +1810,7 @@ async def startup():
     await db.menu_items.create_index([("restaurant_id", 1), ("category_id", 1)])
     await db.wallet_transactions.create_index([("restaurant_id", 1), ("created_at", -1)])
     await db.branches.create_index("restaurant_id")
+    await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
     logger.info("Database indexes created")
 
 @app.on_event("shutdown")

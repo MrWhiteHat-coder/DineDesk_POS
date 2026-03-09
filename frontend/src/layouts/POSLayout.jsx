@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { daySessionAPI } from '../lib/api';
 import { toast } from 'sonner';
+import DayCloseReport from '../components/pos/DayCloseReport';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -25,6 +26,8 @@ import {
   ChefHat,
   Wallet,
   Building2,
+  Zap,
+  Truck,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -40,11 +43,13 @@ import { Label } from '../components/ui/label';
 const navItems = [
   { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true, feature: 'dashboard' },
   { to: '/pos/orders', icon: ShoppingCart, label: 'Create Order', feature: 'menu_order' },
+  { to: '/pos/quick-pos', icon: Zap, label: 'Quick POS', feature: 'menu_order' },
   { to: '/pos/analytics', icon: BarChart3, label: 'Analytics', feature: 'analytics' },
   { to: '/pos/kds', icon: ChefHat, label: 'Kitchen Display', feature: 'kds' },
   { to: '/pos/wallet', icon: Wallet, label: 'Wallet', feature: 'wallet' },
   { to: '/pos/online-orders', icon: Globe, label: 'Online Orders', feature: 'online_orders' },
   { to: '/pos/branches', icon: Building2, label: 'Branches', feature: 'branches' },
+  { to: '/pos/purchase-orders', icon: Truck, label: 'Purchase Orders', feature: 'purchase_orders' },
 ];
 
 const manageTableItems = [
@@ -64,8 +69,8 @@ export default function POSLayout() {
 
   // Role-based access
   const ROLE_ACCESS = {
-    owner: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches']),
-    manager: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches']),
+    owner: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches', 'purchase_orders']),
+    manager: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches', 'purchase_orders']),
     cashier: new Set(['dashboard', 'menu_order', 'wallet', 'analytics']),
     captain: new Set(['menu_order', 'tables', 'kds']),
     chef: new Set(['kds']),
@@ -80,6 +85,8 @@ export default function POSLayout() {
   const [openingCash, setOpeningCash] = useState('');
   const [closingCash, setClosingCash] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDayReport, setShowDayReport] = useState(false);
+  const [reportSessionId, setReportSessionId] = useState(null);
 
   // Auto-expand sidebar sections based on current route
   const isTableRoute = ['/pos/tables', '/pos/order-management'].some(p => location.pathname.startsWith(p));
@@ -138,6 +145,9 @@ export default function POSLayout() {
       setShowDayCloseModal(false);
       setClosingCash('');
       toast.success(`Day closed! Total sales: ₹${res.data.total_sales.toFixed(2)}`);
+      // Show day close report
+      setReportSessionId(currentSession?.id);
+      setShowDayReport(true);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to close day');
     } finally {
@@ -469,6 +479,9 @@ export default function POSLayout() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Day Close Report */}
+      <DayCloseReport sessionId={reportSessionId} open={showDayReport} onClose={() => setShowDayReport(false)} />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import requests
 import os
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://dine-flow-19.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://quick-pos-demo.preview.emergentagent.com')
 
 # Test data
 DEMO_USER = {

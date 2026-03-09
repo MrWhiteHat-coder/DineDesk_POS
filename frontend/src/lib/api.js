@@ -139,6 +139,24 @@ export const adminAPI = {
   getAnalytics: () => api.get('/admin/analytics'),
 };
 
+// Purchase Order APIs
+export const purchaseOrderAPI = {
+  getAll: (status) => api.get('/purchase-orders', { params: status ? { status } : {} }),
+  create: (data) => api.post('/purchase-orders', data),
+  receive: (id) => api.put(`/purchase-orders/${id}/receive`),
+  cancel: (id) => api.put(`/purchase-orders/${id}/cancel`),
+};
+
+// Receipt API
+export const receiptAPI = {
+  get: (orderId) => api.get(`/orders/${orderId}/receipt`),
+};
+
+// Day Session Report
+export const dayReportAPI = {
+  get: (sessionId) => api.get(`/day-session/${sessionId}/report`),
+};
+
 // File Upload
 export const uploadFile = async (file) => {
   const formData = new FormData();

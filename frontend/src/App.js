@@ -26,6 +26,8 @@ import OnlineOrdersPage from './pages/pos/OnlineOrdersPage';
 import KDSPage from './pages/pos/KDSPage';
 import WalletPage from './pages/pos/WalletPage';
 import BranchesPage from './pages/pos/BranchesPage';
+import QuickPOSPage from './pages/pos/QuickPOSPage';
+import PurchaseOrdersPage from './pages/pos/PurchaseOrdersPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -124,6 +126,8 @@ function AppRoutes() {
         <Route path="kds" element={<KDSPage />} />
         <Route path="wallet" element={<WalletPage />} />
         <Route path="branches" element={<BranchesPage />} />
+        <Route path="quick-pos" element={<QuickPOSPage />} />
+        <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
       </Route>
 
       {/* Admin Routes */}
