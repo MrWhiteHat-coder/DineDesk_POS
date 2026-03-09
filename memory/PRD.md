@@ -1,4 +1,4 @@
-# FoodFlow POS - Product Requirements Document
+# OrderNest POS - Product Requirements Document
 
 ## Original Problem Statement
 Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
@@ -6,6 +6,7 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 2. **Restaurant POS Application** - Restaurant daily operations
 
 ## Brand: OrderNest
+## Color Scheme: Primary Teal (#0F766E) | Accent Amber (#F59E0B) | Background Warm Cream (#F5F1EB)
 
 ## Architecture
 - **Backend**: FastAPI + MongoDB (monolithic `server.py`)
@@ -21,60 +22,47 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 ## Completed Features
 
 ### Platform Admin Dashboard
-- Platform-wide stats (total restaurants, revenue, orders)
-- Restaurant management (view, search, activate/suspend)
-- Subscription management (fixed 2999/year plan)
-- User monitoring, system logs, admin analytics
+- Platform-wide stats, restaurant management, subscription management, user monitoring, system logs
 
 ### Restaurant POS Application
-- User onboarding: account creation, business category, restaurant setup, subscription
-- Day Open/Close system with detailed Day Close Reports (PDF download + AI insights)
-- Menu Management: categories, items with images, recipe linking
-- Order Management: dine-in, takeaway, online order types
-- Quick POS mode for fast order processing
-- Kitchen Display System (KDS)
-- Purchase Order management (create, receive, cancel with inventory updates)
-- Receipt generation and printing
-- Basic Inventory Management with low-stock tracking
-- Analytics Dashboard with AI-powered insights (Claude Sonnet 4.5) + date/branch filtering
-- Staff Management with 5 roles (Owner, Manager, Cashier, Captain, Chef)
-- Role-based frontend access control
+- Day Open/Close system with PDF reports + AI insights
+- Menu Management with categories, images, recipe linking
+- Order Management: dine-in, takeaway, online
+- Quick POS mode, Kitchen Display System (KDS)
+- Purchase Order management, Receipt printing
+- Inventory Management with low-stock tracking
+- Analytics Dashboard with AI insights + date/branch filtering
+- Staff Management (Owner, Manager, Cashier, Captain, Chef)
 - Wallet/Sales summary with date picker
-- Multi-Branch support with auto-generated login credentials
-- Editable running orders
-- Customer details mandatory at checkout with phone auto-suggest
+- Multi-Branch support with auto-generated credentials
+- Customer details mandatory at checkout
 - SMS/WhatsApp Notifications (Twilio - demo mode)
 
 ### Mobile Responsiveness (Completed March 9, 2026)
-- Mobile sidebar navigation using Shadcn Sheet component (slide-out drawer)
-- Hamburger menu button on mobile (<1024px), hidden on desktop
-- Auto-close sidebar on route navigation
-- All POS pages responsive: Dashboard, Create Order, Quick POS, Analytics, KDS, Wallet, etc.
+- Shadcn Sheet-based mobile sidebar, hamburger menu, responsive grids
 
-### Premium Auth Pages Redesign (Completed March 9, 2026)
-- Two-column layout: 60% marketing left / 40% auth right
-- Orange gradient left panel with feature highlights (Fast POS, Online Orders, Menu Management, Analytics, Inventory)
-- Clean auth card with icon inputs, OR divider, demo credentials section
-- Responsive: stacks vertically on mobile
-- Brand renamed from FoodFlow to OrderNest across entire application
+### Premium Auth Pages (Completed March 9, 2026)
+- Two-column layout: 60% marketing / 40% auth, feature highlights, demo credentials
+
+### UI/UX Theme Redesign (Completed March 9, 2026)
+- Teal/amber/cream color scheme inspired by premium POS reference designs
+- Teal sidebar active states, amber CTA buttons, warm cream backgrounds
+- Teal chart colors, teal stat cards, consistent theme across all pages
+- Updated: Login, Register, Dashboard, Create Order, Quick POS, Wallet, Analytics, all POS pages
 
 ## Mocked Integrations
-- Razorpay payment processing
-- Swiggy online orders webhook
-- Zomato online orders webhook
-- Twilio notifications (demo mode - backend calls commented out)
+- Razorpay payments, Swiggy/Zomato webhooks, Twilio (demo mode)
 
-## Backlog / Future Tasks
-- **P1**: Full Razorpay payment integration (user deferred)
-- **P1**: Activate Twilio notifications (move from demo mode to production)
-- **P2**: Real Swiggy/Zomato delivery platform integration
-- **P2**: Backend refactoring - break `server.py` into modular APIRouter files
+## Backlog
+- P1: Full Razorpay payment integration
+- P1: Activate Twilio notifications
+- P2: Swiggy/Zomato live integration
+- P2: Backend refactoring into modular routers
 
 ## Key Files
 - `backend/server.py` - All backend logic
-- `frontend/src/lib/api.js` - API client
-- `frontend/src/layouts/POSLayout.jsx` - POS navigation & day session controls
-- `frontend/src/pages/auth/LoginPage.jsx` - Premium login page
-- `frontend/src/pages/auth/RegisterPage.jsx` - Premium register page
-- `frontend/src/pages/pos/` - All POS page components
-- `frontend/src/pages/admin/` - Admin dashboard pages
+- `frontend/src/layouts/POSLayout.jsx` - POS navigation (teal theme)
+- `frontend/src/pages/auth/LoginPage.jsx` - Premium login
+- `frontend/src/pages/auth/RegisterPage.jsx` - Premium register
+- `frontend/src/pages/pos/POSDashboard.jsx` - Dashboard (teal stats cards)
+- `frontend/src/pages/pos/` - All POS pages
