@@ -48,8 +48,10 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 - Day Close Report: summary cards, payment breakdown, cash drawer, top items, hourly chart, print
 - Receipt API: returns restaurant + order details
 - Dashboard Order Types chart: shows breakdown by order type
-- **Create Order receipt printing**: receipt modal appears after takeaway payment and dine-in table release
-- **Dashboard Today's Orders detail view**: clickable card opens modal with all orders, items, and Print Bill per order
+- Create Order receipt printing: receipt modal appears after takeaway payment and dine-in table release
+- Dashboard Today's Orders detail view: clickable card opens modal with all orders, items, and Print Bill per order
+- **Customer details at checkout**: Mandatory name + phone, optional email, phone auto-suggest from previous orders
+- **Day Close Report with AI insights**: Claude-powered suggestions, premium PDF download + in-app view, print
 
 ## Mocked Integrations
 - Razorpay payment processing
