@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { walletAPI } from '../../lib/api';
-import { toast } from 'sonner';
+import { Input } from '../../components/ui/input';
 import {
-  Banknote, CreditCard, Smartphone, TrendingUp, TrendingDown, ArrowUpDown, RefreshCw,
+  Banknote, CreditCard, Smartphone, TrendingUp, TrendingDown, ArrowUpDown, RefreshCw, CalendarDays,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 
@@ -16,11 +16,12 @@ export default function WalletPage() {
   const [summary, setSummary] = useState(null);
   const [period, setPeriod] = useState('today');
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState('');
 
   const fetchSummary = async () => {
     setLoading(true);
     try {
-      const res = await walletAPI.getSummary(period);
+      const res = await walletAPI.getSummary(selectedDate ? 'custom' : period, selectedDate || undefined);
       setSummary(res.data);
     } catch (err) {
       console.error('Wallet error:', err);
@@ -29,7 +30,20 @@ export default function WalletPage() {
     }
   };
 
-  useEffect(() => { fetchSummary(); }, [period]);
+  useEffect(() => { fetchSummary(); }, [period, selectedDate]);
+
+  const handleDateChange = (e) => {
+    const date = e.target.value;
+    setSelectedDate(date);
+    if (date) {
+      setPeriod('');
+    }
+  };
+
+  const handlePeriodChange = (p) => {
+    setPeriod(p);
+    setSelectedDate('');
+  };
 
   if (loading || !summary) {
     return (
@@ -54,20 +68,39 @@ export default function WalletPage() {
           {PERIODS.map((p) => (
             <button
               key={p.value}
-              onClick={() => setPeriod(p.value)}
+              onClick={() => handlePeriodChange(p.value)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                period === p.value ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                period === p.value && !selectedDate ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
               data-testid={`period-${p.value}`}
             >
               {p.label}
             </button>
           ))}
+          <div className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 ${selectedDate ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <CalendarDays className={`w-4 h-4 ${selectedDate ? 'text-white' : 'text-slate-500'}`} />
+            <Input
+              type="date"
+              value={selectedDate}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={handleDateChange}
+              className={`h-7 border-0 p-0 text-sm font-medium w-36 focus-visible:ring-0 ${selectedDate ? 'text-white' : 'text-slate-800'}`}
+              data-testid="wallet-date-picker"
+            />
+          </div>
           <Button onClick={fetchSummary} variant="outline" className="h-9 rounded-lg gap-2" data-testid="wallet-refresh">
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
       </div>
+
+      {/* Date indicator */}
+      {selectedDate && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700 mb-4">
+          Showing report for <span className="font-semibold">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          <button onClick={() => { setSelectedDate(''); setPeriod('today'); }} className="ml-2 text-xs underline text-blue-600 hover:text-blue-800">Clear</button>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -138,7 +171,7 @@ export default function WalletPage() {
         ) : (
           <div className="py-12 text-center text-slate-400">
             <Banknote className="w-10 h-10 mx-auto mb-2" />
-            <p className="text-sm">No transactions yet</p>
+            <p className="text-sm">No transactions for this period</p>
           </div>
         )}
       </div>

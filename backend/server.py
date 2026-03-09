@@ -121,6 +121,8 @@ class BranchCreate(BaseModel):
     pincode: str
     contact_phone: str
     share_menu: bool = True
+    login_email: Optional[str] = None
+    login_password: Optional[str] = None
 
 class BranchResponse(BaseModel):
     id: str
@@ -612,11 +614,21 @@ async def update_my_restaurant(data: RestaurantUpdate, user: dict = Depends(get_
 
 # ============== BRANCH ROUTES ==============
 
-@api_router.post("/branches", response_model=BranchResponse)
+@api_router.post("/branches")
 async def create_branch(data: BranchCreate, user: dict = Depends(get_current_user)):
     check_role(user, "branches")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
+
+    # Validate login credentials
+    if not data.login_email or not data.login_password:
+        raise HTTPException(status_code=400, detail="Login email and password are required for branch")
+    if len(data.login_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    existing_user = await db.users.find_one({"email": data.login_email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     branch_id = str(uuid.uuid4())
     branch = {
@@ -629,12 +641,28 @@ async def create_branch(data: BranchCreate, user: dict = Depends(get_current_use
         "contact_phone": data.contact_phone,
         "share_menu": data.share_menu,
         "is_active": True,
+        "login_email": data.login_email,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.branches.insert_one(branch)
 
-    # If not sharing menu, create independent tables for branch
-    return BranchResponse(**{k: v for k, v in branch.items() if k != "_id"})
+    # Create branch manager user account
+    branch_user_id = str(uuid.uuid4())
+    branch_user = {
+        "id": branch_user_id,
+        "email": data.login_email,
+        "password": hash_password(data.login_password),
+        "name": f"{data.name} Manager",
+        "role": "manager",
+        "restaurant_id": user["restaurant_id"],
+        "branch_id": branch_id,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(branch_user)
+
+    result = {k: v for k, v in branch.items() if k not in ["_id", "login_email"]}
+    return BranchResponse(**result)
 
 @api_router.get("/branches", response_model=List[BranchResponse])
 async def get_branches(user: dict = Depends(get_current_user)):
@@ -1241,7 +1269,7 @@ async def create_staff(data: StaffCreate, user: dict = Depends(get_current_user)
     if user.get("role") not in ["owner", "admin", "manager"]:
         raise HTTPException(status_code=403, detail="Only owners/managers can create staff")
 
-    valid_roles = ["manager", "cashier", "captain", "chef"]
+    valid_roles = ["owner", "manager", "cashier", "captain", "chef"]
     if data.role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
 
@@ -1270,10 +1298,17 @@ async def get_staff(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
     staff = await db.users.find(
-        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["manager", "cashier", "captain", "chef"]}},
+        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["owner", "manager", "cashier", "captain", "chef"]}},
         {"_id": 0, "password": 0}
     ).to_list(100)
-    return [StaffResponse(**{k: v for k, v in s.items() if k not in ["branch_id", "onboarding_complete"]}) for s in staff]
+    result = []
+    for s in staff:
+        # Ensure is_active exists (default to True for old records)
+        if "is_active" not in s:
+            s["is_active"] = True
+        data = {k: v for k, v in s.items() if k not in ["branch_id", "onboarding_complete"]}
+        result.append(StaffResponse(**data))
+    return result
 
 @api_router.delete("/staff/{staff_id}")
 async def delete_staff(staff_id: str, user: dict = Depends(get_current_user)):
@@ -1291,26 +1326,40 @@ async def delete_staff(staff_id: str, user: dict = Depends(get_current_user)):
 # ============== WALLET ROUTES ==============
 
 @api_router.get("/wallet/summary")
-async def get_wallet_summary(period: str = "today", user: dict = Depends(get_current_user)):
+async def get_wallet_summary(period: str = "today", date: Optional[str] = None, user: dict = Depends(get_current_user)):
     """Get wallet summary with payment method breakdown."""
     check_role(user, "wallet")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
 
     now = datetime.now(timezone.utc)
-    if period == "today":
+
+    if date:
+        # Specific date selected
+        try:
+            selected = datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
+        except:
+            selected = now
+        start = selected.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        end = (selected.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat()
+    elif period == "today":
         start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        end = None
     elif period == "week":
         start = (now - timedelta(days=7)).isoformat()
+        end = None
     elif period == "month":
         start = (now - timedelta(days=30)).isoformat()
+        end = None
     else:
         start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        end = None
 
-    txns = await db.wallet_transactions.find({
-        "restaurant_id": user["restaurant_id"],
-        "created_at": {"$gte": start}
-    }, {"_id": 0}).sort("created_at", -1).to_list(500)
+    query = {"restaurant_id": user["restaurant_id"], "created_at": {"$gte": start}}
+    if end:
+        query["created_at"]["$lt"] = end
+
+    txns = await db.wallet_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
 
     total_cash = sum(t["amount"] for t in txns if t["payment_method"] == "cash" and t["transaction_type"] == "sale")
     total_card = sum(t["amount"] for t in txns if t["payment_method"] == "card" and t["transaction_type"] == "sale")
@@ -1329,40 +1378,53 @@ async def get_wallet_summary(period: str = "today", user: dict = Depends(get_cur
 
 # ============== ANALYTICS ROUTES ==============
 
-@api_router.get("/analytics", response_model=AnalyticsResponse)
-async def get_analytics(user: dict = Depends(get_current_user)):
+@api_router.get("/analytics")
+async def get_analytics(date: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "analytics")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
 
     now = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_start = today_start - timedelta(days=7)
-    month_start = today_start - timedelta(days=30)
+    # If specific date provided, use that date's start/end
+    if date:
+        try:
+            selected = datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
+        except:
+            selected = now
+        day_start = selected.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+    else:
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = now
+
+    week_start = day_start - timedelta(days=7)
+    month_start = day_start - timedelta(days=30)
 
     all_orders = await db.orders.find(
         {"restaurant_id": user["restaurant_id"], "payment_status": "paid"},
         {"_id": 0}
     ).to_list(10000)
 
-    daily_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= today_start.isoformat())
+    # Filter for the selected day
+    day_orders = [o for o in all_orders if day_start.isoformat() <= o["created_at"] < day_end.isoformat()] if date else [o for o in all_orders if o["created_at"] >= day_start.isoformat()]
+    daily_sales = sum(o["total_amount"] for o in day_orders)
     weekly_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= week_start.isoformat())
     monthly_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= month_start.isoformat())
 
     item_counts = {}
-    for order in all_orders:
+    for order in day_orders:
         for item in order.get("items", []):
             name = item.get("name", "Unknown")
             item_counts[name] = item_counts.get(name, 0) + item.get("quantity", 1)
     top_items = sorted([{"name": k, "count": v} for k, v in item_counts.items()], key=lambda x: -x["count"])[:10]
 
     order_types = {}
-    for order in all_orders:
+    for order in day_orders:
         ot = order.get("order_type", "unknown")
         order_types[ot] = order_types.get(ot, 0) + 1
 
     hourly = {}
-    for order in all_orders:
+    for order in day_orders:
         try:
             hour = datetime.fromisoformat(order["created_at"]).hour
             hourly[hour] = hourly.get(hour, 0) + 1
@@ -1371,15 +1433,16 @@ async def get_analytics(user: dict = Depends(get_current_user)):
     hourly_orders = [{"hour": h, "orders": c} for h, c in sorted(hourly.items())]
 
     payment_breakdown = {}
-    for order in all_orders:
+    for order in day_orders:
         pm = order.get("payment_method", "unknown")
         payment_breakdown[pm] = payment_breakdown.get(pm, 0) + order["total_amount"]
 
-    return AnalyticsResponse(
-        daily_sales=daily_sales, weekly_sales=weekly_sales, monthly_sales=monthly_sales,
-        total_orders=len(all_orders), top_items=top_items, order_type_breakdown=order_types,
-        hourly_orders=hourly_orders, payment_breakdown=payment_breakdown
-    )
+    return {
+        "daily_sales": daily_sales, "weekly_sales": weekly_sales, "monthly_sales": monthly_sales,
+        "total_orders": len(day_orders), "top_items": top_items, "order_type_breakdown": order_types,
+        "hourly_orders": hourly_orders, "payment_breakdown": payment_breakdown,
+        "selected_date": date or day_start.strftime("%Y-%m-%d")
+    }
 
 @api_router.post("/analytics/ai-insights")
 async def get_ai_insights(user: dict = Depends(get_current_user)):

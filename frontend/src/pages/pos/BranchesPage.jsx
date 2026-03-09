@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { branchAPI } from '../../lib/api';
 import { toast } from 'sonner';
-import { Plus, MapPin, Phone, Pencil, Trash2, Building2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, MapPin, Phone, Pencil, Trash2, Building2, Mail, Key, Copy, Check } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -15,7 +15,10 @@ export default function BranchesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editBranch, setEditBranch] = useState(null);
-  const [form, setForm] = useState({ name: '', address: '', city: '', pincode: '', contact_phone: '', share_menu: true });
+  const [form, setForm] = useState({ name: '', address: '', city: '', pincode: '', contact_phone: '', share_menu: true, login_email: '', login_password: '' });
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [createdCreds, setCreatedCreds] = useState(null);
+  const [copied, setCopied] = useState('');
 
   const fetchBranches = async () => {
     try {
@@ -33,10 +36,10 @@ export default function BranchesPage() {
   const openModal = (branch = null) => {
     if (branch) {
       setEditBranch(branch);
-      setForm({ name: branch.name, address: branch.address, city: branch.city, pincode: branch.pincode, contact_phone: branch.contact_phone, share_menu: branch.share_menu });
+      setForm({ name: branch.name, address: branch.address, city: branch.city, pincode: branch.pincode, contact_phone: branch.contact_phone, share_menu: branch.share_menu, login_email: '', login_password: '' });
     } else {
       setEditBranch(null);
-      setForm({ name: '', address: '', city: '', pincode: '', contact_phone: '', share_menu: true });
+      setForm({ name: '', address: '', city: '', pincode: '', contact_phone: '', share_menu: true, login_email: '', login_password: '' });
     }
     setShowModal(true);
   };
@@ -51,8 +54,18 @@ export default function BranchesPage() {
         await branchAPI.update(editBranch.id, form);
         toast.success('Branch updated');
       } else {
+        if (!form.login_email || !form.login_password) {
+          toast.error('Login email and password are required for new branch');
+          return;
+        }
+        if (form.login_password.length < 6) {
+          toast.error('Password must be at least 6 characters');
+          return;
+        }
         await branchAPI.create(form);
-        toast.success('Branch created');
+        setCreatedCreds({ email: form.login_email, password: form.login_password, branch: form.name });
+        setShowCredentials(true);
+        toast.success('Branch created with login credentials');
       }
       setShowModal(false);
       fetchBranches();
@@ -70,6 +83,12 @@ export default function BranchesPage() {
     } catch (err) {
       toast.error('Failed to delete branch');
     }
+  };
+
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopied(field);
+    setTimeout(() => setCopied(''), 2000);
   };
 
   if (loading) {
@@ -122,6 +141,7 @@ export default function BranchesPage() {
         </div>
       )}
 
+      {/* Create/Edit Branch Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
@@ -157,6 +177,21 @@ export default function BranchesPage() {
               </div>
               <Switch checked={form.share_menu} onCheckedChange={(v) => setForm({ ...form, share_menu: v })} data-testid="share-menu-toggle" />
             </div>
+            {/* Login Credentials - only for new branches */}
+            {!editBranch && (
+              <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm font-semibold text-blue-800 flex items-center gap-1.5"><Key className="w-4 h-4" /> Branch Login Credentials</p>
+                <p className="text-xs text-blue-600">Create login credentials for the branch manager</p>
+                <div>
+                  <Label className="text-xs text-blue-700">Login Email *</Label>
+                  <Input value={form.login_email} onChange={(e) => setForm({ ...form, login_email: e.target.value })} className="mt-1 rounded-lg bg-white" placeholder="branch@restaurant.com" data-testid="branch-login-email" type="email" />
+                </div>
+                <div>
+                  <Label className="text-xs text-blue-700">Password *</Label>
+                  <Input value={form.login_password} onChange={(e) => setForm({ ...form, login_password: e.target.value })} className="mt-1 rounded-lg bg-white" placeholder="Min. 6 characters" data-testid="branch-login-password" type="password" />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowModal(false)} className="rounded-lg">Cancel</Button>
@@ -164,6 +199,44 @@ export default function BranchesPage() {
               {editBranch ? 'Update' : 'Create'} Branch
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credentials Success Modal */}
+      <Dialog open={showCredentials} onOpenChange={setShowCredentials}>
+        <DialogContent className="rounded-2xl max-w-sm" data-testid="credentials-modal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700"><Check className="w-5 h-5" /> Branch Created!</DialogTitle>
+          </DialogHeader>
+          {createdCreds && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-slate-600">Branch <span className="font-semibold text-slate-800">{createdCreds.branch}</span> has been created. Share these credentials with the branch manager:</p>
+              <div className="space-y-2 bg-slate-50 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-semibold">Email</p>
+                    <p className="text-sm font-mono font-semibold text-slate-800">{createdCreds.email}</p>
+                  </div>
+                  <button onClick={() => copyToClipboard(createdCreds.email, 'email')} className="p-1.5 rounded-md hover:bg-slate-200" data-testid="copy-email">
+                    {copied === 'email' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-semibold">Password</p>
+                    <p className="text-sm font-mono font-semibold text-slate-800">{createdCreds.password}</p>
+                  </div>
+                  <button onClick={() => copyToClipboard(createdCreds.password, 'password')} className="p-1.5 rounded-md hover:bg-slate-200" data-testid="copy-password">
+                    {copied === 'password' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-[11px] text-amber-600 bg-amber-50 p-2 rounded-lg">Save these credentials securely. The password cannot be recovered later.</p>
+            </div>
+          )}
+          <Button onClick={() => setShowCredentials(false)} className="w-full rounded-lg bg-slate-800 hover:bg-slate-900" data-testid="close-credentials-btn">
+            Done
+          </Button>
         </DialogContent>
       </Dialog>
     </div>

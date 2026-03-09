@@ -119,12 +119,12 @@ export const kdsAPI = {
 
 // Wallet APIs
 export const walletAPI = {
-  getSummary: (period) => api.get('/wallet/summary', { params: { period } }),
+  getSummary: (period, date) => api.get('/wallet/summary', { params: { period, ...(date ? { date } : {}) } }),
 };
 
 // Analytics APIs
 export const analyticsAPI = {
-  get: () => api.get('/analytics'),
+  get: (date) => api.get('/analytics', { params: date ? { date } : {} }),
   getAiInsights: () => api.post('/analytics/ai-insights'),
 };
 

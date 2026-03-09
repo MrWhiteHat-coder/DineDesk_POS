@@ -228,6 +228,7 @@ export default function StaffPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="owner">Owner - Full access + Branch reports</SelectItem>
                   <SelectItem value="manager">Manager - Complete access</SelectItem>
                   <SelectItem value="cashier">Cashier - Financial & billing</SelectItem>
                   <SelectItem value="captain">Captain - Order taking only</SelectItem>
