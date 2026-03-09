@@ -21,12 +21,12 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 ### Platform Admin Dashboard
 - Platform-wide stats (total restaurants, revenue, orders)
 - Restaurant management (view, search, activate/suspend)
-- Subscription management (fixed ₹2999/year plan)
+- Subscription management (fixed 2999/year plan)
 - User monitoring, system logs, admin analytics
 
 ### Restaurant POS Application
 - User onboarding: account creation, business category, restaurant setup, subscription
-- Day Open/Close system with detailed Day Close Reports
+- Day Open/Close system with detailed Day Close Reports (PDF download + AI insights)
 - Menu Management: categories, items with images, recipe linking
 - Order Management: dine-in, takeaway, online order types
 - Quick POS mode for fast order processing
@@ -34,45 +34,38 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 - Purchase Order management (create, receive, cancel with inventory updates)
 - Receipt generation and printing
 - Basic Inventory Management with low-stock tracking
-- Analytics Dashboard with AI-powered insights (Claude Sonnet 4.5)
-- Staff Management with 4 roles (Manager, Cashier, Captain, Chef)
+- Analytics Dashboard with AI-powered insights (Claude Sonnet 4.5) + date/branch filtering
+- Staff Management with 5 roles (Owner, Manager, Cashier, Captain, Chef)
 - Role-based frontend access control
-- Wallet/Sales summary
-- Multi-Branch support (stubbed)
+- Wallet/Sales summary with date picker
+- Multi-Branch support with auto-generated login credentials
 - Editable running orders
-- Premium dark navy/slate UI theme
+- Customer details mandatory at checkout with phone auto-suggest
+- SMS/WhatsApp Notifications (Twilio - demo mode)
 
-### Tested & Verified (March 9, 2026)
-- Quick POS: menu grid, category filtering, cart, payments (Cash/Card/UPI), receipt modal
-- Purchase Orders: CRUD with inventory items, status filters, receive/cancel
-- Day Close Report: summary cards, payment breakdown, cash drawer, top items, hourly chart, print
-- Receipt API: returns restaurant + order details
-- Dashboard Order Types chart: shows breakdown by order type
-- Create Order receipt printing: receipt modal appears after takeaway payment and dine-in table release
-- Dashboard Today's Orders detail view: clickable card opens modal with all orders, items, and Print Bill per order
-- **Customer details at checkout**: Mandatory name + phone, optional email, phone auto-suggest from previous orders
-- **Day Close Report with AI insights**: Claude-powered suggestions, premium PDF download + in-app view, print
-- **Branches with login credentials**: Create branch with email/password, auto-creates manager user, credentials modal with copy buttons
-- **Owner role in Staff**: Owner role available in staff dropdown with full access
-- **Analytics date picker**: Select any previous date to view that day's report, Today button to reset
-- **Dashboard online orders**: Order type chart dynamically includes all types (dine-in, takeaway, online)
-- **Wallet date picker**: Select specific date for wallet/sales report alongside period buttons
-- **SMS/WhatsApp Notifications**: Twilio-powered order confirmation via SMS and WhatsApp, notification settings page with toggles, notification logs. Live and working with Twilio Account SID + Auth Token.
-- **Analytics branch selector**: Owner/Manager can filter analytics by specific branch or view all branches combined
+### Mobile Responsiveness (Completed March 9, 2026)
+- Mobile sidebar navigation using Shadcn Sheet component (slide-out drawer)
+- Hamburger menu button on mobile (<1024px), hidden on desktop
+- Auto-close sidebar on route navigation
+- All POS pages responsive: Dashboard, Create Order, Quick POS, Analytics, KDS, Wallet, etc.
+- Responsive grids, flex-wrap headers, horizontal scroll categories
+- Tested on 375px (mobile) and 1920px (desktop) viewports
 
 ## Mocked Integrations
 - Razorpay payment processing
 - Swiggy online orders webhook
 - Zomato online orders webhook
+- Twilio notifications (demo mode - backend calls commented out)
 
 ## Backlog / Future Tasks
-- **P1**: Real Razorpay payment integration (user deferred)
+- **P1**: Full Razorpay payment integration (user deferred)
+- **P1**: Activate Twilio notifications (move from demo mode to production)
 - **P2**: Real Swiggy/Zomato delivery platform integration
 - **P2**: Backend refactoring - break `server.py` into modular APIRouter files
 
 ## Key Files
-- `backend/server.py` - All backend logic (~1818 lines)
+- `backend/server.py` - All backend logic
 - `frontend/src/lib/api.js` - API client
-- `frontend/src/layouts/POSLayout.jsx` - POS navigation & day session controls
+- `frontend/src/layouts/POSLayout.jsx` - POS navigation & day session controls (Sheet for mobile)
 - `frontend/src/pages/pos/` - All POS page components
 - `frontend/src/pages/admin/` - Admin dashboard pages
