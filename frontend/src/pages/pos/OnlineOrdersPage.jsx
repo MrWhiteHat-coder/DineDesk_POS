@@ -55,7 +55,7 @@ export default function OnlineOrdersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -90,16 +90,16 @@ export default function OnlineOrdersPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-slate-200 bg-slate-50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-orange-500">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-slate-800">
               <svg viewBox="0 0 61 61" className="w-7 h-7" fill="white">
                 <path d="M30.5 0C13.7 0 0 13.7 0 30.5S13.7 61 30.5 61 61 47.3 61 30.5 47.3 0 30.5 0zm15.3 23.8l-4.8 18.4c-.3 1.3-1.5 2.2-2.8 2.2H22.8c-1.3 0-2.5-.9-2.8-2.2l-4.8-18.4c-.4-1.6.8-3.1 2.4-3.1h25.8c1.6 0 2.8 1.5 2.4 3.1z"/>
               </svg>
             </div>
             <div>
-              <p className="text-sm text-orange-600">Swiggy</p>
-              <p className="font-numbers text-xl font-bold text-orange-700">
+              <p className="text-sm text-slate-800">Swiggy</p>
+              <p className="font-numbers text-xl font-bold text-slate-700">
                 {platformCounts.swiggy}
               </p>
             </div>
@@ -159,7 +159,7 @@ export default function OnlineOrdersPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden ${
-                          order.platform === 'swiggy' ? 'bg-orange-500' : 'bg-red-500'
+                          order.platform === 'swiggy' ? 'bg-slate-800' : 'bg-red-500'
                         }`}>
                           {order.platform === 'swiggy' ? (
                             <svg viewBox="0 0 61 61" className="w-7 h-7" fill="white">

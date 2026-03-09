@@ -37,7 +37,7 @@ export default function AdminAnalytics() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -65,8 +65,8 @@ export default function AdminAnalytics() {
                 <p className="text-sm text-slate-500 mb-1">Total Orders (30 days)</p>
                 <p className="font-numbers text-3xl font-bold text-slate-900">{totalOrders}</p>
               </div>
-              <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-7 h-7 text-orange-600" />
+              <div className="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center">
+                <ShoppingCart className="w-7 h-7 text-slate-800" />
               </div>
             </div>
           </CardContent>
@@ -93,7 +93,7 @@ export default function AdminAnalytics() {
       <Card className="border-slate-200">
         <CardHeader>
           <CardTitle className="font-heading text-lg flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-orange-500" />
+            <TrendingUp className="w-5 h-5 text-slate-800" />
             Orders & Revenue Trend
           </CardTitle>
         </CardHeader>
@@ -147,7 +147,7 @@ export default function AdminAnalytics() {
       <Card className="border-slate-200">
         <CardHeader>
           <CardTitle className="font-heading text-lg flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-orange-500" />
+            <BarChart3 className="w-5 h-5 text-slate-800" />
             Daily Orders Distribution
           </CardTitle>
         </CardHeader>

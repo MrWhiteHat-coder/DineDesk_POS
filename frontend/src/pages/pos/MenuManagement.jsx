@@ -251,7 +251,7 @@ export default function MenuManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -260,67 +260,65 @@ export default function MenuManagement() {
     <div className="space-y-6" data-testid="menu-management">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold text-slate-900">Menu Management</h1>
-        <div className="flex gap-3">
+        <h1 className="font-heading text-xl font-bold text-slate-900">Menu Management</h1>
+        <div className="flex gap-2">
           <Button
             variant="outline"
             onClick={() => setShowCategoryModal(true)}
-            className="h-11 px-4 rounded-xl"
+            className="h-9 px-3 rounded-lg text-sm"
             data-testid="add-category-btn"
           >
-            <FolderPlus className="w-4 h-4 mr-2" />
+            <FolderPlus className="w-4 h-4 mr-1.5" />
             Add Category
           </Button>
           <Button
             onClick={() => openItemModal()}
-            className="h-11 px-4 rounded-xl bg-orange-500 hover:bg-orange-600"
+            className="h-9 px-3 rounded-lg bg-slate-800 hover:bg-slate-900 text-sm"
             data-testid="add-item-btn"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4 mr-1.5" />
             Add Item
           </Button>
         </div>
       </div>
 
       {/* Categories */}
-      <div className="flex gap-3 overflow-x-auto pb-2">
-        <Button
-          variant={!selectedCategory ? 'default' : 'outline'}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        <button
           onClick={() => setSelectedCategory(null)}
-          className={`flex-shrink-0 h-11 px-5 rounded-xl ${
-            !selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : ''
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+            !selectedCategory ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
           All Items
-          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+          <span className={`text-xs px-1.5 py-0.5 rounded-md ${
             !selectedCategory ? 'bg-white/20' : 'bg-slate-100'
           }`}>
             {menuItems.length}
           </span>
-        </Button>
+        </button>
         {categories.map((cat) => (
           <div key={cat.id} className="flex items-center gap-1">
-            <Button
-              variant={selectedCategory === cat.id ? 'default' : 'outline'}
+            <button
               onClick={() => setSelectedCategory(cat.id)}
-              className={`flex-shrink-0 h-11 px-5 rounded-xl ${
-                selectedCategory === cat.id ? 'bg-orange-500 hover:bg-orange-600' : ''
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                selectedCategory === cat.id ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
               {cat.name}
-              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+              <span className={`text-xs px-1.5 py-0.5 rounded-md ${
                 selectedCategory === cat.id ? 'bg-white/20' : 'bg-slate-100'
               }`}>
                 {getCategoryCount(cat.id)}
               </span>
-            </Button>
+            </button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleDeleteCategory(cat.id)}
-              className="text-slate-400 hover:text-red-500 h-8 w-8 p-0 rounded-lg"
+              className="text-slate-400 hover:text-red-500 h-7 w-7 p-0 rounded-md"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
         ))}
@@ -328,70 +326,64 @@ export default function MenuManagement() {
 
       {/* Items Grid */}
       {filteredItems.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden rounded-2xl border-slate-200" data-testid={`menu-item-card-${item.id}`}>
-              <div className="relative aspect-square bg-slate-100">
+            <Card key={item.id} className="overflow-hidden rounded-xl border-slate-200 hover:shadow-md transition-shadow" data-testid={`menu-item-card-${item.id}`}>
+              <div className="relative aspect-[4/3] bg-slate-100">
                 <img
-                  src={getImageUrl(item.image_url) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop'}
+                  src={getImageUrl(item.image_url) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'}
                   alt={item.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop';
+                    e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop';
                   }}
                 />
-                <div className="absolute top-3 right-3 flex gap-2">
-                  {item.is_vegetarian && (
-                    <div className="w-6 h-6 bg-white rounded flex items-center justify-center border-2 border-green-500">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    </div>
-                  )}
-                  <Badge className={`px-2 py-1 text-xs ${item.is_available ? 'bg-green-500' : 'bg-red-500'}`}>
+                <div className="absolute top-2 right-2">
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white ${item.is_available ? 'text-green-700' : 'text-red-600'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${item.is_available ? 'bg-green-500' : 'bg-red-500'}`}></span>
                     {item.is_available ? 'Available' : 'Unavailable'}
-                  </Badge>
+                  </span>
                 </div>
               </div>
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-slate-900 mb-1 truncate">{item.name}</h3>
-                {item.description && (
-                  <p className="text-sm text-slate-500 mb-2 line-clamp-2">{item.description}</p>
-                )}
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-numbers text-xl font-bold text-orange-500">
+              <CardContent className="p-3">
+                <h3 className="font-semibold text-slate-900 text-sm mb-0.5 truncate">{item.name}</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-base text-slate-900">
                     ₹{item.price.toFixed(2)}
                   </span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
                     <Clock className="w-3 h-3" />
                     {item.preparation_time} min
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Switch
                       checked={item.is_available}
                       onCheckedChange={() => handleToggleAvailability(item)}
+                      className="scale-75 origin-left"
                       data-testid={`toggle-availability-${item.id}`}
                     />
-                    <span className="text-xs text-slate-500">Available</span>
+                    <span className="text-[11px] text-slate-500">Available</span>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => openItemModal(item)}
-                      className="h-8 w-8 p-0 rounded-lg"
+                      className="h-7 w-7 p-0 rounded-md"
                       data-testid={`edit-item-${item.id}`}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteItem(item.id)}
-                      className="h-8 w-8 p-0 rounded-lg text-red-500 hover:text-red-600"
+                      className="h-7 w-7 p-0 rounded-md text-red-500 hover:text-red-600"
                       data-testid={`delete-item-${item.id}`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -403,7 +395,7 @@ export default function MenuManagement() {
         <Card className="p-12 text-center rounded-2xl">
           <Image className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No menu items yet</p>
-          <Button onClick={() => openItemModal()} className="bg-orange-500 hover:bg-orange-600 rounded-xl">
+          <Button onClick={() => openItemModal()} className="bg-slate-800 hover:bg-slate-900 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>
@@ -445,7 +437,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleCreateCategory}
               disabled={categoryLoading}
-              className="bg-orange-500 hover:bg-orange-600 rounded-xl"
+              className="bg-slate-800 hover:bg-slate-900 rounded-xl"
               data-testid="save-category-btn"
             >
               {categoryLoading ? 'Creating...' : 'Create Category'}
@@ -496,7 +488,7 @@ export default function MenuManagement() {
                     />
                     <div className="flex flex-col items-center gap-3 py-6">
                       {uploadingImage ? (
-                        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <Upload className="w-10 h-10 text-slate-400" />
                       )}
@@ -621,7 +613,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleSaveItem}
               disabled={itemLoading}
-              className="bg-orange-500 hover:bg-orange-600 rounded-xl"
+              className="bg-slate-800 hover:bg-slate-900 rounded-xl"
               data-testid="save-item-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}

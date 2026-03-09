@@ -66,11 +66,11 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-500 rounded-2xl mb-4 shadow-lg shadow-orange-500/30">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-800 rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
             <UtensilsCrossed className="w-7 h-7 text-white" />
           </div>
           <h1 className="font-heading text-2xl font-bold text-slate-900 mb-2">
@@ -80,14 +80,14 @@ export default function SubscriptionPage() {
         </div>
 
         {/* Subscription Card */}
-        <Card className="border-2 border-orange-200 shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white">
+        <Card className="border-2 border-slate-200 shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-500 to-slate-900 p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-100 text-sm font-medium">Restaurant POS Plan</p>
+                <p className="text-slate-300 text-sm font-medium">Restaurant POS Plan</p>
                 <div className="flex items-baseline gap-1 mt-1">
                   <span className="font-numbers text-4xl font-bold">₹2,999</span>
-                  <span className="text-orange-100">/year</span>
+                  <span className="text-slate-300">/year</span>
                 </div>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
@@ -113,7 +113,7 @@ export default function SubscriptionPage() {
             <Button
               onClick={handleSubscribe}
               disabled={loading}
-              className="w-full h-14 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-lg"
+              className="w-full h-14 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-lg"
               data-testid="subscribe-btn"
             >
               {loading ? (

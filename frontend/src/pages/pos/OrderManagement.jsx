@@ -78,7 +78,7 @@ export default function OrderManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -194,7 +194,7 @@ function OrderCard({ order, onUpdateStatus }) {
         {/* Total */}
         <div className="flex justify-between font-semibold border-t border-slate-100 pt-2 mb-4">
           <span>Total</span>
-          <span className="font-numbers text-orange-500">₹{order.total_amount.toFixed(2)}</span>
+          <span className="font-numbers text-slate-800">₹{order.total_amount.toFixed(2)}</span>
         </div>
 
         {/* Customer Info */}

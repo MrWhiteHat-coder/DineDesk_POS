@@ -46,7 +46,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-heading text-lg flex items-center gap-2">
-            <Store className="w-5 h-5 text-orange-500" />
+            <Store className="w-5 h-5 text-slate-800" />
             Restaurant Information
           </CardTitle>
           <CardDescription>Update your restaurant details</CardDescription>
@@ -95,7 +95,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-orange-500 hover:bg-orange-600"
+            className="bg-slate-800 hover:bg-slate-900"
             data-testid="save-settings-btn"
           >
             <Save className="w-4 h-4 mr-2" />
@@ -108,12 +108,12 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-heading text-lg flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-orange-500" />
+            <CreditCard className="w-5 h-5 text-slate-800" />
             Subscription
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
             <div>
               <p className="font-semibold text-slate-900">Restaurant POS Plan</p>
               <p className="text-sm text-slate-500">Annual subscription</p>
@@ -159,7 +159,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="flex gap-2">
               {restaurant.delivery_platforms?.includes('swiggy') && (
-                <Badge className="bg-orange-500">Swiggy</Badge>
+                <Badge className="bg-slate-800">Swiggy</Badge>
               )}
               {restaurant.delivery_platforms?.includes('zomato') && (
                 <Badge className="bg-red-500">Zomato</Badge>

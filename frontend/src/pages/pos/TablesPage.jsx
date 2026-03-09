@@ -16,7 +16,7 @@ import { Plus, Users, UtensilsCrossed, Clock } from 'lucide-react';
 
 const statusColors = {
   available: 'bg-green-100 border-green-300 text-green-700',
-  occupied: 'bg-orange-100 border-orange-300 text-orange-700',
+  occupied: 'bg-slate-100 border-slate-300 text-slate-700',
   reserved: 'bg-blue-100 border-blue-300 text-blue-700',
 };
 
@@ -86,7 +86,7 @@ export default function TablesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -98,7 +98,7 @@ export default function TablesPage() {
         <h1 className="font-heading text-2xl font-bold text-slate-900">Tables</h1>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-orange-500 hover:bg-orange-600"
+          className="bg-slate-800 hover:bg-slate-900"
           data-testid="add-table-btn"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -120,14 +120,14 @@ export default function TablesPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-orange-50 border-orange-200">
+        <Card className="bg-slate-50 border-slate-200">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-orange-600" />
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Users className="w-5 h-5 text-slate-800" />
             </div>
             <div>
-              <p className="text-sm text-orange-600">Occupied</p>
-              <p className="font-numbers text-2xl font-bold text-orange-700">{stats.occupied}</p>
+              <p className="text-sm text-slate-800">Occupied</p>
+              <p className="font-numbers text-2xl font-bold text-slate-700">{stats.occupied}</p>
             </div>
           </CardContent>
         </Card>
@@ -196,7 +196,7 @@ export default function TablesPage() {
       ) : (
         <Card className="p-12 text-center">
           <p className="text-slate-400 mb-4">No tables configured yet</p>
-          <Button onClick={() => setShowAddModal(true)} className="bg-orange-500 hover:bg-orange-600">
+          <Button onClick={() => setShowAddModal(true)} className="bg-slate-800 hover:bg-slate-900">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Table
           </Button>
@@ -238,7 +238,7 @@ export default function TablesPage() {
             <Button
               onClick={handleAddTable}
               disabled={addLoading}
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-slate-800 hover:bg-slate-900"
               data-testid="save-table-btn"
             >
               {addLoading ? 'Adding...' : 'Add Table'}

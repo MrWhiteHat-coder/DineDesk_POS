@@ -38,11 +38,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-2xl mb-4 shadow-lg shadow-orange-500/30">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-800 rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
             <UtensilsCrossed className="w-8 h-8 text-white" />
           </div>
           <h1 className="font-heading text-3xl font-bold text-slate-900">FoodFlow POS</h1>
@@ -92,7 +92,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold"
+                className="w-full h-12 bg-slate-800 hover:bg-slate-900 text-white font-semibold"
                 disabled={loading}
                 data-testid="login-submit-btn"
               >
@@ -112,7 +112,7 @@ export default function LoginPage() {
                 Don't have an account?{' '}
                 <Link
                   to="/register"
-                  className="text-orange-500 hover:text-orange-600 font-medium"
+                  className="text-slate-800 hover:text-slate-800 font-medium"
                   data-testid="register-link"
                 >
                   Create Account

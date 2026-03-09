@@ -60,7 +60,7 @@ export default function AdminRestaurants() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -112,8 +112,8 @@ export default function AdminRestaurants() {
                 <TableRow key={restaurant.id} data-testid={`restaurant-row-${restaurant.id}`}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <Store className="w-5 h-5 text-orange-600" />
+                      <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                        <Store className="w-5 h-5 text-slate-800" />
                       </div>
                       <div>
                         <p className="font-medium">{restaurant.name}</p>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { daySessionAPI } from '../lib/api';
 import { toast } from 'sonner';
@@ -54,6 +54,7 @@ const manageDishItems = [
 export default function POSLayout() {
   const { user, restaurant, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isDayOpen, setIsDayOpen] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const [showDayOpenModal, setShowDayOpenModal] = useState(false);
@@ -61,14 +62,23 @@ export default function POSLayout() {
   const [openingCash, setOpeningCash] = useState('');
   const [closingCash, setClosingCash] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-expand sidebar sections based on current route
+  const isTableRoute = ['/pos/tables', '/pos/order-management'].some(p => location.pathname.startsWith(p));
+  const isDishRoute = ['/pos/menu', '/pos/inventory'].some(p => location.pathname.startsWith(p));
   const [expandedSections, setExpandedSections] = useState({
-    tables: false,
-    dishes: false,
+    tables: isTableRoute,
+    dishes: isDishRoute,
   });
 
   useEffect(() => {
     fetchDaySession();
   }, []);
+
+  useEffect(() => {
+    if (isTableRoute) setExpandedSections(prev => ({ ...prev, tables: true }));
+    if (isDishRoute) setExpandedSections(prev => ({ ...prev, dishes: true }));
+  }, [location.pathname]);
 
   const fetchDaySession = async () => {
     try {

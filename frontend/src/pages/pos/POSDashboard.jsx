@@ -77,7 +77,7 @@ export default function POSDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -120,8 +120,8 @@ export default function POSDashboard() {
                 <p className="text-sm text-slate-500 mb-1">Today's Orders</p>
                 <p className="font-numbers text-2xl font-bold text-slate-900">{todayOrderCount}</p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                <ShoppingCart className="w-6 h-6 text-slate-800" />
               </div>
             </div>
           </CardContent>
@@ -264,7 +264,7 @@ export default function POSDashboard() {
                   className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-numbers font-bold text-orange-500 w-6">
+                    <span className="font-numbers font-bold text-slate-800 w-6">
                       #{index + 1}
                     </span>
                     <span className="font-medium text-slate-900">{item.name}</span>

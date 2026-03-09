@@ -96,7 +96,7 @@ export default function StaffPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -108,7 +108,7 @@ export default function StaffPage() {
         <h1 className="font-heading text-2xl font-bold text-slate-900">Staff Management</h1>
         <Button
           onClick={() => setShowModal(true)}
-          className="bg-orange-500 hover:bg-orange-600"
+          className="bg-slate-800 hover:bg-slate-900"
           data-testid="add-staff-btn"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -170,7 +170,7 @@ export default function StaffPage() {
         <Card className="p-12 text-center">
           <User className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No staff members yet</p>
-          <Button onClick={() => setShowModal(true)} className="bg-orange-500 hover:bg-orange-600">
+          <Button onClick={() => setShowModal(true)} className="bg-slate-800 hover:bg-slate-900">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Staff
           </Button>
@@ -239,7 +239,7 @@ export default function StaffPage() {
             <Button
               onClick={handleAddStaff}
               disabled={addLoading}
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-slate-800 hover:bg-slate-900"
               data-testid="save-staff-btn"
             >
               {addLoading ? 'Adding...' : 'Add Staff'}

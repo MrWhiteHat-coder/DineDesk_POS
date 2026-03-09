@@ -37,7 +37,7 @@ export default function AdminSubscriptions() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -81,12 +81,12 @@ export default function AdminSubscriptions() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500 mb-1">Total Revenue</p>
-                <p className="font-numbers text-2xl font-bold text-orange-600">
+                <p className="font-numbers text-2xl font-bold text-slate-800">
                   ₹{totalRevenue.toFixed(0)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-slate-800" />
               </div>
             </div>
           </CardContent>

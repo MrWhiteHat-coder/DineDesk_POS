@@ -23,24 +23,24 @@ code {
         --card-foreground: 222 47% 11%;
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
-        --primary: 24 95% 53%;
+        --primary: 217 33% 17%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 33 100% 96%;
-        --secondary-foreground: 24 95% 53%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 215 25% 27%;
         --muted: 210 40% 96%;
         --muted-foreground: 215 16% 47%;
-        --accent: 33 100% 96%;
-        --accent-foreground: 24 95% 53%;
+        --accent: 210 40% 96%;
+        --accent-foreground: 215 25% 27%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
         --border: 214 32% 91%;
         --input: 214 32% 91%;
-        --ring: 24 95% 53%;
-        --chart-1: 24 95% 53%;
+        --ring: 217 33% 17%;
+        --chart-1: 199 89% 48%;
         --chart-2: 142 71% 45%;
-        --chart-3: 199 89% 48%;
+        --chart-3: 262 83% 58%;
         --chart-4: 43 96% 56%;
-        --chart-5: 262 83% 58%;
+        --chart-5: 339 80% 58%;
         --radius: 0.5rem;
     }
 
@@ -51,7 +51,7 @@ code {
         --card-foreground: 210 40% 98%;
         --popover: 222 47% 13%;
         --popover-foreground: 210 40% 98%;
-        --primary: 24 95% 53%;
+        --primary: 217 33% 17%;
         --primary-foreground: 0 0% 100%;
         --secondary: 217 33% 17%;
         --secondary-foreground: 210 40% 98%;
@@ -63,12 +63,12 @@ code {
         --destructive-foreground: 210 40% 98%;
         --border: 217 33% 17%;
         --input: 217 33% 17%;
-        --ring: 24 95% 53%;
-        --chart-1: 24 95% 53%;
+        --ring: 217 33% 17%;
+        --chart-1: 199 89% 48%;
         --chart-2: 142 71% 45%;
-        --chart-3: 199 89% 48%;
+        --chart-3: 262 83% 58%;
         --chart-4: 43 96% 56%;
-        --chart-5: 262 83% 58%;
+        --chart-5: 339 80% 58%;
     }
 }
 
@@ -150,13 +150,13 @@ code {
 }
 
 .pos-btn-primary {
-    @apply pos-btn bg-orange-500 text-white hover:bg-orange-600;
+    @apply pos-btn bg-slate-800 text-white hover:bg-slate-900;
 }
 
 .pos-btn-secondary {
-    @apply pos-btn bg-orange-50 text-orange-600 hover:bg-orange-100;
+    @apply pos-btn bg-slate-50 text-slate-800 hover:bg-slate-100;
 }
 
 .pos-input {
-    @apply h-12 px-4 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all;
+    @apply h-12 px-4 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 focus:border-slate-800 outline-none transition-all;
 }
