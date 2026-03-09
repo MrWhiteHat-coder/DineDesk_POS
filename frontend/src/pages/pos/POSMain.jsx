@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { menuAPI, orderAPI, tableAPI } from '../../lib/api';
+import { menuAPI, orderAPI, tableAPI, receiptAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -14,7 +14,7 @@ import {
 } from '../../components/ui/dialog';
 import {
   Plus, Minus, Trash2, ShoppingCart, Search, AlertCircle, X, Pencil, RefreshCw, Tag,
-  Banknote, CreditCard, Smartphone, CheckCircle2, Utensils,
+  Banknote, CreditCard, Smartphone, CheckCircle2, Utensils, Printer, Check,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -46,6 +46,30 @@ export default function POSMain() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [pendingOrderId, setPendingOrderId] = useState(null);
+  // Receipt modal
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
+  const receiptRef = useRef(null);
+
+  const fetchAndShowReceipt = async (orderId) => {
+    try {
+      const rcpt = await receiptAPI.get(orderId);
+      setReceiptData(rcpt.data);
+      setShowReceipt(true);
+    } catch (err) {
+      console.error('Receipt fetch failed:', err);
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    if (!receiptRef.current) return;
+    const win = window.open('', '_blank', 'width=320,height=600');
+    win.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:10px}h2{text-align:center;margin:4px 0}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.center{text-align:center}p{margin:2px 0}</style></head><body>`);
+    win.document.write(receiptRef.current.innerHTML);
+    win.document.write('</body></html>');
+    win.document.close();
+    win.print();
+  };
 
   useEffect(() => {
     fetchMenu();
@@ -203,6 +227,7 @@ export default function POSMain() {
       };
       const res = await orderAPI.create(orderData);
       toast.success(`Order #${res.data.order_number} completed!`);
+      await fetchAndShowReceipt(res.data.id);
       clearCart();
       setShowPaymentModal(false);
       setPaymentMethod('');
@@ -218,6 +243,7 @@ export default function POSMain() {
     try {
       await orderAPI.pay(orderId, { payment_method: method });
       toast.success('Payment confirmed! Table released.');
+      await fetchAndShowReceipt(orderId);
       fetchRunningOrders();
       fetchTables();
       setSelectedRunningOrder(null);
@@ -556,6 +582,60 @@ export default function POSMain() {
               </button>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Modal */}
+      <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
+        <DialogContent className="rounded-2xl max-w-xs" data-testid="receipt-modal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="w-5 h-5 text-green-500" /> Order Complete
+            </DialogTitle>
+          </DialogHeader>
+          {receiptData && (
+            <div ref={receiptRef}>
+              <div className="text-center border-b border-dashed border-slate-300 pb-2 mb-2">
+                <h2 className="font-bold text-base">{receiptData.restaurant.name}</h2>
+                <p className="text-[10px] text-slate-500">{receiptData.restaurant.address}, {receiptData.restaurant.city}</p>
+                <p className="text-[10px] text-slate-500">{receiptData.restaurant.phone}</p>
+              </div>
+              <div className="text-[11px] mb-2">
+                <div className="flex justify-between"><span>Order #</span><span className="font-mono">{receiptData.order.order_number}</span></div>
+                <div className="flex justify-between"><span>Type</span><span className="capitalize">{receiptData.order.order_type?.replace('_', ' ')}</span></div>
+                <div className="flex justify-between"><span>Payment</span><span className="capitalize">{receiptData.order.payment_method}</span></div>
+                <div className="flex justify-between"><span>Date</span><span>{new Date(receiptData.order.created_at).toLocaleString()}</span></div>
+              </div>
+              <hr className="border-dashed border-slate-300 my-1" />
+              <div className="space-y-1 text-[11px]">
+                {(receiptData.order.items || []).map((item, i) => (
+                  <div key={i} className="flex justify-between">
+                    <span>{item.quantity}x {item.name}</span>
+                    <span>₹{item.total?.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <hr className="border-dashed border-slate-300 my-1" />
+              <div className="text-[11px] space-y-0.5">
+                <div className="flex justify-between"><span>Subtotal</span><span>₹{receiptData.order.subtotal?.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Tax</span><span>₹{receiptData.order.tax_amount?.toFixed(2)}</span></div>
+                {receiptData.order.discount_amount > 0 && (
+                  <div className="flex justify-between"><span>Discount</span><span>-₹{receiptData.order.discount_amount?.toFixed(2)}</span></div>
+                )}
+                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-slate-300">
+                  <span>Total</span><span>₹{receiptData.order.total_amount?.toFixed(2)}</span>
+                </div>
+              </div>
+              <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>
+            </div>
+          )}
+          <button
+            onClick={handlePrintReceipt}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-semibold hover:bg-slate-900 transition-colors mt-2"
+            data-testid="print-receipt-btn"
+          >
+            <Printer className="w-4 h-4" /> Print Receipt
+          </button>
         </DialogContent>
       </Dialog>
     </div>
