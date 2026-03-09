@@ -50,6 +50,7 @@ const navItems = [
   { to: '/pos/online-orders', icon: Globe, label: 'Online Orders', feature: 'online_orders' },
   { to: '/pos/branches', icon: Building2, label: 'Branches', feature: 'branches' },
   { to: '/pos/purchase-orders', icon: Truck, label: 'Purchase Orders', feature: 'purchase_orders' },
+  { to: '/pos/notifications', icon: Bell, label: 'Notifications', feature: 'notifications' },
 ];
 
 const manageTableItems = [
@@ -69,8 +70,8 @@ export default function POSLayout() {
 
   // Role-based access
   const ROLE_ACCESS = {
-    owner: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches', 'purchase_orders']),
-    manager: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches', 'purchase_orders']),
+    owner: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches', 'purchase_orders', 'notifications']),
+    manager: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches', 'purchase_orders', 'notifications']),
     cashier: new Set(['dashboard', 'menu_order', 'wallet', 'analytics']),
     captain: new Set(['menu_order', 'tables', 'kds']),
     chef: new Set(['kds']),

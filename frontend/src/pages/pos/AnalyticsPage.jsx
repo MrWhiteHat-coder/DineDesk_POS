@@ -1,29 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { analyticsAPI } from '../../lib/api';
+import { analyticsAPI, branchAPI } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '../../components/ui/select';
+import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
-import { DollarSign, ShoppingCart, TrendingUp, Clock, Sparkles, RefreshCw, CalendarDays } from 'lucide-react';
+import { DollarSign, ShoppingCart, TrendingUp, Clock, Sparkles, RefreshCw, CalendarDays, Building2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import ReactMarkdown from 'react-markdown';
 
 const COLORS = ['#3B82F6', '#22C55E', '#EAB308', '#8B5CF6', '#EF4444'];
 
 export default function AnalyticsPage() {
+  const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiInsights, setAiInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState('all');
+  const isOwnerOrManager = user?.role === 'owner' || user?.role === 'manager';
 
-  useEffect(() => { fetchAnalytics(); }, [selectedDate]);
+  useEffect(() => {
+    if (isOwnerOrManager) {
+      branchAPI.getAll().then(res => setBranches(res.data)).catch(() => {});
+    }
+  }, [isOwnerOrManager]);
+
+  useEffect(() => { fetchAnalytics(); }, [selectedDate, selectedBranch]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const res = await analyticsAPI.get(selectedDate);
+      const res = await analyticsAPI.get(selectedDate, selectedBranch);
       setAnalytics(res.data);
     } catch (err) {
       console.error('Failed to fetch analytics:', err);
@@ -59,14 +73,31 @@ export default function AnalyticsPage() {
     : [];
 
   const hourlyData = analytics?.hourly_orders || [];
-
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
 
   return (
     <div className="space-y-6" data-testid="analytics-page">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-heading text-2xl font-bold text-slate-900">Analytics</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Branch Selector */}
+          {isOwnerOrManager && branches.length > 0 && (
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
+              <Building2 className="w-4 h-4 text-slate-500" />
+              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                <SelectTrigger className="h-7 border-0 p-0 text-sm font-medium w-40 focus:ring-0" data-testid="branch-selector">
+                  <SelectValue placeholder="All Branches" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {/* Date Picker */}
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
             <CalendarDays className="w-4 h-4 text-slate-500" />
             <Input
@@ -86,10 +117,15 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Date Label */}
-      {!isToday && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700">
-          Showing report for <span className="font-semibold">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+      {/* Filter indicators */}
+      {(!isToday || selectedBranch !== 'all') && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700 flex items-center gap-2 flex-wrap">
+          {!isToday && (
+            <span>Date: <span className="font-semibold">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></span>
+          )}
+          {selectedBranch !== 'all' && (
+            <span>{!isToday && '|'} Branch: <span className="font-semibold">{branches.find(b => b.id === selectedBranch)?.name || selectedBranch}</span></span>
+          )}
         </div>
       )}
 

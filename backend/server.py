@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import asyncio
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -33,6 +34,11 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+
+# Twilio Config
+TWILIO_API_KEY_SID = os.environ.get('TWILIO_API_KEY_SID')
+TWILIO_API_KEY_SECRET = os.environ.get('TWILIO_API_KEY_SECRET')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
 # Create the main app
 app = FastAPI(title="FoodFlow POS API")
@@ -971,6 +977,7 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         "id": order_id,
         "order_number": order_number,
         "restaurant_id": user["restaurant_id"],
+        "branch_id": user.get("branch_id"),
         "order_type": data.order_type,
         "table_number": data.table_number,
         "items": order_items,
@@ -1004,6 +1011,14 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
     # Record wallet transaction if paid
     if not is_pending_payment:
         await record_wallet_transaction(user["restaurant_id"], "sale", total_amount, data.payment_method, order_id, session["id"])
+        # Send SMS/WhatsApp notification
+        try:
+            settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]})
+            if not settings or settings.get("sms_enabled", True):
+                restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+                asyncio.create_task(send_order_notification(order, restaurant))
+        except Exception as e:
+            logger.error(f"Notification trigger error: {e}")
 
     return OrderResponse(**{k: v for k, v in order.items() if k not in ["_id", "created_by"]})
 
@@ -1127,6 +1142,16 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
         user["restaurant_id"], "sale", order["total_amount"],
         data.payment_method, order_id, order.get("day_session_id")
     )
+
+    # Send SMS/WhatsApp notification
+    try:
+        settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]})
+        if not settings or settings.get("sms_enabled", True):
+            restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+            updated_order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+            asyncio.create_task(send_order_notification(updated_order, restaurant))
+    except Exception as e:
+        logger.error(f"Notification trigger error: {e}")
 
     updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
     return OrderResponse(**{k: v for k, v in updated.items() if k not in ["_id", "created_by"]})
@@ -1379,7 +1404,7 @@ async def get_wallet_summary(period: str = "today", date: Optional[str] = None, 
 # ============== ANALYTICS ROUTES ==============
 
 @api_router.get("/analytics")
-async def get_analytics(date: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "analytics")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
@@ -1400,10 +1425,11 @@ async def get_analytics(date: Optional[str] = None, user: dict = Depends(get_cur
     week_start = day_start - timedelta(days=7)
     month_start = day_start - timedelta(days=30)
 
-    all_orders = await db.orders.find(
-        {"restaurant_id": user["restaurant_id"], "payment_status": "paid"},
-        {"_id": 0}
-    ).to_list(10000)
+    order_query = {"restaurant_id": user["restaurant_id"], "payment_status": "paid"}
+    if branch_id and branch_id != "all":
+        order_query["branch_id"] = branch_id
+
+    all_orders = await db.orders.find(order_query, {"_id": 0}).to_list(10000)
 
     # Filter for the selected day
     day_orders = [o for o in all_orders if day_start.isoformat() <= o["created_at"] < day_end.isoformat()] if date else [o for o in all_orders if o["created_at"] >= day_start.isoformat()]
@@ -1827,6 +1853,130 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
             "difference": (session.get("closing_cash") or 0) - (session.get("opening_cash", 0) + payment_methods.get("cash", 0)) if session.get("closing_cash") is not None else None,
         }
     }
+
+# ============== NOTIFICATIONS ==============
+
+async def send_order_notification(order_data: dict, restaurant: dict):
+    """Send SMS/WhatsApp notification to customer after order completion."""
+    phone = order_data.get("customer_phone")
+    name = order_data.get("customer_name", "Customer")
+    if not phone:
+        return
+
+    # Format phone to E.164
+    clean_phone = phone.strip().replace(" ", "")
+    if not clean_phone.startswith("+"):
+        clean_phone = "+91" + clean_phone.lstrip("0")
+
+    restaurant_name = restaurant.get("name", "Restaurant") if restaurant else "Restaurant"
+    order_number = order_data.get("order_number", "N/A")
+    total = order_data.get("total_amount", 0)
+    items_text = ", ".join(f"{i.get('quantity',1)}x {i.get('name','')}" for i in order_data.get("items", [])[:5])
+
+    message_body = (
+        f"Hi {name}! Your order #{order_number} at {restaurant_name} is confirmed.\n"
+        f"Items: {items_text}\n"
+        f"Total: Rs.{total:.2f}\n"
+        f"Payment: {order_data.get('payment_method', 'N/A').upper()}\n"
+        f"Thank you for your order!"
+    )
+
+    # Log notification attempt
+    notif_log = {
+        "id": str(uuid.uuid4()),
+        "restaurant_id": order_data.get("restaurant_id"),
+        "order_id": order_data.get("id"),
+        "order_number": order_number,
+        "customer_name": name,
+        "customer_phone": clean_phone,
+        "message": message_body,
+        "channel": "sms",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    try:
+        from twilio.rest import Client as TwilioClient
+        if TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET:
+            twilio_client = TwilioClient(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET)
+            # Send SMS
+            msg = twilio_client.messages.create(
+                body=message_body,
+                from_=TWILIO_PHONE_NUMBER,
+                to=clean_phone
+            )
+            notif_log["status"] = "sent"
+            notif_log["twilio_sid"] = msg.sid
+            logger.info(f"SMS sent to {clean_phone}: {msg.sid}")
+
+            # Try WhatsApp too
+            try:
+                wa_msg = twilio_client.messages.create(
+                    body=message_body,
+                    from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
+                    to=f"whatsapp:{clean_phone}"
+                )
+                notif_log["whatsapp_status"] = "sent"
+                notif_log["whatsapp_sid"] = wa_msg.sid
+            except Exception as wa_err:
+                notif_log["whatsapp_status"] = "failed"
+                notif_log["whatsapp_error"] = str(wa_err)[:200]
+                logger.warning(f"WhatsApp failed for {clean_phone}: {wa_err}")
+        else:
+            notif_log["status"] = "skipped"
+            notif_log["error"] = "Twilio credentials not configured"
+    except Exception as e:
+        notif_log["status"] = "failed"
+        notif_log["error"] = str(e)[:200]
+        logger.error(f"SMS notification failed: {e}")
+
+    await db.notifications.insert_one(notif_log)
+
+@api_router.get("/notifications")
+async def get_notifications(user: dict = Depends(get_current_user)):
+    """Get recent notification logs."""
+    if not user.get("restaurant_id"):
+        return []
+    notifs = await db.notifications.find(
+        {"restaurant_id": user["restaurant_id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    return notifs
+
+@api_router.post("/notifications/test")
+async def send_test_notification(user: dict = Depends(get_current_user)):
+    """Send a test SMS to verify Twilio setup."""
+    test_order = {
+        "id": "test",
+        "restaurant_id": user.get("restaurant_id"),
+        "customer_phone": TWILIO_PHONE_NUMBER,
+        "customer_name": "Test User",
+        "order_number": "TEST-001",
+        "total_amount": 100.00,
+        "items": [{"name": "Test Item", "quantity": 1}],
+        "payment_method": "cash"
+    }
+    restaurant = await db.restaurants.find_one({"id": user.get("restaurant_id")}, {"_id": 0})
+    await send_order_notification(test_order, restaurant)
+    return {"message": "Test notification sent. Check notification logs."}
+
+@api_router.get("/notifications/settings")
+async def get_notification_settings(user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return {"sms_enabled": False, "whatsapp_enabled": False}
+    settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]}, {"_id": 0})
+    return settings or {"sms_enabled": True, "whatsapp_enabled": True}
+
+@api_router.put("/notifications/settings")
+async def update_notification_settings(data: dict, user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant")
+    await db.notification_settings.update_one(
+        {"restaurant_id": user["restaurant_id"]},
+        {"$set": {"restaurant_id": user["restaurant_id"], "sms_enabled": data.get("sms_enabled", True), "whatsapp_enabled": data.get("whatsapp_enabled", True)}},
+        upsert=True
+    )
+    return {"message": "Settings updated"}
 
 # ============== CUSTOMER LOOKUP ==============
 

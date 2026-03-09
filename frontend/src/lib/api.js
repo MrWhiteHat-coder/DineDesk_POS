@@ -124,8 +124,16 @@ export const walletAPI = {
 
 // Analytics APIs
 export const analyticsAPI = {
-  get: (date) => api.get('/analytics', { params: date ? { date } : {} }),
+  get: (date, branchId) => api.get('/analytics', { params: { ...(date ? { date } : {}), ...(branchId && branchId !== 'all' ? { branch_id: branchId } : {}) } }),
   getAiInsights: () => api.post('/analytics/ai-insights'),
+};
+
+// Notification APIs
+export const notificationAPI = {
+  getAll: () => api.get('/notifications'),
+  sendTest: () => api.post('/notifications/test'),
+  getSettings: () => api.get('/notifications/settings'),
+  updateSettings: (data) => api.put('/notifications/settings', data),
 };
 
 // Admin APIs
