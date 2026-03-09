@@ -22,6 +22,9 @@ import {
   CalendarDays,
   RefreshCw,
   Bell,
+  ChefHat,
+  Wallet,
+  Building2,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -35,10 +38,13 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 
 const navItems = [
-  { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { to: '/pos/orders', icon: ShoppingCart, label: 'Menu Order' },
-  { to: '/pos/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/pos/online-orders', icon: Globe, label: 'Online Orders' },
+  { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true, feature: 'dashboard' },
+  { to: '/pos/orders', icon: ShoppingCart, label: 'Menu Order', feature: 'menu_order' },
+  { to: '/pos/analytics', icon: BarChart3, label: 'Analytics', feature: 'analytics' },
+  { to: '/pos/kds', icon: ChefHat, label: 'Kitchen Display', feature: 'kds' },
+  { to: '/pos/wallet', icon: Wallet, label: 'Wallet', feature: 'wallet' },
+  { to: '/pos/online-orders', icon: Globe, label: 'Online Orders', feature: 'online_orders' },
+  { to: '/pos/branches', icon: Building2, label: 'Branches', feature: 'branches' },
 ];
 
 const manageTableItems = [
@@ -55,6 +61,18 @@ export default function POSLayout() {
   const { user, restaurant, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Role-based access
+  const ROLE_ACCESS = {
+    owner: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches']),
+    manager: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches']),
+    cashier: new Set(['dashboard', 'menu_order', 'wallet', 'analytics']),
+    captain: new Set(['menu_order', 'tables', 'kds']),
+    chef: new Set(['kds']),
+  };
+  const userRole = user?.role || 'owner';
+  const permissions = ROLE_ACCESS[userRole] || ROLE_ACCESS.owner;
+  const hasAccess = (feature) => permissions.has(feature);
   const [isDayOpen, setIsDayOpen] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const [showDayOpenModal, setShowDayOpenModal] = useState(false);
@@ -164,7 +182,7 @@ export default function POSLayout() {
         {/* Navigation */}
         <nav className="flex-1 py-4 px-3 overflow-y-auto">
           <div className="space-y-0.5">
-            {navItems.map((item) => (
+            {navItems.filter(item => hasAccess(item.feature)).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -184,6 +202,7 @@ export default function POSLayout() {
             ))}
 
             {/* Manage Table - Expandable */}
+            {hasAccess('tables') && (
             <div>
               <button
                 onClick={() => toggleSection('tables')}
@@ -220,8 +239,10 @@ export default function POSLayout() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Manage Dish - Expandable */}
+            {hasAccess('menu') && (
             <div>
               <button
                 onClick={() => toggleSection('dishes')}
@@ -258,8 +279,10 @@ export default function POSLayout() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Staff */}
+            {hasAccess('staff') && (
             <NavLink
               to="/pos/staff"
               className={({ isActive }) =>
@@ -274,11 +297,13 @@ export default function POSLayout() {
               <Users className="w-[18px] h-[18px]" />
               <span>Staff</span>
             </NavLink>
+            )}
           </div>
         </nav>
 
         {/* Bottom Section */}
         <div className="px-3 py-3 border-t border-slate-100 space-y-0.5">
+          {hasAccess('settings') && (
           <NavLink
             to="/pos/settings"
             className={({ isActive }) =>
@@ -293,6 +318,7 @@ export default function POSLayout() {
             <Settings className="w-[18px] h-[18px]" />
             <span>Settings</span>
           </NavLink>
+          )}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-[13px] font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all"

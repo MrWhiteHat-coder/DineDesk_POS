@@ -32,6 +32,8 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'foodflow-pos-secret-key-2024')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+
 # Create the main app
 app = FastAPI(title="FoodFlow POS API")
 
@@ -63,6 +65,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     restaurant_id: Optional[str] = None
+    branch_id: Optional[str] = None
     created_at: str
 
 class TokenResponse(BaseModel):
@@ -73,11 +76,11 @@ class TokenResponse(BaseModel):
 # Restaurant Models
 class RestaurantOnboarding(BaseModel):
     name: str
-    restaurant_type: str  # restaurant, cafe, cloud_kitchen
+    restaurant_type: str
     num_tables: int
     avg_daily_orders: int
     uses_delivery: bool
-    delivery_platforms: List[str] = []  # swiggy, zomato
+    delivery_platforms: List[str] = []
     contact_phone: str
     contact_email: EmailStr
     address: str
@@ -110,11 +113,32 @@ class RestaurantResponse(BaseModel):
     created_at: str
     owner_id: str
 
+# Branch Models
+class BranchCreate(BaseModel):
+    name: str
+    address: str
+    city: str
+    pincode: str
+    contact_phone: str
+    share_menu: bool = True
+
+class BranchResponse(BaseModel):
+    id: str
+    restaurant_id: str
+    name: str
+    address: str
+    city: str
+    pincode: str
+    contact_phone: str
+    share_menu: bool
+    is_active: bool
+    created_at: str
+
 # Subscription Models
 class SubscriptionCreate(BaseModel):
     restaurant_id: str
-    payment_method: str  # mock_razorpay
-    
+    payment_method: str
+
 class SubscriptionResponse(BaseModel):
     id: str
     restaurant_id: str
@@ -142,6 +166,12 @@ class MenuCategoryResponse(BaseModel):
     is_active: bool
     created_at: str
 
+class RecipeIngredient(BaseModel):
+    inventory_item_id: str
+    inventory_item_name: Optional[str] = None
+    quantity_needed: float
+    unit: str
+
 class MenuItemCreate(BaseModel):
     category_id: str
     name: str
@@ -150,7 +180,8 @@ class MenuItemCreate(BaseModel):
     image_url: Optional[str] = None
     is_vegetarian: bool = False
     is_available: bool = True
-    preparation_time: int = 15  # minutes
+    preparation_time: int = 15
+    recipe: List[RecipeIngredient] = []
 
 class MenuItemUpdate(BaseModel):
     name: Optional[str] = None
@@ -161,6 +192,7 @@ class MenuItemUpdate(BaseModel):
     is_available: Optional[bool] = None
     preparation_time: Optional[int] = None
     category_id: Optional[str] = None
+    recipe: Optional[List[RecipeIngredient]] = None
 
 class MenuItemResponse(BaseModel):
     id: str
@@ -173,6 +205,7 @@ class MenuItemResponse(BaseModel):
     is_vegetarian: bool
     is_available: bool
     preparation_time: int
+    recipe: List[Dict[str, Any]] = []
     created_at: str
 
 # Order Models
@@ -187,12 +220,18 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
-    payment_method: str  # cash, card, upi
+    payment_method: str = "pending"  # cash, card, upi, pending
     discount_amount: float = 0
-    platform: Optional[str] = None  # swiggy, zomato
+    platform: Optional[str] = None
+
+class OrderAddItems(BaseModel):
+    items: List[OrderItemCreate]
 
 class OrderUpdate(BaseModel):
-    status: str  # received, preparing, ready, completed, cancelled
+    status: str  # received, preparing, ready, served, completed, cancelled
+
+class OrderPayment(BaseModel):
+    payment_method: str  # cash, card, upi
 
 class OrderResponse(BaseModel):
     id: str
@@ -233,7 +272,7 @@ class DaySessionResponse(BaseModel):
 # Inventory Models
 class InventoryItemCreate(BaseModel):
     name: str
-    unit: str  # kg, g, l, ml, pieces
+    unit: str
     quantity: float
     min_quantity: float
     cost_per_unit: float
@@ -259,7 +298,7 @@ class StaffCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
-    role: str  # manager, cashier
+    role: str  # manager, cashier, captain, chef
 
 class StaffResponse(BaseModel):
     id: str
@@ -280,8 +319,25 @@ class TableResponse(BaseModel):
     restaurant_id: str
     table_number: int
     capacity: int
-    status: str  # available, occupied, reserved
+    status: str
     current_order_id: Optional[str] = None
+
+# Wallet Models
+class WalletTransactionCreate(BaseModel):
+    transaction_type: str  # sale, refund, adjustment
+    amount: float
+    payment_method: str  # cash, card, upi
+    reference_id: Optional[str] = None
+    notes: Optional[str] = None
+
+class WalletSummaryResponse(BaseModel):
+    total_cash: float
+    total_card: float
+    total_upi: float
+    total_sales: float
+    total_refunds: float
+    net_amount: float
+    transactions: List[Dict[str, Any]]
 
 # Analytics Models
 class AnalyticsResponse(BaseModel):
@@ -364,6 +420,23 @@ async def get_admin_user(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
+# Role-based access helpers
+ROLE_ACCESS = {
+    "owner": {"dashboard", "menu_order", "analytics", "kds", "tables", "menu", "inventory", "staff", "settings", "online_orders", "wallet", "branches"},
+    "manager": {"dashboard", "menu_order", "analytics", "kds", "tables", "menu", "inventory", "staff", "settings", "online_orders", "wallet", "branches"},
+    "cashier": {"dashboard", "menu_order", "wallet", "analytics"},
+    "captain": {"menu_order", "tables", "kds"},
+    "chef": {"kds"},
+}
+
+def check_role(user: dict, feature: str):
+    role = user.get("role", "")
+    if role == "admin":
+        return
+    allowed = ROLE_ACCESS.get(role, set())
+    if feature not in allowed:
+        raise HTTPException(status_code=403, detail=f"Access denied. Your role '{role}' cannot access '{feature}'")
+
 async def log_action(log_type: str, action: str, user_id: str = None, restaurant_id: str = None, details: str = None):
     log = {
         "id": str(uuid.uuid4()),
@@ -376,41 +449,69 @@ async def log_action(log_type: str, action: str, user_id: str = None, restaurant
     }
     await db.system_logs.insert_one(log)
 
+async def deduct_inventory(restaurant_id: str, order_items_data: list):
+    """Deduct inventory based on recipe for each ordered item."""
+    for item_data in order_items_data:
+        menu_item = await db.menu_items.find_one({"id": item_data["menu_item_id"]}, {"_id": 0})
+        if not menu_item or not menu_item.get("recipe"):
+            continue
+        for ingredient in menu_item["recipe"]:
+            qty_to_deduct = ingredient["quantity_needed"] * item_data["quantity"]
+            inv_item = await db.inventory.find_one({
+                "id": ingredient["inventory_item_id"],
+                "restaurant_id": restaurant_id
+            })
+            if inv_item:
+                new_qty = max(0, inv_item["quantity"] - qty_to_deduct)
+                await db.inventory.update_one(
+                    {"id": ingredient["inventory_item_id"]},
+                    {"$set": {
+                        "quantity": new_qty,
+                        "is_low_stock": new_qty <= inv_item["min_quantity"]
+                    }}
+                )
+
+async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: float, payment_method: str, reference_id: str = None, day_session_id: str = None):
+    txn = {
+        "id": str(uuid.uuid4()),
+        "restaurant_id": restaurant_id,
+        "transaction_type": txn_type,
+        "amount": amount,
+        "payment_method": payment_method,
+        "reference_id": reference_id,
+        "day_session_id": day_session_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.wallet_transactions.insert_one(txn)
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
-    # Check if user exists
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     user_id = str(uuid.uuid4())
     user = {
         "id": user_id,
         "email": user_data.email,
         "password": hash_password(user_data.password),
         "name": user_data.name,
-        "role": "owner",  # New users are restaurant owners
+        "role": "owner",
         "restaurant_id": None,
+        "branch_id": None,
         "onboarding_complete": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
-    
+
     token = create_token(user_id, "owner")
     return TokenResponse(
         access_token=token,
         token_type="bearer",
-        user=UserResponse(
-            id=user_id,
-            email=user_data.email,
-            name=user_data.name,
-            role="owner",
-            restaurant_id=None,
-            created_at=user["created_at"]
-        )
+        user=UserResponse(id=user_id, email=user_data.email, name=user_data.name, role="owner", restaurant_id=None, branch_id=None, created_at=user["created_at"])
     )
 
 @api_router.post("/auth/login", response_model=TokenResponse)
@@ -418,33 +519,30 @@ async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     await log_action("auth", "user_login", user_id=user["id"])
-    
+
     return TokenResponse(
         access_token=token,
         token_type="bearer",
-        user=UserResponse(
-            id=user["id"],
-            email=user["email"],
-            name=user["name"],
-            role=user["role"],
-            restaurant_id=user.get("restaurant_id"),
-            created_at=user["created_at"]
-        )
+        user=UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user["role"],
+                          restaurant_id=user.get("restaurant_id"), branch_id=user.get("branch_id"),
+                          created_at=user["created_at"])
     )
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
-    return UserResponse(
-        id=user["id"],
-        email=user["email"],
-        name=user["name"],
-        role=user["role"],
-        restaurant_id=user.get("restaurant_id"),
-        created_at=user["created_at"]
-    )
+    return UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user["role"],
+                        restaurant_id=user.get("restaurant_id"), branch_id=user.get("branch_id"),
+                        created_at=user["created_at"])
+
+@api_router.get("/auth/permissions")
+async def get_permissions(user: dict = Depends(get_current_user)):
+    role = user.get("role", "")
+    if role == "admin":
+        return {"role": role, "permissions": list(ROLE_ACCESS.get("owner", set()))}
+    return {"role": role, "permissions": list(ROLE_ACCESS.get(role, set()))}
 
 # ============== RESTAURANT ROUTES ==============
 
@@ -465,20 +563,18 @@ async def onboard_restaurant(data: RestaurantOnboarding, user: dict = Depends(ge
         "address": data.address,
         "city": data.city,
         "pincode": data.pincode,
-        "is_active": False,  # Needs subscription
+        "is_active": False,
         "subscription_status": "pending",
         "subscription_expires": None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.restaurants.insert_one(restaurant)
-    
-    # Update user with restaurant_id
+
     await db.users.update_one(
         {"id": user["id"]},
         {"$set": {"restaurant_id": restaurant_id, "onboarding_complete": True}}
     )
-    
-    # Create default tables
+
     for i in range(1, data.num_tables + 1):
         table = {
             "id": str(uuid.uuid4()),
@@ -489,36 +585,85 @@ async def onboard_restaurant(data: RestaurantOnboarding, user: dict = Depends(ge
             "current_order_id": None
         }
         await db.tables.insert_one(table)
-    
+
     await log_action("restaurant", "restaurant_onboarded", user_id=user["id"], restaurant_id=restaurant_id)
-    
     return RestaurantResponse(**{k: v for k, v in restaurant.items() if k != "_id"})
 
 @api_router.get("/restaurants/my", response_model=RestaurantResponse)
 async def get_my_restaurant(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=404, detail="No restaurant found")
-    
     restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
-    
     return RestaurantResponse(**restaurant)
 
 @api_router.put("/restaurants/my", response_model=RestaurantResponse)
 async def update_my_restaurant(data: RestaurantUpdate, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=404, detail="No restaurant found")
-    
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if update_data:
-        await db.restaurants.update_one(
-            {"id": user["restaurant_id"]},
-            {"$set": update_data}
-        )
-    
+        await db.restaurants.update_one({"id": user["restaurant_id"]}, {"$set": update_data})
     restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
     return RestaurantResponse(**restaurant)
+
+# ============== BRANCH ROUTES ==============
+
+@api_router.post("/branches", response_model=BranchResponse)
+async def create_branch(data: BranchCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "branches")
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+
+    branch_id = str(uuid.uuid4())
+    branch = {
+        "id": branch_id,
+        "restaurant_id": user["restaurant_id"],
+        "name": data.name,
+        "address": data.address,
+        "city": data.city,
+        "pincode": data.pincode,
+        "contact_phone": data.contact_phone,
+        "share_menu": data.share_menu,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.branches.insert_one(branch)
+
+    # If not sharing menu, create independent tables for branch
+    return BranchResponse(**{k: v for k, v in branch.items() if k != "_id"})
+
+@api_router.get("/branches", response_model=List[BranchResponse])
+async def get_branches(user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return []
+    branches = await db.branches.find({"restaurant_id": user["restaurant_id"], "is_active": True}, {"_id": 0}).to_list(50)
+    return [BranchResponse(**b) for b in branches]
+
+@api_router.put("/branches/{branch_id}", response_model=BranchResponse)
+async def update_branch(branch_id: str, data: BranchCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "branches")
+    update_data = data.model_dump()
+    await db.branches.update_one(
+        {"id": branch_id, "restaurant_id": user.get("restaurant_id")},
+        {"$set": update_data}
+    )
+    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    return BranchResponse(**branch)
+
+@api_router.delete("/branches/{branch_id}")
+async def delete_branch(branch_id: str, user: dict = Depends(get_current_user)):
+    check_role(user, "branches")
+    result = await db.branches.update_one(
+        {"id": branch_id, "restaurant_id": user.get("restaurant_id")},
+        {"$set": {"is_active": False}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    return {"message": "Branch deleted"}
 
 # ============== SUBSCRIPTION ROUTES ==============
 
@@ -527,14 +672,12 @@ async def create_subscription(data: SubscriptionCreate, user: dict = Depends(get
     restaurant = await db.restaurants.find_one({"id": data.restaurant_id}, {"_id": 0})
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
-    
-    # Mock Razorpay payment
+
     payment_id = f"pay_mock_{uuid.uuid4().hex[:16]}"
-    
     subscription_id = str(uuid.uuid4())
     starts_at = datetime.now(timezone.utc)
     expires_at = starts_at + timedelta(days=365)
-    
+
     subscription = {
         "id": subscription_id,
         "restaurant_id": data.restaurant_id,
@@ -549,40 +692,28 @@ async def create_subscription(data: SubscriptionCreate, user: dict = Depends(get
         "created_at": starts_at.isoformat()
     }
     await db.subscriptions.insert_one(subscription)
-    
-    # Activate restaurant
+
     await db.restaurants.update_one(
         {"id": data.restaurant_id},
-        {"$set": {
-            "is_active": True,
-            "subscription_status": "active",
-            "subscription_expires": expires_at.isoformat()
-        }}
+        {"$set": {"is_active": True, "subscription_status": "active", "subscription_expires": expires_at.isoformat()}}
     )
-    
     await log_action("subscription", "subscription_created", user_id=user["id"], restaurant_id=data.restaurant_id)
-    
     return SubscriptionResponse(**{k: v for k, v in subscription.items() if k != "_id"})
 
 @api_router.get("/subscriptions/my", response_model=List[SubscriptionResponse])
 async def get_my_subscriptions(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
-    
-    subscriptions = await db.subscriptions.find(
-        {"restaurant_id": user["restaurant_id"]},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
-    
+    subscriptions = await db.subscriptions.find({"restaurant_id": user["restaurant_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [SubscriptionResponse(**s) for s in subscriptions]
 
 # ============== MENU CATEGORY ROUTES ==============
 
 @api_router.post("/menu/categories", response_model=MenuCategoryResponse)
 async def create_category(data: MenuCategoryCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "menu")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
     category_id = str(uuid.uuid4())
     category = {
         "id": category_id,
@@ -594,23 +725,20 @@ async def create_category(data: MenuCategoryCreate, user: dict = Depends(get_cur
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.menu_categories.insert_one(category)
-    
     return MenuCategoryResponse(**{k: v for k, v in category.items() if k != "_id"})
 
 @api_router.get("/menu/categories", response_model=List[MenuCategoryResponse])
 async def get_categories(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
-    
     categories = await db.menu_categories.find(
-        {"restaurant_id": user["restaurant_id"], "is_active": True},
-        {"_id": 0}
+        {"restaurant_id": user["restaurant_id"], "is_active": True}, {"_id": 0}
     ).sort("sort_order", 1).to_list(100)
-    
     return [MenuCategoryResponse(**c) for c in categories]
 
 @api_router.delete("/menu/categories/{category_id}")
 async def delete_category(category_id: str, user: dict = Depends(get_current_user)):
+    check_role(user, "menu")
     result = await db.menu_categories.update_one(
         {"id": category_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"is_active": False}}
@@ -623,10 +751,11 @@ async def delete_category(category_id: str, user: dict = Depends(get_current_use
 
 @api_router.post("/menu/items", response_model=MenuItemResponse)
 async def create_menu_item(data: MenuItemCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "menu")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
     item_id = str(uuid.uuid4())
+    recipe_data = [r.model_dump() for r in data.recipe] if data.recipe else []
     item = {
         "id": item_id,
         "restaurant_id": user["restaurant_id"],
@@ -638,43 +767,51 @@ async def create_menu_item(data: MenuItemCreate, user: dict = Depends(get_curren
         "is_vegetarian": data.is_vegetarian,
         "is_available": data.is_available,
         "preparation_time": data.preparation_time,
+        "recipe": recipe_data,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.menu_items.insert_one(item)
-    
     return MenuItemResponse(**{k: v for k, v in item.items() if k != "_id"})
 
 @api_router.get("/menu/items", response_model=List[MenuItemResponse])
 async def get_menu_items(category_id: Optional[str] = None, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
-    
     query = {"restaurant_id": user["restaurant_id"]}
     if category_id:
         query["category_id"] = category_id
-    
     items = await db.menu_items.find(query, {"_id": 0}).to_list(500)
+    for item in items:
+        if "recipe" not in item:
+            item["recipe"] = []
     return [MenuItemResponse(**i) for i in items]
 
 @api_router.put("/menu/items/{item_id}", response_model=MenuItemResponse)
 async def update_menu_item(item_id: str, data: MenuItemUpdate, user: dict = Depends(get_current_user)):
-    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    check_role(user, "menu")
+    update_data = {}
+    for k, v in data.model_dump().items():
+        if v is not None:
+            if k == "recipe":
+                update_data[k] = v
+            else:
+                update_data[k] = v
     if update_data:
         await db.menu_items.update_one(
             {"id": item_id, "restaurant_id": user.get("restaurant_id")},
             {"$set": update_data}
         )
-    
     item = await db.menu_items.find_one({"id": item_id}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
+    if "recipe" not in item:
+        item["recipe"] = []
     return MenuItemResponse(**item)
 
 @api_router.delete("/menu/items/{item_id}")
 async def delete_menu_item(item_id: str, user: dict = Depends(get_current_user)):
-    result = await db.menu_items.delete_one(
-        {"id": item_id, "restaurant_id": user.get("restaurant_id")}
-    )
+    check_role(user, "menu")
+    result = await db.menu_items.delete_one({"id": item_id, "restaurant_id": user.get("restaurant_id")})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted"}
@@ -687,10 +824,8 @@ async def upload_file(file: UploadFile = File(...), user: dict = Depends(get_cur
     file_ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
     file_name = f"{file_id}.{file_ext}"
     file_path = UPLOAD_DIR / file_name
-    
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
     return {"url": f"/api/uploads/{file_name}"}
 
 # ============== DAY SESSION ROUTES ==============
@@ -699,15 +834,9 @@ async def upload_file(file: UploadFile = File(...), user: dict = Depends(get_cur
 async def open_day(opening_cash: float = 0, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
-    # Check if there's already an open session
-    existing = await db.day_sessions.find_one({
-        "restaurant_id": user["restaurant_id"],
-        "status": "open"
-    })
+    existing = await db.day_sessions.find_one({"restaurant_id": user["restaurant_id"], "status": "open"})
     if existing:
         raise HTTPException(status_code=400, detail="Day already open")
-    
     session_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
     session = {
@@ -728,113 +857,70 @@ async def open_day(opening_cash: float = 0, user: dict = Depends(get_current_use
     }
     await db.day_sessions.insert_one(session)
     await log_action("day_session", "day_opened", user_id=user["id"], restaurant_id=user["restaurant_id"])
-    
     return DaySessionResponse(**{k: v for k, v in session.items() if k not in ["_id", "opened_by"]})
 
 @api_router.post("/day-session/close", response_model=DaySessionResponse)
 async def close_day(closing_cash: float = 0, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
-    session = await db.day_sessions.find_one({
-        "restaurant_id": user["restaurant_id"],
-        "status": "open"
-    }, {"_id": 0})
-    
+    session = await db.day_sessions.find_one({"restaurant_id": user["restaurant_id"], "status": "open"}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=400, detail="No open day session")
-    
-    # Calculate totals
-    orders = await db.orders.find({
-        "day_session_id": session["id"],
-        "status": "completed"
-    }, {"_id": 0}).to_list(1000)
-    
+    orders = await db.orders.find({"day_session_id": session["id"], "payment_status": "paid"}, {"_id": 0}).to_list(1000)
     total_sales = sum(o["total_amount"] for o in orders)
     cash_sales = sum(o["total_amount"] for o in orders if o["payment_method"] == "cash")
     card_sales = sum(o["total_amount"] for o in orders if o["payment_method"] == "card")
     upi_sales = sum(o["total_amount"] for o in orders if o["payment_method"] == "upi")
-    
     now = datetime.now(timezone.utc)
     await db.day_sessions.update_one(
         {"id": session["id"]},
-        {"$set": {
-            "status": "closed",
-            "closed_at": now.isoformat(),
-            "closing_cash": closing_cash,
-            "total_sales": total_sales,
-            "total_orders": len(orders),
-            "cash_sales": cash_sales,
-            "card_sales": card_sales,
-            "upi_sales": upi_sales
-        }}
+        {"$set": {"status": "closed", "closed_at": now.isoformat(), "closing_cash": closing_cash,
+                  "total_sales": total_sales, "total_orders": len(orders),
+                  "cash_sales": cash_sales, "card_sales": card_sales, "upi_sales": upi_sales}}
     )
-    
     updated = await db.day_sessions.find_one({"id": session["id"]}, {"_id": 0})
     await log_action("day_session", "day_closed", user_id=user["id"], restaurant_id=user["restaurant_id"])
-    
     return DaySessionResponse(**{k: v for k, v in updated.items() if k not in ["_id", "opened_by"]})
 
 @api_router.get("/day-session/current", response_model=Optional[DaySessionResponse])
 async def get_current_session(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return None
-    
-    session = await db.day_sessions.find_one({
-        "restaurant_id": user["restaurant_id"],
-        "status": "open"
-    }, {"_id": 0})
-    
+    session = await db.day_sessions.find_one({"restaurant_id": user["restaurant_id"], "status": "open"}, {"_id": 0})
     if not session:
         return None
-    
     return DaySessionResponse(**{k: v for k, v in session.items() if k not in ["_id", "opened_by"]})
 
 @api_router.get("/day-session/history", response_model=List[DaySessionResponse])
 async def get_session_history(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
-    
-    sessions = await db.day_sessions.find(
-        {"restaurant_id": user["restaurant_id"]},
-        {"_id": 0, "opened_by": 0}
-    ).sort("opened_at", -1).to_list(30)
-    
+    sessions = await db.day_sessions.find({"restaurant_id": user["restaurant_id"]}, {"_id": 0, "opened_by": 0}).sort("opened_at", -1).to_list(30)
     return [DaySessionResponse(**s) for s in sessions]
 
 # ============== ORDER ROUTES ==============
 
 @api_router.post("/orders", response_model=OrderResponse)
 async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "menu_order")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
-    # Check day is open
-    session = await db.day_sessions.find_one({
-        "restaurant_id": user["restaurant_id"],
-        "status": "open"
-    }, {"_id": 0})
-    
+    session = await db.day_sessions.find_one({"restaurant_id": user["restaurant_id"], "status": "open"}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=400, detail="Day not open. Please open the day first.")
-    
-    # Generate order number
+
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
     count = await db.orders.count_documents({"restaurant_id": user["restaurant_id"], "order_number": {"$regex": f"^{today}"}})
     order_number = f"{today}{count + 1:04d}"
-    
-    # Calculate totals
+
     order_items = []
     subtotal = 0
-    
     for item_data in data.items:
         menu_item = await db.menu_items.find_one({"id": item_data.menu_item_id}, {"_id": 0})
         if not menu_item:
             raise HTTPException(status_code=404, detail=f"Menu item {item_data.menu_item_id} not found")
-        
         item_total = menu_item["price"] * item_data.quantity
         subtotal += item_total
-        
         order_items.append({
             "menu_item_id": item_data.menu_item_id,
             "name": menu_item["name"],
@@ -843,11 +929,13 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
             "notes": item_data.notes,
             "total": item_total
         })
-    
-    tax_rate = 0.05  # 5% GST
+
+    tax_rate = 0.05
     tax_amount = round(subtotal * tax_rate, 2)
     total_amount = round(subtotal + tax_amount - data.discount_amount, 2)
-    
+
+    # For dine-in with pending payment, payment_status is "pending"
+    is_pending_payment = data.payment_method == "pending"
     order_id = str(uuid.uuid4())
     order = {
         "id": order_id,
@@ -863,7 +951,7 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         "discount_amount": data.discount_amount,
         "total_amount": total_amount,
         "payment_method": data.payment_method,
-        "payment_status": "paid",
+        "payment_status": "pending" if is_pending_payment else "paid",
         "status": "received",
         "platform": data.platform,
         "day_session_id": session["id"],
@@ -871,27 +959,32 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.orders.insert_one(order)
-    
+
     # Update table status if dine-in
     if data.order_type == "dine_in" and data.table_number:
         await db.tables.update_one(
             {"restaurant_id": user["restaurant_id"], "table_number": data.table_number},
             {"$set": {"status": "occupied", "current_order_id": order_id}}
         )
-    
+
+    # Deduct inventory
+    await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
+
+    # Record wallet transaction if paid
+    if not is_pending_payment:
+        await record_wallet_transaction(user["restaurant_id"], "sale", total_amount, data.payment_method, order_id, session["id"])
+
     return OrderResponse(**{k: v for k, v in order.items() if k not in ["_id", "created_by"]})
 
 @api_router.get("/orders", response_model=List[OrderResponse])
 async def get_orders(status: Optional[str] = None, order_type: Optional[str] = None, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
-    
     query = {"restaurant_id": user["restaurant_id"]}
     if status:
         query["status"] = status
     if order_type:
         query["order_type"] = order_type
-    
     orders = await db.orders.find(query, {"_id": 0, "created_by": 0}).sort("created_at", -1).to_list(100)
     return [OrderResponse(**o) for o in orders]
 
@@ -899,53 +992,148 @@ async def get_orders(status: Optional[str] = None, order_type: Optional[str] = N
 async def get_today_orders(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
-    
-    session = await db.day_sessions.find_one({
-        "restaurant_id": user["restaurant_id"],
-        "status": "open"
-    }, {"_id": 0})
-    
+    session = await db.day_sessions.find_one({"restaurant_id": user["restaurant_id"], "status": "open"}, {"_id": 0})
     if not session:
         return []
-    
-    orders = await db.orders.find(
-        {"day_session_id": session["id"]},
-        {"_id": 0, "created_by": 0}
-    ).sort("created_at", -1).to_list(500)
-    
+    orders = await db.orders.find({"day_session_id": session["id"]}, {"_id": 0, "created_by": 0}).sort("created_at", -1).to_list(500)
+    return [OrderResponse(**o) for o in orders]
+
+@api_router.get("/orders/running", response_model=List[OrderResponse])
+async def get_running_orders(user: dict = Depends(get_current_user)):
+    """Get orders that are not completed/cancelled (for table management)."""
+    if not user.get("restaurant_id"):
+        return []
+    orders = await db.orders.find({
+        "restaurant_id": user["restaurant_id"],
+        "status": {"$nin": ["completed", "cancelled"]},
+        "order_type": "dine_in"
+    }, {"_id": 0, "created_by": 0}).sort("created_at", -1).to_list(100)
     return [OrderResponse(**o) for o in orders]
 
 @api_router.put("/orders/{order_id}/status", response_model=OrderResponse)
 async def update_order_status(order_id: str, data: OrderUpdate, user: dict = Depends(get_current_user)):
-    order = await db.orders.find_one(
-        {"id": order_id, "restaurant_id": user.get("restaurant_id")},
-        {"_id": 0}
-    )
+    order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    
-    await db.orders.update_one(
-        {"id": order_id},
-        {"$set": {"status": data.status}}
-    )
-    
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": data.status}})
+
     # Free table if completed and dine-in
     if data.status == "completed" and order["order_type"] == "dine_in" and order.get("table_number"):
         await db.tables.update_one(
             {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"]},
             {"$set": {"status": "available", "current_order_id": None}}
         )
-    
+
     order["status"] = data.status
     return OrderResponse(**{k: v for k, v in order.items() if k not in ["_id", "created_by"]})
+
+@api_router.post("/orders/{order_id}/add-items", response_model=OrderResponse)
+async def add_items_to_order(order_id: str, data: OrderAddItems, user: dict = Depends(get_current_user)):
+    """Add more items to a running dine-in order."""
+    check_role(user, "menu_order")
+    order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order["status"] in ["completed", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Cannot add items to completed/cancelled order")
+
+    new_items = []
+    additional_subtotal = 0
+    for item_data in data.items:
+        menu_item = await db.menu_items.find_one({"id": item_data.menu_item_id}, {"_id": 0})
+        if not menu_item:
+            continue
+        item_total = menu_item["price"] * item_data.quantity
+        additional_subtotal += item_total
+        new_items.append({
+            "menu_item_id": item_data.menu_item_id,
+            "name": menu_item["name"],
+            "price": menu_item["price"],
+            "quantity": item_data.quantity,
+            "notes": item_data.notes,
+            "total": item_total
+        })
+
+    all_items = order["items"] + new_items
+    new_subtotal = sum(i["total"] for i in all_items)
+    tax_amount = round(new_subtotal * 0.05, 2)
+    total_amount = round(new_subtotal + tax_amount - order["discount_amount"], 2)
+
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {"items": all_items, "subtotal": new_subtotal, "tax_amount": tax_amount, "total_amount": total_amount}}
+    )
+
+    await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
+
+    updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    return OrderResponse(**{k: v for k, v in updated.items() if k not in ["_id", "created_by"]})
+
+@api_router.post("/orders/{order_id}/pay", response_model=OrderResponse)
+async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_current_user)):
+    """Complete payment for a running dine-in order and release the table."""
+    check_role(user, "menu_order")
+    order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order["payment_status"] == "paid":
+        raise HTTPException(status_code=400, detail="Order already paid")
+
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {"payment_method": data.payment_method, "payment_status": "paid", "status": "completed"}}
+    )
+
+    # Free table
+    if order["order_type"] == "dine_in" and order.get("table_number"):
+        await db.tables.update_one(
+            {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"]},
+            {"$set": {"status": "available", "current_order_id": None}}
+        )
+
+    # Record wallet transaction
+    await record_wallet_transaction(
+        user["restaurant_id"], "sale", order["total_amount"],
+        data.payment_method, order_id, order.get("day_session_id")
+    )
+
+    updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    return OrderResponse(**{k: v for k, v in updated.items() if k not in ["_id", "created_by"]})
+
+# ============== KDS (Kitchen Display System) ROUTES ==============
+
+@api_router.get("/kds/orders")
+async def get_kds_orders(user: dict = Depends(get_current_user)):
+    """Get active orders for the kitchen display."""
+    check_role(user, "kds")
+    if not user.get("restaurant_id"):
+        return []
+    orders = await db.orders.find({
+        "restaurant_id": user["restaurant_id"],
+        "status": {"$in": ["received", "preparing"]}
+    }, {"_id": 0, "created_by": 0}).sort("created_at", 1).to_list(50)
+    return orders
+
+@api_router.put("/kds/orders/{order_id}/status")
+async def update_kds_order_status(order_id: str, new_status: str, user: dict = Depends(get_current_user)):
+    """Update order status from KDS (received -> preparing -> ready -> served)."""
+    check_role(user, "kds")
+    valid = ["preparing", "ready", "served"]
+    if new_status not in valid:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid}")
+    await db.orders.update_one(
+        {"id": order_id, "restaurant_id": user.get("restaurant_id")},
+        {"$set": {"status": new_status}}
+    )
+    return {"message": f"Order updated to {new_status}"}
 
 # ============== INVENTORY ROUTES ==============
 
 @api_router.post("/inventory", response_model=InventoryItemResponse)
 async def create_inventory_item(data: InventoryItemCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "inventory")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
     item_id = str(uuid.uuid4())
     item = {
         "id": item_id,
@@ -959,38 +1147,30 @@ async def create_inventory_item(data: InventoryItemCreate, user: dict = Depends(
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.inventory.insert_one(item)
-    
     return InventoryItemResponse(**{k: v for k, v in item.items() if k != "_id"})
 
 @api_router.get("/inventory", response_model=List[InventoryItemResponse])
 async def get_inventory(low_stock_only: bool = False, user: dict = Depends(get_current_user)):
+    check_role(user, "inventory")
     if not user.get("restaurant_id"):
         return []
-    
     query = {"restaurant_id": user["restaurant_id"]}
     if low_stock_only:
         query["is_low_stock"] = True
-    
     items = await db.inventory.find(query, {"_id": 0}).to_list(500)
     return [InventoryItemResponse(**i) for i in items]
 
 @api_router.put("/inventory/{item_id}", response_model=InventoryItemResponse)
 async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: dict = Depends(get_current_user)):
+    check_role(user, "inventory")
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
-    
     if update_data:
-        # Recalculate low stock status
         item = await db.inventory.find_one({"id": item_id}, {"_id": 0})
         if item:
             new_quantity = update_data.get("quantity", item["quantity"])
             new_min = update_data.get("min_quantity", item["min_quantity"])
             update_data["is_low_stock"] = new_quantity <= new_min
-        
-        await db.inventory.update_one(
-            {"id": item_id, "restaurant_id": user.get("restaurant_id")},
-            {"$set": update_data}
-        )
-    
+        await db.inventory.update_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"$set": update_data})
     item = await db.inventory.find_one({"id": item_id}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -998,9 +1178,8 @@ async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: d
 
 @api_router.delete("/inventory/{item_id}")
 async def delete_inventory_item(item_id: str, user: dict = Depends(get_current_user)):
-    result = await db.inventory.delete_one(
-        {"id": item_id, "restaurant_id": user.get("restaurant_id")}
-    )
+    check_role(user, "inventory")
+    result = await db.inventory.delete_one({"id": item_id, "restaurant_id": user.get("restaurant_id")})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted"}
@@ -1011,19 +1190,14 @@ async def delete_inventory_item(item_id: str, user: dict = Depends(get_current_u
 async def get_tables(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
-    
-    tables = await db.tables.find(
-        {"restaurant_id": user["restaurant_id"]},
-        {"_id": 0}
-    ).sort("table_number", 1).to_list(100)
-    
+    tables = await db.tables.find({"restaurant_id": user["restaurant_id"]}, {"_id": 0}).sort("table_number", 1).to_list(100)
     return [TableResponse(**t) for t in tables]
 
 @api_router.post("/tables", response_model=TableResponse)
 async def create_table(data: TableCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "tables")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
     table_id = str(uuid.uuid4())
     table = {
         "id": table_id,
@@ -1034,7 +1208,6 @@ async def create_table(data: TableCreate, user: dict = Depends(get_current_user)
         "current_order_id": None
     }
     await db.tables.insert_one(table)
-    
     return TableResponse(**{k: v for k, v in table.items() if k != "_id"})
 
 @api_router.put("/tables/{table_id}/status")
@@ -1045,21 +1218,34 @@ async def update_table_status(table_id: str, status: str, user: dict = Depends(g
     )
     return {"message": "Table status updated"}
 
+@api_router.put("/tables/{table_id}/release")
+async def release_table(table_id: str, user: dict = Depends(get_current_user)):
+    """Release an occupied table (marks table as available, doesn't affect order)."""
+    check_role(user, "tables")
+    await db.tables.update_one(
+        {"id": table_id, "restaurant_id": user.get("restaurant_id")},
+        {"$set": {"status": "available", "current_order_id": None}}
+    )
+    return {"message": "Table released"}
+
 # ============== STAFF ROUTES ==============
 
 @api_router.post("/staff", response_model=StaffResponse)
 async def create_staff(data: StaffCreate, user: dict = Depends(get_current_user)):
+    check_role(user, "staff")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
-    if user.get("role") not in ["owner", "admin"]:
-        raise HTTPException(status_code=403, detail="Only owners can create staff")
-    
-    # Check if email exists
+    if user.get("role") not in ["owner", "admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Only owners/managers can create staff")
+
+    valid_roles = ["manager", "cashier", "captain", "chef"]
+    if data.role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
+
     existing = await db.users.find_one({"email": data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     staff_id = str(uuid.uuid4())
     staff = {
         "id": staff_id,
@@ -1068,30 +1254,29 @@ async def create_staff(data: StaffCreate, user: dict = Depends(get_current_user)
         "name": data.name,
         "role": data.role,
         "restaurant_id": user["restaurant_id"],
+        "branch_id": None,
         "is_active": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(staff)
-    
-    return StaffResponse(**{k: v for k, v in staff.items() if k not in ["_id", "password"]})
+    return StaffResponse(**{k: v for k, v in staff.items() if k not in ["_id", "password", "branch_id"]})
 
 @api_router.get("/staff", response_model=List[StaffResponse])
 async def get_staff(user: dict = Depends(get_current_user)):
+    check_role(user, "staff")
     if not user.get("restaurant_id"):
         return []
-    
     staff = await db.users.find(
-        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["manager", "cashier"]}},
+        {"restaurant_id": user["restaurant_id"], "role": {"$in": ["manager", "cashier", "captain", "chef"]}},
         {"_id": 0, "password": 0}
     ).to_list(100)
-    
-    return [StaffResponse(**s) for s in staff]
+    return [StaffResponse(**{k: v for k, v in s.items() if k not in ["branch_id", "onboarding_complete"]}) for s in staff]
 
 @api_router.delete("/staff/{staff_id}")
 async def delete_staff(staff_id: str, user: dict = Depends(get_current_user)):
-    if user.get("role") not in ["owner", "admin"]:
-        raise HTTPException(status_code=403, detail="Only owners can delete staff")
-    
+    check_role(user, "staff")
+    if user.get("role") not in ["owner", "admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Only owners/managers can delete staff")
     result = await db.users.update_one(
         {"id": staff_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"is_active": False}}
@@ -1100,44 +1285,79 @@ async def delete_staff(staff_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Staff not found")
     return {"message": "Staff deleted"}
 
+# ============== WALLET ROUTES ==============
+
+@api_router.get("/wallet/summary")
+async def get_wallet_summary(period: str = "today", user: dict = Depends(get_current_user)):
+    """Get wallet summary with payment method breakdown."""
+    check_role(user, "wallet")
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+
+    now = datetime.now(timezone.utc)
+    if period == "today":
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    elif period == "week":
+        start = (now - timedelta(days=7)).isoformat()
+    elif period == "month":
+        start = (now - timedelta(days=30)).isoformat()
+    else:
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+    txns = await db.wallet_transactions.find({
+        "restaurant_id": user["restaurant_id"],
+        "created_at": {"$gte": start}
+    }, {"_id": 0}).sort("created_at", -1).to_list(500)
+
+    total_cash = sum(t["amount"] for t in txns if t["payment_method"] == "cash" and t["transaction_type"] == "sale")
+    total_card = sum(t["amount"] for t in txns if t["payment_method"] == "card" and t["transaction_type"] == "sale")
+    total_upi = sum(t["amount"] for t in txns if t["payment_method"] == "upi" and t["transaction_type"] == "sale")
+    total_refunds = sum(t["amount"] for t in txns if t["transaction_type"] == "refund")
+
+    return {
+        "total_cash": total_cash,
+        "total_card": total_card,
+        "total_upi": total_upi,
+        "total_sales": total_cash + total_card + total_upi,
+        "total_refunds": total_refunds,
+        "net_amount": total_cash + total_card + total_upi - total_refunds,
+        "transactions": txns[:50]
+    }
+
 # ============== ANALYTICS ROUTES ==============
 
 @api_router.get("/analytics", response_model=AnalyticsResponse)
 async def get_analytics(user: dict = Depends(get_current_user)):
+    check_role(user, "analytics")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
-    
+
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = today_start - timedelta(days=7)
     month_start = today_start - timedelta(days=30)
-    
-    # Get orders for different periods
+
     all_orders = await db.orders.find(
-        {"restaurant_id": user["restaurant_id"], "status": "completed"},
+        {"restaurant_id": user["restaurant_id"], "payment_status": "paid"},
         {"_id": 0}
     ).to_list(10000)
-    
+
     daily_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= today_start.isoformat())
     weekly_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= week_start.isoformat())
     monthly_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= month_start.isoformat())
-    
-    # Top items
+
     item_counts = {}
     for order in all_orders:
         for item in order.get("items", []):
             name = item.get("name", "Unknown")
             item_counts[name] = item_counts.get(name, 0) + item.get("quantity", 1)
-    
     top_items = sorted([{"name": k, "count": v} for k, v in item_counts.items()], key=lambda x: -x["count"])[:10]
-    
-    # Order type breakdown
+
     order_types = {}
     for order in all_orders:
         ot = order.get("order_type", "unknown")
         order_types[ot] = order_types.get(ot, 0) + 1
-    
-    # Hourly distribution
+
     hourly = {}
     for order in all_orders:
         try:
@@ -1146,23 +1366,92 @@ async def get_analytics(user: dict = Depends(get_current_user)):
         except:
             pass
     hourly_orders = [{"hour": h, "orders": c} for h, c in sorted(hourly.items())]
-    
-    # Payment breakdown
+
     payment_breakdown = {}
     for order in all_orders:
         pm = order.get("payment_method", "unknown")
         payment_breakdown[pm] = payment_breakdown.get(pm, 0) + order["total_amount"]
-    
+
     return AnalyticsResponse(
-        daily_sales=daily_sales,
-        weekly_sales=weekly_sales,
-        monthly_sales=monthly_sales,
-        total_orders=len(all_orders),
-        top_items=top_items,
-        order_type_breakdown=order_types,
-        hourly_orders=hourly_orders,
-        payment_breakdown=payment_breakdown
+        daily_sales=daily_sales, weekly_sales=weekly_sales, monthly_sales=monthly_sales,
+        total_orders=len(all_orders), top_items=top_items, order_type_breakdown=order_types,
+        hourly_orders=hourly_orders, payment_breakdown=payment_breakdown
     )
+
+@api_router.post("/analytics/ai-insights")
+async def get_ai_insights(user: dict = Depends(get_current_user)):
+    """Generate AI-powered sales insights using Claude."""
+    check_role(user, "analytics")
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+
+    # Gather data
+    now = datetime.now(timezone.utc)
+    month_start = (now - timedelta(days=30)).isoformat()
+    week_start = (now - timedelta(days=7)).isoformat()
+
+    orders = await db.orders.find({
+        "restaurant_id": user["restaurant_id"],
+        "payment_status": "paid"
+    }, {"_id": 0}).to_list(5000)
+
+    monthly_orders = [o for o in orders if o["created_at"] >= month_start]
+    weekly_orders = [o for o in orders if o["created_at"] >= week_start]
+
+    monthly_sales = sum(o["total_amount"] for o in monthly_orders)
+    weekly_sales = sum(o["total_amount"] for o in weekly_orders)
+    avg_order_value = monthly_sales / len(monthly_orders) if monthly_orders else 0
+
+    # Top items
+    item_counts = {}
+    for o in monthly_orders:
+        for it in o.get("items", []):
+            name = it.get("name", "Unknown")
+            item_counts[name] = item_counts.get(name, 0) + it.get("quantity", 1)
+    top_items = sorted(item_counts.items(), key=lambda x: -x[1])[:5]
+
+    # Payment breakdown
+    payment_methods = {}
+    for o in monthly_orders:
+        pm = o.get("payment_method", "unknown")
+        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
+
+    order_types = {}
+    for o in monthly_orders:
+        ot = o.get("order_type", "unknown")
+        order_types[ot] = order_types.get(ot, 0) + 1
+
+    # Low stock items
+    low_stock = await db.inventory.find({
+        "restaurant_id": user["restaurant_id"],
+        "is_low_stock": True
+    }, {"_id": 0, "name": 1, "quantity": 1, "unit": 1}).to_list(20)
+
+    data_summary = f"""
+Restaurant Sales Report (Last 30 Days):
+- Total Orders: {len(monthly_orders)}
+- Monthly Revenue: ₹{monthly_sales:.2f}
+- Weekly Revenue: ₹{weekly_sales:.2f}
+- Average Order Value: ₹{avg_order_value:.2f}
+- Top Items: {', '.join(f'{name} ({count})' for name, count in top_items)}
+- Payment Methods: {', '.join(f'{k}: ₹{v:.2f}' for k, v in payment_methods.items())}
+- Order Types: {', '.join(f'{k}: {v}' for k, v in order_types.items())}
+- Low Stock Items: {', '.join(f'{i["name"]} ({i["quantity"]} {i.get("unit","")})' for i in low_stock) if low_stock else 'None'}
+"""
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"analytics-{user['restaurant_id']}-{uuid.uuid4().hex[:8]}",
+            system_message="You are a restaurant business analyst. Analyze the sales data and provide actionable insights. Keep your response concise with 3-5 key insights and 3-5 improvement suggestions. Use bullet points. Focus on revenue growth, menu optimization, and operational efficiency. Format with markdown headers."
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+
+        response = await chat.send_message(UserMessage(text=f"Analyze this restaurant data and provide insights:\n{data_summary}"))
+        return {"insights": response, "data_summary": {"monthly_orders": len(monthly_orders), "monthly_sales": monthly_sales, "weekly_sales": weekly_sales, "avg_order_value": avg_order_value, "top_items": top_items}}
+    except Exception as e:
+        logger.error(f"AI insights error: {e}")
+        return {"insights": f"AI insights temporarily unavailable. Error: {str(e)}", "data_summary": {"monthly_orders": len(monthly_orders), "monthly_sales": monthly_sales}}
 
 # ============== ADMIN ROUTES ==============
 
@@ -1171,52 +1460,31 @@ async def get_admin_stats(user: dict = Depends(get_admin_user)):
     total_restaurants = await db.restaurants.count_documents({})
     active_restaurants = await db.restaurants.count_documents({"is_active": True})
     total_users = await db.users.count_documents({})
-    
-    # Monthly revenue from subscriptions
     month_start = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    subscriptions = await db.subscriptions.find(
-        {"created_at": {"$gte": month_start}},
-        {"_id": 0}
-    ).to_list(1000)
+    subscriptions = await db.subscriptions.find({"created_at": {"$gte": month_start}}, {"_id": 0}).to_list(1000)
     monthly_revenue = sum(s["amount"] for s in subscriptions)
-    
-    # Daily orders across all restaurants
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     daily_orders = await db.orders.count_documents({"created_at": {"$gte": today_start}})
-    
-    return AdminStats(
-        total_restaurants=total_restaurants,
-        active_restaurants=active_restaurants,
-        total_users=total_users,
-        monthly_revenue=monthly_revenue,
-        daily_orders=daily_orders
-    )
+    return AdminStats(total_restaurants=total_restaurants, active_restaurants=active_restaurants,
+                      total_users=total_users, monthly_revenue=monthly_revenue, daily_orders=daily_orders)
 
 @api_router.get("/admin/restaurants")
 async def get_all_restaurants(search: Optional[str] = None, status: Optional[str] = None, user: dict = Depends(get_admin_user)):
     query = {}
     if search:
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"city": {"$regex": search, "$options": "i"}}
-        ]
+        query["$or"] = [{"name": {"$regex": search, "$options": "i"}}, {"city": {"$regex": search, "$options": "i"}}]
     if status == "active":
         query["is_active"] = True
     elif status == "inactive":
         query["is_active"] = False
-    
     restaurants = await db.restaurants.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return restaurants
 
 @api_router.put("/admin/restaurants/{restaurant_id}/status")
 async def update_restaurant_status(restaurant_id: str, is_active: bool, user: dict = Depends(get_admin_user)):
-    result = await db.restaurants.update_one(
-        {"id": restaurant_id},
-        {"$set": {"is_active": is_active}}
-    )
+    result = await db.restaurants.update_one({"id": restaurant_id}, {"$set": {"is_active": is_active}})
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Restaurant not found")
-    
     await log_action("admin", f"restaurant_{'activated' if is_active else 'suspended'}", user_id=user["id"], restaurant_id=restaurant_id)
     return {"message": f"Restaurant {'activated' if is_active else 'suspended'}"}
 
@@ -1235,15 +1503,12 @@ async def get_system_logs(log_type: Optional[str] = None, user: dict = Depends(g
     query = {}
     if log_type:
         query["log_type"] = log_type
-    
     logs = await db.system_logs.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return [SystemLogResponse(**l) for l in logs]
 
 @api_router.get("/admin/analytics")
 async def get_platform_analytics(user: dict = Depends(get_admin_user)):
-    # Orders per day for last 30 days
     orders = await db.orders.find({}, {"_id": 0, "created_at": 1, "total_amount": 1}).to_list(10000)
-    
     daily_orders = {}
     daily_revenue = {}
     for order in orders:
@@ -1253,112 +1518,68 @@ async def get_platform_analytics(user: dict = Depends(get_admin_user)):
             daily_revenue[date] = daily_revenue.get(date, 0) + order.get("total_amount", 0)
         except:
             pass
-    
     return {
         "orders_by_day": [{"date": k, "orders": v} for k, v in sorted(daily_orders.items())[-30:]],
         "revenue_by_day": [{"date": k, "revenue": v} for k, v in sorted(daily_revenue.items())[-30:]]
     }
 
-# ============== WEBHOOK ROUTES (Mock for Swiggy/Zomato) ==============
+# ============== WEBHOOK ROUTES (Mock) ==============
 
 @api_router.post("/webhooks/swiggy")
 async def swiggy_webhook(data: SwiggyWebhook):
-    """Webhook endpoint for Swiggy orders (Mock)"""
-    # In production, verify webhook signature
     restaurant = await db.restaurants.find_one({"id": data.restaurant_id}, {"_id": 0})
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
-    
-    # Check day session
-    session = await db.day_sessions.find_one({
-        "restaurant_id": data.restaurant_id,
-        "status": "open"
-    }, {"_id": 0})
-    
+    session = await db.day_sessions.find_one({"restaurant_id": data.restaurant_id, "status": "open"}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=400, detail="Restaurant day not open")
-    
-    # Create order
     order_id = str(uuid.uuid4())
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
     count = await db.orders.count_documents({"restaurant_id": data.restaurant_id, "order_number": {"$regex": f"^{today}"}})
-    order_number = f"{today}{count + 1:04d}"
-    
     order = {
-        "id": order_id,
-        "order_number": order_number,
-        "restaurant_id": data.restaurant_id,
-        "order_type": "online",
-        "items": data.items,
-        "customer_name": data.customer.get("name"),
+        "id": order_id, "order_number": f"{today}{count + 1:04d}",
+        "restaurant_id": data.restaurant_id, "order_type": "online",
+        "items": data.items, "customer_name": data.customer.get("name"),
         "customer_phone": data.customer.get("phone"),
-        "subtotal": data.total_amount,
-        "tax_amount": 0,
-        "discount_amount": 0,
-        "total_amount": data.total_amount,
-        "payment_method": "online",
-        "payment_status": "paid",
-        "status": "received",
-        "platform": "swiggy",
-        "external_order_id": data.order_id,
-        "delivery_address": data.delivery_address,
-        "day_session_id": session["id"],
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "subtotal": data.total_amount, "tax_amount": 0, "discount_amount": 0,
+        "total_amount": data.total_amount, "payment_method": "online",
+        "payment_status": "paid", "status": "received", "platform": "swiggy",
+        "external_order_id": data.order_id, "delivery_address": data.delivery_address,
+        "day_session_id": session["id"], "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.orders.insert_one(order)
-    
     return {"message": "Order received", "order_id": order_id}
 
 @api_router.post("/webhooks/zomato")
 async def zomato_webhook(data: ZomatoWebhook):
-    """Webhook endpoint for Zomato orders (Mock)"""
     restaurant = await db.restaurants.find_one({"id": data.restaurant_id}, {"_id": 0})
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
-    
-    session = await db.day_sessions.find_one({
-        "restaurant_id": data.restaurant_id,
-        "status": "open"
-    }, {"_id": 0})
-    
+    session = await db.day_sessions.find_one({"restaurant_id": data.restaurant_id, "status": "open"}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=400, detail="Restaurant day not open")
-    
     order_id = str(uuid.uuid4())
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
     count = await db.orders.count_documents({"restaurant_id": data.restaurant_id, "order_number": {"$regex": f"^{today}"}})
-    order_number = f"{today}{count + 1:04d}"
-    
     order = {
-        "id": order_id,
-        "order_number": order_number,
-        "restaurant_id": data.restaurant_id,
-        "order_type": "online",
-        "items": data.items,
-        "customer_name": data.customer.get("name"),
+        "id": order_id, "order_number": f"{today}{count + 1:04d}",
+        "restaurant_id": data.restaurant_id, "order_type": "online",
+        "items": data.items, "customer_name": data.customer.get("name"),
         "customer_phone": data.customer.get("phone"),
-        "subtotal": data.total_amount,
-        "tax_amount": 0,
-        "discount_amount": 0,
-        "total_amount": data.total_amount,
-        "payment_method": "online",
-        "payment_status": "paid",
-        "status": "received",
-        "platform": "zomato",
-        "external_order_id": data.order_id,
-        "delivery_address": data.delivery_address,
-        "day_session_id": session["id"],
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "subtotal": data.total_amount, "tax_amount": 0, "discount_amount": 0,
+        "total_amount": data.total_amount, "payment_method": "online",
+        "payment_status": "paid", "status": "received", "platform": "zomato",
+        "external_order_id": data.order_id, "delivery_address": data.delivery_address,
+        "day_session_id": session["id"], "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.orders.insert_one(order)
-    
     return {"message": "Order received", "order_id": order_id}
 
 # ============== UTILITY ROUTES ==============
 
 @api_router.get("/")
 async def root():
-    return {"message": "FoodFlow POS API", "version": "1.0.0"}
+    return {"message": "FoodFlow POS API", "version": "2.0.0"}
 
 @api_router.get("/health")
 async def health():
@@ -1381,7 +1602,6 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    # Create admin user if not exists
     admin = await db.users.find_one({"email": "admin@foodflow.com"})
     if not admin:
         admin_user = {
@@ -1391,16 +1611,18 @@ async def startup():
             "name": "Platform Admin",
             "role": "admin",
             "restaurant_id": None,
+            "branch_id": None,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(admin_user)
         logger.info("Admin user created: admin@foodflow.com / admin123")
-    
-    # Create indexes
+
     await db.users.create_index("email", unique=True)
     await db.restaurants.create_index("owner_id")
     await db.orders.create_index([("restaurant_id", 1), ("created_at", -1)])
     await db.menu_items.create_index([("restaurant_id", 1), ("category_id", 1)])
+    await db.wallet_transactions.create_index([("restaurant_id", 1), ("created_at", -1)])
+    await db.branches.create_index("restaurant_id")
     logger.info("Database indexes created")
 
 @app.on_event("shutdown")

@@ -2,31 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { analyticsAPI } from '../../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { DollarSign, ShoppingCart, TrendingUp, Clock } from 'lucide-react';
+import { DollarSign, ShoppingCart, TrendingUp, Clock, Sparkles, RefreshCw } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import ReactMarkdown from 'react-markdown';
 
 const COLORS = ['#3B82F6', '#22C55E', '#3B82F6', '#EAB308', '#8B5CF6'];
 
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [aiInsights, setAiInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, []);
+  useEffect(() => { fetchAnalytics(); }, []);
 
   const fetchAnalytics = async () => {
     try {
@@ -36,6 +26,18 @@ export default function AnalyticsPage() {
       console.error('Failed to fetch analytics:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAiInsights = async () => {
+    setInsightsLoading(true);
+    try {
+      const res = await analyticsAPI.getAiInsights();
+      setAiInsights(res.data);
+    } catch (err) {
+      console.error('AI insights error:', err);
+    } finally {
+      setInsightsLoading(false);
     }
   };
 
@@ -294,6 +296,45 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <p className="text-slate-400 text-center py-8">No sales data yet</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* AI Insights Section */}
+      <Card className="border-slate-200 overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              <CardTitle className="text-base text-white">AI-Powered Insights</CardTitle>
+            </div>
+            <Button
+              onClick={fetchAiInsights}
+              disabled={insightsLoading}
+              variant="outline"
+              className="h-8 rounded-lg bg-white/10 border-white/20 text-white hover:bg-white/20 text-xs gap-1.5"
+              data-testid="ai-insights-btn"
+            >
+              {insightsLoading ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
+              {insightsLoading ? 'Analyzing...' : 'Generate Insights'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5">
+          {aiInsights ? (
+            <div className="prose prose-sm prose-slate max-w-none" data-testid="ai-insights-content">
+              <ReactMarkdown>{aiInsights.insights}</ReactMarkdown>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-400">
+              <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-50" />
+              <p className="text-sm font-medium">Click "Generate Insights" to get AI-powered sales analysis</p>
+              <p className="text-xs mt-1">Powered by Claude AI - compares your data and suggests improvements</p>
+            </div>
           )}
         </CardContent>
       </Card>

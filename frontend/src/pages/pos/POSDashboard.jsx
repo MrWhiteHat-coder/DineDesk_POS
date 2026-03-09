@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { analyticsAPI, orderAPI, daySessionAPI } from '../../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import {
-  DollarSign,
+  IndianRupee,
   ShoppingCart,
   TrendingUp,
   Clock,
@@ -107,7 +107,7 @@ export default function POSDashboard() {
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-600" />
+                <IndianRupee className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </CardContent>

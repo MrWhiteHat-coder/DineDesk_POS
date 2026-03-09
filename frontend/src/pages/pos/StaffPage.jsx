@@ -20,12 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Plus, Trash2, User, Shield, CreditCard } from 'lucide-react';
+import { Plus, Trash2, User, Shield, CreditCard, ChefHat, UserCheck } from 'lucide-react';
 
 const roleConfig = {
-  owner: { label: 'Owner', color: 'bg-purple-100 text-purple-700', icon: Shield },
-  manager: { label: 'Manager', color: 'bg-blue-100 text-blue-700', icon: User },
-  cashier: { label: 'Cashier', color: 'bg-green-100 text-green-700', icon: CreditCard },
+  owner: { label: 'Owner', color: 'bg-purple-100 text-purple-700', icon: Shield, desc: 'Full access' },
+  manager: { label: 'Manager', color: 'bg-blue-100 text-blue-700', icon: User, desc: 'Complete access' },
+  cashier: { label: 'Cashier', color: 'bg-green-100 text-green-700', icon: CreditCard, desc: 'Financial & billing' },
+  captain: { label: 'Captain', color: 'bg-amber-100 text-amber-700', icon: UserCheck, desc: 'Order taking only' },
+  chef: { label: 'Chef', color: 'bg-red-100 text-red-700', icon: ChefHat, desc: 'KDS access only' },
 };
 
 export default function StaffPage() {
@@ -226,8 +228,10 @@ export default function StaffPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="cashier">Cashier</SelectItem>
+                  <SelectItem value="manager">Manager - Complete access</SelectItem>
+                  <SelectItem value="cashier">Cashier - Financial & billing</SelectItem>
+                  <SelectItem value="captain">Captain - Order taking only</SelectItem>
+                  <SelectItem value="chef">Chef - KDS access only</SelectItem>
                 </SelectContent>
               </Select>
             </div>

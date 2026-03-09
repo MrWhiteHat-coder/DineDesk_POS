@@ -23,6 +23,9 @@ import AnalyticsPage from './pages/pos/AnalyticsPage';
 import StaffPage from './pages/pos/StaffPage';
 import SettingsPage from './pages/pos/SettingsPage';
 import OnlineOrdersPage from './pages/pos/OnlineOrdersPage';
+import KDSPage from './pages/pos/KDSPage';
+import WalletPage from './pages/pos/WalletPage';
+import BranchesPage from './pages/pos/BranchesPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -118,6 +121,9 @@ function AppRoutes() {
         <Route path="staff" element={<StaffPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="online-orders" element={<OnlineOrdersPage />} />
+        <Route path="kds" element={<KDSPage />} />
+        <Route path="wallet" element={<WalletPage />} />
+        <Route path="branches" element={<BranchesPage />} />
       </Route>
 
       {/* Admin Routes */}

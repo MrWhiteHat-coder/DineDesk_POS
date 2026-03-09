@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { menuAPI, uploadFile } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -23,16 +22,9 @@ import {
 } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  FolderPlus,
-  Image,
-  Leaf,
-  Clock,
-  Upload,
-  X,
+  Plus, Pencil, Trash2, FolderPlus, Image, Leaf, Clock, Upload, X, FlaskConical,
 } from 'lucide-react';
+import { inventoryAPI, menuAPI, uploadFile } from '../../lib/api';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -66,13 +58,25 @@ export default function MenuManagement() {
     is_available: true,
     preparation_time: '15',
     image_url: '',
+    recipe: [],
   });
   const [itemLoading, setItemLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState([]);
 
   useEffect(() => {
     fetchMenu();
+    fetchInventory();
   }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const res = await inventoryAPI.getAll();
+      setInventoryItems(res.data);
+    } catch (err) {
+      console.error('Failed to fetch inventory:', err);
+    }
+  };
 
   const fetchMenu = async () => {
     try {
@@ -140,6 +144,7 @@ export default function MenuManagement() {
         is_available: item.is_available,
         preparation_time: item.preparation_time.toString(),
         image_url: item.image_url || '',
+        recipe: item.recipe || [],
       });
     } else {
       setEditingItem(null);
@@ -153,6 +158,7 @@ export default function MenuManagement() {
         is_available: true,
         preparation_time: '15',
         image_url: '',
+        recipe: [],
       });
     }
     setShowItemModal(true);
@@ -604,6 +610,77 @@ export default function MenuManagement() {
                 }
                 data-testid="item-available-switch"
               />
+            </div>
+
+            {/* Recipe / Preparation List */}
+            <div className="space-y-3 border border-slate-200 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2 text-sm font-semibold">
+                  <FlaskConical className="w-4 h-4" /> Recipe (Preparation List)
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs rounded-lg"
+                  onClick={() => setItemForm((prev) => ({
+                    ...prev,
+                    recipe: [...prev.recipe, { inventory_item_id: '', inventory_item_name: '', quantity_needed: '', unit: '' }],
+                  }))}
+                  data-testid="add-ingredient-btn"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Add Ingredient
+                </Button>
+              </div>
+              {itemForm.recipe.length === 0 ? (
+                <p className="text-xs text-slate-400 py-2 text-center">No ingredients added. Stock will not auto-deduct on sale.</p>
+              ) : (
+                <div className="space-y-2">
+                  {itemForm.recipe.map((ing, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Select
+                        value={ing.inventory_item_id}
+                        onValueChange={(val) => {
+                          const inv = inventoryItems.find(i => i.id === val);
+                          const updated = [...itemForm.recipe];
+                          updated[idx] = { ...updated[idx], inventory_item_id: val, inventory_item_name: inv?.name || '', unit: inv?.unit || '' };
+                          setItemForm((prev) => ({ ...prev, recipe: updated }));
+                        }}
+                      >
+                        <SelectTrigger className="h-8 rounded-lg text-xs flex-1">
+                          <SelectValue placeholder="Select ingredient" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {inventoryItems.map((inv) => (
+                            <SelectItem key={inv.id} value={inv.id}>{inv.name} ({inv.unit})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        placeholder="Qty"
+                        value={ing.quantity_needed}
+                        onChange={(e) => {
+                          const updated = [...itemForm.recipe];
+                          updated[idx] = { ...updated[idx], quantity_needed: parseFloat(e.target.value) || 0 };
+                          setItemForm((prev) => ({ ...prev, recipe: updated }));
+                        }}
+                        className="h-8 w-20 rounded-lg text-xs"
+                      />
+                      <span className="text-xs text-slate-400 w-8">{ing.unit}</span>
+                      <button
+                        onClick={() => {
+                          const updated = itemForm.recipe.filter((_, i) => i !== idx);
+                          setItemForm((prev) => ({ ...prev, recipe: updated }));
+                        }}
+                        className="text-red-400 hover:text-red-600 p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="gap-2">

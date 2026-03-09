@@ -160,3 +160,51 @@ code {
 .pos-input {
     @apply h-12 px-4 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 focus:border-slate-800 outline-none transition-all;
 }
+
+
+/* Premium hover animations */
+.pos-card {
+    @apply hover:-translate-y-0.5;
+}
+
+/* Smooth card hover effect */
+[data-testid*="menu-item-card"] {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+[data-testid*="menu-item-card"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(0,0,0,0.08);
+}
+
+/* Sidebar nav hover */
+nav a, nav button {
+    transition: all 0.15s ease;
+}
+
+/* Button press animation */
+button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+/* Card entrance animation */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.3s ease forwards;
+}
+
+/* Stat card pulse on hover */
+[data-testid*="wallet-card"]:hover,
+[data-testid*="staff-card"]:hover,
+[data-testid*="branch-"]:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+
+/* Smooth page transitions */
+main > * {
+    animation: fadeInUp 0.25s ease;
+}
