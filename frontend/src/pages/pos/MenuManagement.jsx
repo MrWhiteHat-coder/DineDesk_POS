@@ -136,11 +136,13 @@ export default function MenuManagement() {
       });
     } else {
       setEditingItem(null);
+      // Always set a valid category_id if categories exist
+      const defaultCategoryId = selectedCategory || (categories.length > 0 ? categories[0].id : '');
       setItemForm({
         name: '',
         description: '',
         price: '',
-        category_id: selectedCategory || (categories[0]?.id || ''),
+        category_id: defaultCategoryId,
         is_vegetarian: false,
         is_available: true,
         preparation_time: '15',
@@ -486,21 +488,27 @@ export default function MenuManagement() {
               </div>
               <div className="space-y-2">
                 <Label>Category *</Label>
-                <Select
-                  value={itemForm.category_id}
-                  onValueChange={(val) => setItemForm((prev) => ({ ...prev, category_id: val }))}
-                >
-                  <SelectTrigger data-testid="item-category-select">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {categories.length === 0 ? (
+                  <p className="text-sm text-amber-600 p-2 bg-amber-50 rounded-lg">
+                    Please create a category first before adding items
+                  </p>
+                ) : (
+                  <Select
+                    value={itemForm.category_id}
+                    onValueChange={(val) => setItemForm((prev) => ({ ...prev, category_id: val }))}
+                  >
+                    <SelectTrigger data-testid="item-category-select">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

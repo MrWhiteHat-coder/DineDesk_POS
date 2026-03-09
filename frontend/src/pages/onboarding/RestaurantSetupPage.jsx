@@ -229,8 +229,10 @@ export default function RestaurantSetupPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold">
-                              S
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-orange-500">
+                              <svg viewBox="0 0 61 61" className="w-8 h-8" fill="white">
+                                <path d="M30.5 0C13.7 0 0 13.7 0 30.5S13.7 61 30.5 61 61 47.3 61 30.5 47.3 0 30.5 0zm15.3 23.8l-4.8 18.4c-.3 1.3-1.5 2.2-2.8 2.2H22.8c-1.3 0-2.5-.9-2.8-2.2l-4.8-18.4c-.4-1.6.8-3.1 2.4-3.1h25.8c1.6 0 2.8 1.5 2.4 3.1zm-7.6 4.1c-.5-1.4-1.8-2.3-3.3-2.3h-8.8c-1.5 0-2.8.9-3.3 2.3l-2.3 6.3c-.3.9.4 1.8 1.3 1.8h17.4c.9 0 1.6-.9 1.3-1.8l-2.3-6.3z"/>
+                              </svg>
                             </div>
                             <div>
                               <p className="font-medium text-slate-900">Swiggy</p>
@@ -252,8 +254,8 @@ export default function RestaurantSetupPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold">
-                              Z
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-red-500">
+                              <span className="text-white font-bold text-lg">Z</span>
                             </div>
                             <div>
                               <p className="font-medium text-slate-900">Zomato</p>
