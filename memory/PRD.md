@@ -22,57 +22,57 @@ Build a cloud-based Restaurant POS SaaS platform for small and medium food busin
 
 ### Frontend (React)
 - `/app/frontend/src/` - React application
-- Tailwind CSS with custom orange theme
+- Tailwind CSS with dark navy theme (redesigned)
 - Shadcn/UI components
 - React Router for navigation
 - Recharts for analytics
 
 ### Database Collections
-- users
-- restaurants
-- subscriptions
-- menu_categories
-- menu_items
-- orders
-- inventory
-- tables
-- day_sessions
-- system_logs
+- users, restaurants, subscriptions
+- menu_categories, menu_items, orders
+- inventory, tables, day_sessions, system_logs
 
-## What's Been Implemented (2026-03-09)
+## What's Been Implemented
 
 ### Platform 1: Admin Dashboard
-- [x] Master Dashboard with stats cards (restaurants, users, revenue, orders)
+- [x] Master Dashboard with stats cards
 - [x] Restaurant Management (list, search, activate/suspend)
-- [x] Subscription Management (view payments, track renewals)
-- [x] User Monitoring (view all users by role)
-- [x] System Logs (auth, restaurant, subscription, day_session logs)
-- [x] Platform Analytics (orders/revenue trends)
+- [x] Subscription Management
+- [x] User Monitoring
+- [x] System Logs
+- [x] Platform Analytics
 
 ### Platform 2: Restaurant POS Application
 
 #### Authentication & Onboarding
 - [x] User registration and login
-- [x] Business category selection (Food Business enabled)
-- [x] 3-step restaurant setup (details, delivery platforms, contact)
+- [x] Business category selection
+- [x] 3-step restaurant setup
 - [x] Mock Razorpay subscription (₹2999/year)
 
-#### POS Features
+#### POS Features (Redesigned 2026-03-09)
 - [x] Dashboard with daily/weekly/monthly sales
-- [x] Day Open/Close system with reports
-- [x] Menu Management (categories, items, images)
-- [x] POS Main Screen (menu grid, cart, checkout)
-- [x] Order Management (status updates)
+- [x] Day Open/Close system
+- [x] Menu Management with image upload (bug fixed)
+- [x] POS Main Screen - redesigned with reference image
+  - Light white sidebar with dark navy active states
+  - Expandable navigation sections (Manage Table, Manage Dish)
+  - Food card grid with availability badges
+  - "Add to Cart" / "Add More (X)" button states
+  - Order summary right panel with totals, discount, payment
+  - Category horizontal tabs with item counts
+  - Search and refresh functionality
+- [x] Order Management
 - [x] Tables Management
-- [x] Inventory Management (low stock alerts)
-- [x] Analytics Dashboard (charts, top items)
-- [x] Staff Management (roles: owner, manager, cashier)
+- [x] Inventory Management
+- [x] Analytics Dashboard
+- [x] Staff Management
 - [x] Settings page
+- [x] Online Orders (Mock Swiggy/Zomato)
 
-#### Online Orders Integration
-- [x] Mock Swiggy/Zomato integration UI
-- [x] Webhook endpoints ready for real integration
-- [x] Online orders management
+## Bug Fixes (2026-03-09)
+- [x] Image URL construction: Now stores relative paths, constructs full URL at display time using getImageUrl() helper
+- [x] Works across different preview environments
 
 ## API Endpoints (27 total)
 - Auth: /api/auth/register, /api/auth/login, /api/auth/me
@@ -85,32 +85,30 @@ Build a cloud-based Restaurant POS SaaS platform for small and medium food busin
 - Tables: /api/tables
 - Staff: /api/staff
 - Analytics: /api/analytics
-- Admin: /api/admin/stats, /api/admin/restaurants, /api/admin/subscriptions, etc.
+- Upload: /api/upload
+- Admin: /api/admin/stats, /api/admin/restaurants, etc.
 - Webhooks: /api/webhooks/swiggy, /api/webhooks/zomato
 
 ## Demo Credentials
 - **Admin**: admin@foodflow.com / admin123
+- **Restaurant Owner**: demo@restaurant.com / demo123456
 
 ## P0/P1/P2 Features Remaining
 
-### P0 (Critical) - Done
-All P0 features implemented
-
 ### P1 (Important)
+- [ ] Inventory Automation - auto-deduct stock on item sale
+- [ ] Staff Management Roles - Owner/Manager/Cashier permissions
 - [ ] Real Razorpay integration
-- [ ] Email notifications (order confirmations, low stock alerts)
 - [ ] Receipt printing support
 - [ ] Kitchen Display System (KDS) view
 
 ### P2 (Nice to have)
+- [ ] Detailed Analytics - sales trends, top items charts
+- [ ] Day Close Report generation
 - [ ] Real Swiggy/Zomato API integration
 - [ ] Customer loyalty program
 - [ ] Reservation system
-- [ ] Expense tracking
 - [ ] Multi-branch support
 
-## Next Action Items
-1. Add sample menu items and test full order flow
-2. Test Day Open/Close reporting
-3. Implement real Razorpay payment integration
-4. Add push notifications for online orders
+## Refactoring Needed
+- [ ] Break down monolithic server.py into modular routers (routes/auth.py, routes/menu.py, etc.)
