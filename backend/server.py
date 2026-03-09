@@ -38,6 +38,7 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 # Twilio Config
 TWILIO_API_KEY_SID = os.environ.get('TWILIO_API_KEY_SID')
 TWILIO_API_KEY_SECRET = os.environ.get('TWILIO_API_KEY_SECRET')
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
 # Create the main app
@@ -1897,27 +1898,33 @@ async def send_order_notification(order_data: dict, restaurant: dict):
 
     try:
         from twilio.rest import Client as TwilioClient
-        if TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET:
-            twilio_client = TwilioClient(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET)
+        if TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET and TWILIO_ACCOUNT_SID:
+            twilio_client = TwilioClient(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET, TWILIO_ACCOUNT_SID)
             # Send SMS
-            msg = twilio_client.messages.create(
-                body=message_body,
-                from_=TWILIO_PHONE_NUMBER,
-                to=clean_phone
-            )
-            notif_log["status"] = "sent"
-            notif_log["twilio_sid"] = msg.sid
-            logger.info(f"SMS sent to {clean_phone}: {msg.sid}")
+            try:
+                msg = twilio_client.messages.create(
+                    body=message_body,
+                    from_=TWILIO_PHONE_NUMBER,
+                    to=clean_phone
+                )
+                notif_log["status"] = "sent"
+                notif_log["twilio_sid"] = msg.sid
+                logger.info(f"SMS sent to {clean_phone}: {msg.sid}")
+            except Exception as sms_err:
+                notif_log["status"] = "failed"
+                notif_log["error"] = str(sms_err)[:200]
+                logger.warning(f"SMS failed for {clean_phone}: {sms_err}")
 
-            # Try WhatsApp too
+            # Try WhatsApp
             try:
                 wa_msg = twilio_client.messages.create(
                     body=message_body,
-                    from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
+                    from_='whatsapp:+14155238886',
                     to=f"whatsapp:{clean_phone}"
                 )
                 notif_log["whatsapp_status"] = "sent"
                 notif_log["whatsapp_sid"] = wa_msg.sid
+                logger.info(f"WhatsApp sent to {clean_phone}: {wa_msg.sid}")
             except Exception as wa_err:
                 notif_log["whatsapp_status"] = "failed"
                 notif_log["whatsapp_error"] = str(wa_err)[:200]
