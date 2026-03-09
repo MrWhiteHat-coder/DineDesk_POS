@@ -348,7 +348,7 @@ export default function POSLayout() {
             <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-heading font-bold text-slate-900 text-base leading-tight">FoodFlow</h1>
+            <h1 className="font-heading font-bold text-slate-900 text-base leading-tight">OrderNest</h1>
             <p className="text-[10px] text-slate-400 leading-tight">Cashier Daily Assistant</p>
           </div>
         </div>
@@ -365,7 +365,7 @@ export default function POSLayout() {
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-slate-900 text-base leading-tight">FoodFlow</h1>
+              <h1 className="font-heading font-bold text-slate-900 text-base leading-tight">OrderNest</h1>
               <p className="text-[10px] text-slate-400 leading-tight">Cashier Daily Assistant</p>
             </div>
           </div>
