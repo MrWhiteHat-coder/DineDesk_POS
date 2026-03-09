@@ -52,6 +52,11 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 - Dashboard Today's Orders detail view: clickable card opens modal with all orders, items, and Print Bill per order
 - **Customer details at checkout**: Mandatory name + phone, optional email, phone auto-suggest from previous orders
 - **Day Close Report with AI insights**: Claude-powered suggestions, premium PDF download + in-app view, print
+- **Branches with login credentials**: Create branch with email/password, auto-creates manager user, credentials modal with copy buttons
+- **Owner role in Staff**: Owner role available in staff dropdown with full access
+- **Analytics date picker**: Select any previous date to view that day's report, Today button to reset
+- **Dashboard online orders**: Order type chart dynamically includes all types (dine-in, takeaway, online)
+- **Wallet date picker**: Select specific date for wallet/sales report alongside period buttons
 
 ## Mocked Integrations
 - Razorpay payment processing
