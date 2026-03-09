@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { menuAPI, orderAPI, tableAPI, receiptAPI } from '../../lib/api';
+import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
 import { toast } from 'sonner';
-import { Zap, Search, X, Banknote, CreditCard, Smartphone, Printer, Check } from 'lucide-react';
+import { Zap, Search, X, Banknote, CreditCard, Smartphone, Printer, Check, User } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -27,6 +27,32 @@ export default function QuickPOSPage() {
   const [receiptData, setReceiptData] = useState(null);
   const [processing, setProcessing] = useState(false);
   const receiptRef = useRef(null);
+  // Customer details
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestTimeout = useRef(null);
+
+  const lookupCustomer = useCallback((phone) => {
+    if (suggestTimeout.current) clearTimeout(suggestTimeout.current);
+    if (phone.length < 3) { setSuggestions([]); return; }
+    suggestTimeout.current = setTimeout(async () => {
+      try {
+        const res = await customerAPI.lookup(phone);
+        setSuggestions(res.data);
+        setShowSuggestions(res.data.length > 0);
+      } catch { setSuggestions([]); }
+    }, 300);
+  }, []);
+
+  const selectCustomer = (c) => {
+    setCustomerName(c.name || '');
+    setCustomerPhone(c.phone || '');
+    setCustomerEmail(c.email || '');
+    setShowSuggestions(false);
+  };
 
   useEffect(() => {
     Promise.all([menuAPI.getCategories(), menuAPI.getItems(), tableAPI.getAll()])
@@ -62,6 +88,8 @@ export default function QuickPOSPage() {
 
   const quickPay = async (method) => {
     if (cart.length === 0) return;
+    if (!customerName.trim()) { toast.error('Customer name is required'); return; }
+    if (!customerPhone.trim()) { toast.error('Customer phone is required'); return; }
     setProcessing(true);
     try {
       const res = await orderAPI.create({
@@ -70,15 +98,20 @@ export default function QuickPOSPage() {
         items: cart.map(c => ({ menu_item_id: c.id, quantity: c.qty, notes: null })),
         payment_method: method,
         discount_amount: 0,
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        customer_email: customerEmail.trim() || null,
       });
       toast.success(`Order #${res.data.order_number} done!`);
-      // Fetch receipt
       try {
         const rcpt = await receiptAPI.get(res.data.id);
         setReceiptData(rcpt.data);
         setShowReceipt(true);
       } catch {}
       setCart([]);
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerEmail('');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed');
     } finally {
@@ -186,13 +219,32 @@ export default function QuickPOSPage() {
           )}
         </div>
 
-        {/* Totals + Pay Buttons */}
+        {/* Totals + Customer + Pay Buttons */}
         {cart.length > 0 && (
           <div className="p-2.5 border-t border-slate-100 space-y-2">
             <div className="space-y-0.5 text-[11px]">
               <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-semibold">₹{subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">Tax</span><span className="font-semibold">₹{tax.toFixed(2)}</span></div>
               <div className="flex justify-between text-sm font-bold pt-1 border-t border-slate-100"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
+            </div>
+            {/* Customer Details */}
+            <div className="space-y-1.5 pt-1 border-t border-slate-100">
+              <p className="text-[10px] font-semibold text-slate-500 flex items-center gap-1"><User className="w-3 h-3" /> Customer Details</p>
+              <div className="relative">
+                <Input placeholder="Phone *" value={customerPhone} onChange={e => { setCustomerPhone(e.target.value); lookupCustomer(e.target.value); }} className="h-7 text-xs rounded-lg" data-testid="quick-customer-phone" />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+                    {suggestions.map((s, i) => (
+                      <button key={i} onClick={() => selectCustomer(s)} className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0" data-testid={`suggestion-${i}`}>
+                        <span className="font-semibold text-slate-800">{s.name}</span> <span className="text-slate-400">{s.phone}</span>
+                        <span className="text-[9px] text-slate-400 ml-1">({s.order_count} orders)</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Input placeholder="Name *" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-name" />
+              <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-email" />
             </div>
             <div className="grid grid-cols-3 gap-1.5">
               <button onClick={() => quickPay('cash')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 transition-colors disabled:opacity-50" data-testid="quick-pay-cash">
@@ -225,6 +277,8 @@ export default function QuickPOSPage() {
                 <div className="flex justify-between"><span>Type</span><span className="capitalize">{receiptData.order.order_type?.replace('_', ' ')}</span></div>
                 <div className="flex justify-between"><span>Payment</span><span className="capitalize">{receiptData.order.payment_method}</span></div>
                 <div className="flex justify-between"><span>Date</span><span>{new Date(receiptData.order.created_at).toLocaleString()}</span></div>
+                {receiptData.order.customer_name && <div className="flex justify-between"><span>Customer</span><span>{receiptData.order.customer_name}</span></div>}
+                {receiptData.order.customer_phone && <div className="flex justify-between"><span>Phone</span><span>{receiptData.order.customer_phone}</span></div>}
               </div>
               <hr className="border-dashed border-slate-300 my-1" />
               <div className="space-y-1 text-[11px]">

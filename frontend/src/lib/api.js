@@ -155,6 +155,14 @@ export const receiptAPI = {
 // Day Session Report
 export const dayReportAPI = {
   get: (sessionId) => api.get(`/day-session/${sessionId}/report`),
+  getPdf: (sessionId) => api.get(`/day-session/${sessionId}/report-pdf`, { responseType: 'blob' }),
+  getPdfUrl: (sessionId) => `${API_URL}/api/day-session/${sessionId}/report-pdf`,
+  getAiInsights: (sessionId) => api.get(`/day-session/${sessionId}/ai-insights`),
+};
+
+// Customer Lookup
+export const customerAPI = {
+  lookup: (phone) => api.get('/customers/lookup', { params: { phone } }),
 };
 
 // File Upload

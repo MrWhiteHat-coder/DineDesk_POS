@@ -220,6 +220,7 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
     payment_method: str = "pending"  # cash, card, upi, pending
     discount_amount: float = 0
     platform: Optional[str] = None
@@ -242,6 +243,7 @@ class OrderResponse(BaseModel):
     items: List[Dict[str, Any]]
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
     subtotal: float
     tax_amount: float
     discount_amount: float
@@ -946,6 +948,7 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         "items": order_items,
         "customer_name": data.customer_name,
         "customer_phone": data.customer_phone,
+        "customer_email": data.customer_email,
         "subtotal": subtotal,
         "tax_amount": tax_amount,
         "discount_amount": data.discount_amount,
@@ -1761,6 +1764,331 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
             "difference": (session.get("closing_cash") or 0) - (session.get("opening_cash", 0) + payment_methods.get("cash", 0)) if session.get("closing_cash") is not None else None,
         }
     }
+
+# ============== CUSTOMER LOOKUP ==============
+
+@api_router.get("/customers/lookup")
+async def customer_lookup(phone: str = "", user: dict = Depends(get_current_user)):
+    """Auto-suggest customers based on phone number from previous orders."""
+    if not user.get("restaurant_id") or len(phone) < 3:
+        return []
+    pipeline = [
+        {"$match": {"restaurant_id": user["restaurant_id"], "customer_phone": {"$regex": phone, "$options": "i"}}},
+        {"$group": {"_id": "$customer_phone", "customer_name": {"$last": "$customer_name"}, "customer_email": {"$last": "$customer_email"}, "order_count": {"$sum": 1}}},
+        {"$sort": {"order_count": -1}},
+        {"$limit": 5}
+    ]
+    results = await db.orders.aggregate(pipeline).to_list(5)
+    return [{"phone": r["_id"], "name": r.get("customer_name", ""), "email": r.get("customer_email", ""), "order_count": r["order_count"]} for r in results if r["_id"]]
+
+# ============== DAY CLOSE PDF REPORT ==============
+
+@api_router.get("/day-session/{session_id}/report-pdf")
+async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None, user: dict = Depends(get_current_user)):
+    """Generate a premium PDF day close report with AI insights."""
+    from fastapi.responses import Response
+    from fpdf import FPDF
+
+    session = await db.day_sessions.find_one({"id": session_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0, "opened_by": 0})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    orders = await db.orders.find({"day_session_id": session_id}, {"_id": 0, "created_by": 0}).to_list(5000)
+
+    paid_orders = [o for o in orders if o.get("payment_status") == "paid"]
+    pending_orders = [o for o in orders if o.get("payment_status") == "pending"]
+    cancelled_orders = [o for o in orders if o.get("status") == "cancelled"]
+
+    total_sales = sum(o["total_amount"] for o in paid_orders)
+    total_tax = sum(o.get("tax_amount", 0) for o in paid_orders)
+    total_discount = sum(o.get("discount_amount", 0) for o in paid_orders)
+    avg_order = total_sales / len(paid_orders) if paid_orders else 0
+
+    payment_methods = {}
+    for o in paid_orders:
+        pm = o.get("payment_method", "unknown")
+        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
+
+    order_types = {}
+    for o in paid_orders:
+        ot = o.get("order_type", "unknown")
+        order_types[ot] = order_types.get(ot, 0) + 1
+
+    item_counts = {}
+    item_revenue = {}
+    for o in paid_orders:
+        for item in o.get("items", []):
+            name = item.get("name", "Unknown")
+            qty = item.get("quantity", 1)
+            item_counts[name] = item_counts.get(name, 0) + qty
+            item_revenue[name] = item_revenue.get(name, 0) + item.get("total", 0)
+    top_items = sorted([{"name": k, "quantity": item_counts[k], "revenue": item_revenue.get(k, 0)} for k in item_counts], key=lambda x: -x["revenue"])[:10]
+
+    hourly = {}
+    for o in paid_orders:
+        try:
+            hour = datetime.fromisoformat(o["created_at"]).hour
+            hourly[hour] = hourly.get(hour, {"orders": 0, "revenue": 0})
+            hourly[hour]["orders"] += 1
+            hourly[hour]["revenue"] += o["total_amount"]
+        except:
+            pass
+
+    # Generate AI insights
+    ai_insights = ""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        data_summary = f"""
+Day Close Report - {session.get('date', 'Today')}:
+- Total Paid Orders: {len(paid_orders)}
+- Total Sales: Rs.{total_sales:.2f}
+- Average Order Value: Rs.{avg_order:.2f}
+- Payment Methods: {', '.join(f'{k}: Rs.{v:.2f}' for k, v in payment_methods.items())}
+- Order Types: {', '.join(f'{k}: {v}' for k, v in order_types.items())}
+- Top Items: {', '.join(f'{i["name"]} ({i["quantity"]} sold, Rs.{i["revenue"]:.2f})' for i in top_items[:5])}
+- Pending Orders: {len(pending_orders)}
+- Cancelled Orders: {len(cancelled_orders)}
+- Peak Hours: {', '.join(f'{h}:00 ({d["orders"]} orders, Rs.{d["revenue"]:.2f})' for h, d in sorted(hourly.items(), key=lambda x: -x[1]["revenue"])[:3]) if hourly else 'N/A'}
+"""
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"dayclose-{session_id}-{uuid.uuid4().hex[:8]}",
+            system_message="You are a restaurant business consultant. Based on today's sales data, provide 3-5 actionable suggestions for tomorrow to improve sales and operations. Be specific and practical. Use bullet points. Keep it under 200 words."
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        response = await chat.send_message(UserMessage(text=f"Based on today's performance, give me suggestions for tomorrow:\n{data_summary}"))
+        ai_insights = response
+    except Exception as e:
+        logger.error(f"AI insights for PDF error: {e}")
+        ai_insights = "AI insights unavailable at this time."
+
+    # Generate PDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Header
+    pdf.set_fill_color(30, 41, 59)  # slate-800
+    pdf.rect(0, 0, 210, 40, 'F')
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_y(8)
+    pdf.cell(0, 10, restaurant.get("name", "Restaurant") if restaurant else "Restaurant", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Daily Sales Report - {session.get('date', '')}", align="C", new_x="LMARGIN", new_y="NEXT")
+    opened = session.get("opened_at", "")
+    closed = session.get("closed_at", "")
+    try:
+        opened = datetime.fromisoformat(opened).strftime("%I:%M %p") if opened else ""
+        closed = datetime.fromisoformat(closed).strftime("%I:%M %p") if closed else "Ongoing"
+    except:
+        pass
+    pdf.cell(0, 6, f"Session: {opened} - {closed}", align="C", new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_y(48)
+    pdf.set_text_color(0, 0, 0)
+
+    # Sales Summary Section
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_fill_color(241, 245, 249)  # slate-100
+    pdf.cell(0, 10, "  Sales Summary", fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+
+    pdf.set_font("Helvetica", "", 11)
+    summary_data = [
+        ("Total Sales", f"Rs.{total_sales:,.2f}"),
+        ("Total Orders", str(len(paid_orders))),
+        ("Average Order Value", f"Rs.{avg_order:,.2f}"),
+        ("Total Tax Collected", f"Rs.{total_tax:,.2f}"),
+        ("Total Discounts", f"Rs.{total_discount:,.2f}"),
+        ("Pending Orders", str(len(pending_orders))),
+        ("Cancelled Orders", str(len(cancelled_orders))),
+    ]
+    for label, value in summary_data:
+        pdf.cell(100, 7, f"  {label}", new_x="RIGHT")
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 7, value, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 11)
+    pdf.ln(4)
+
+    # Payment Breakdown
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "  Payment Breakdown", fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "", 11)
+    for method, amount in payment_methods.items():
+        pdf.cell(100, 7, f"  {method.upper()}", new_x="RIGHT")
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 7, f"Rs.{amount:,.2f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 11)
+    pdf.ln(4)
+
+    # Cash Drawer
+    opening_cash = session.get("opening_cash", 0)
+    closing_cash = session.get("closing_cash")
+    cash_sales = payment_methods.get("cash", 0)
+    expected = opening_cash + cash_sales
+
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "  Cash Drawer", fill=True, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "", 11)
+    cash_data = [("Opening Cash", f"Rs.{opening_cash:,.2f}"), ("Cash Sales", f"Rs.{cash_sales:,.2f}"), ("Expected Cash", f"Rs.{expected:,.2f}")]
+    if closing_cash is not None:
+        cash_data.append(("Closing Cash", f"Rs.{closing_cash:,.2f}"))
+        diff = closing_cash - expected
+        cash_data.append(("Difference", f"Rs.{diff:,.2f}"))
+    for label, value in cash_data:
+        pdf.cell(100, 7, f"  {label}", new_x="RIGHT")
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 7, value, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 11)
+    pdf.ln(4)
+
+    # Top Selling Items Table
+    if top_items:
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 10, "  Top Selling Items", fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
+        # Table header
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_fill_color(226, 232, 240)  # slate-200
+        pdf.cell(10, 7, "#", border=1, fill=True, align="C")
+        pdf.cell(80, 7, "Item Name", border=1, fill=True)
+        pdf.cell(30, 7, "Qty Sold", border=1, fill=True, align="C")
+        pdf.cell(40, 7, "Revenue", border=1, fill=True, align="R")
+        pdf.ln()
+        pdf.set_font("Helvetica", "", 10)
+        for i, item in enumerate(top_items):
+            pdf.cell(10, 7, str(i + 1), border=1, align="C")
+            pdf.cell(80, 7, f"  {item['name'][:30]}", border=1)
+            pdf.cell(30, 7, str(item["quantity"]), border=1, align="C")
+            pdf.cell(40, 7, f"Rs.{item['revenue']:,.2f}  ", border=1, align="R")
+            pdf.ln()
+        pdf.ln(4)
+
+    # Hourly Breakdown
+    if hourly:
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 10, "  Hourly Breakdown", fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_fill_color(226, 232, 240)
+        pdf.cell(40, 7, "Hour", border=1, fill=True, align="C")
+        pdf.cell(40, 7, "Orders", border=1, fill=True, align="C")
+        pdf.cell(50, 7, "Revenue", border=1, fill=True, align="R")
+        pdf.ln()
+        pdf.set_font("Helvetica", "", 10)
+        for h in sorted(hourly.keys()):
+            pdf.cell(40, 7, f"{h:02d}:00", border=1, align="C")
+            pdf.cell(40, 7, str(hourly[h]["orders"]), border=1, align="C")
+            pdf.cell(50, 7, f"Rs.{hourly[h]['revenue']:,.2f}", border=1, align="R")
+            pdf.ln()
+        pdf.ln(4)
+
+    # AI Insights Section
+    pdf.add_page()
+    pdf.set_fill_color(30, 41, 59)
+    pdf.rect(0, 0, 210, 25, 'F')
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_y(6)
+    pdf.cell(0, 12, "  AI-Powered Insights & Suggestions", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_y(32)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Helvetica", "", 11)
+    # Clean markdown from AI response and replace unsupported Unicode characters
+    clean_insights = ai_insights.replace("**", "").replace("##", "").replace("# ", "")
+    # Replace Unicode bullets with ASCII dashes (Helvetica doesn't support •)
+    clean_insights = clean_insights.replace("•", "-").replace("→", "->").replace("—", "-")
+    for line in clean_insights.split("\n"):
+        line = line.strip()
+        if not line:
+            pdf.ln(3)
+            continue
+        if line.startswith("- ") or line.startswith("* "):
+            pdf.set_font("Helvetica", "", 11)
+            pdf.multi_cell(0, 6, f"  {line}", new_x="LMARGIN", new_y="NEXT")
+        elif any(line.startswith(f"{i}.") for i in range(1, 10)):
+            pdf.set_font("Helvetica", "", 11)
+            pdf.multi_cell(0, 6, f"  {line}", new_x="LMARGIN", new_y="NEXT")
+        else:
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.multi_cell(0, 7, line, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", "", 11)
+    pdf.ln(8)
+
+    # Footer
+    pdf.set_font("Helvetica", "I", 9)
+    pdf.set_text_color(148, 163, 184)
+    pdf.cell(0, 8, f"Generated by FoodFlow POS on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", align="C")
+
+    pdf_bytes = pdf.output()
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=day-report-{session.get('date', 'report')}.pdf"}
+    )
+
+@api_router.get("/day-session/{session_id}/ai-insights")
+async def get_day_close_ai_insights(session_id: str, user: dict = Depends(get_current_user)):
+    """Get AI insights for a day session for in-app display."""
+    session = await db.day_sessions.find_one({"id": session_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0, "opened_by": 0})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    orders = await db.orders.find({"day_session_id": session_id, "payment_status": "paid"}, {"_id": 0}).to_list(5000)
+    total_sales = sum(o["total_amount"] for o in orders)
+    avg_order = total_sales / len(orders) if orders else 0
+
+    payment_methods = {}
+    for o in orders:
+        pm = o.get("payment_method", "unknown")
+        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
+
+    order_types = {}
+    for o in orders:
+        ot = o.get("order_type", "unknown")
+        order_types[ot] = order_types.get(ot, 0) + 1
+
+    item_counts = {}
+    for o in orders:
+        for item in o.get("items", []):
+            name = item.get("name", "Unknown")
+            item_counts[name] = item_counts.get(name, 0) + item.get("quantity", 1)
+    top_items = sorted(item_counts.items(), key=lambda x: -x[1])[:5]
+
+    hourly = {}
+    for o in orders:
+        try:
+            hour = datetime.fromisoformat(o["created_at"]).hour
+            hourly[hour] = hourly.get(hour, 0) + 1
+        except:
+            pass
+    peak_hours = sorted(hourly.items(), key=lambda x: -x[1])[:3]
+
+    data_summary = f"""
+Day Close Report - {session.get('date', 'Today')}:
+- Total Paid Orders: {len(orders)}
+- Total Sales: Rs.{total_sales:.2f}
+- Average Order Value: Rs.{avg_order:.2f}
+- Payment Methods: {', '.join(f'{k}: Rs.{v:.2f}' for k, v in payment_methods.items())}
+- Order Types: {', '.join(f'{k}: {v}' for k, v in order_types.items())}
+- Top Items: {', '.join(f'{name} ({count} sold)' for name, count in top_items)}
+- Peak Hours: {', '.join(f'{h}:00 ({c} orders)' for h, c in peak_hours) if peak_hours else 'N/A'}
+"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"dayclose-insights-{session_id}-{uuid.uuid4().hex[:8]}",
+            system_message="You are a restaurant business consultant. Based on today's sales data, provide 3-5 actionable suggestions for tomorrow to improve sales and operations. Be specific and practical. Use bullet points. Keep it under 200 words."
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        response = await chat.send_message(UserMessage(text=f"Based on today's performance, give me suggestions for tomorrow:\n{data_summary}"))
+        return {"insights": response}
+    except Exception as e:
+        logger.error(f"Day close AI insights error: {e}")
+        return {"insights": "AI insights temporarily unavailable."}
 
 # ============== UTILITY ROUTES ==============
 

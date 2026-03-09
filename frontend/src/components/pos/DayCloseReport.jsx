@@ -1,24 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { dayReportAPI, daySessionAPI } from '../../lib/api';
+import { dayReportAPI } from '../../lib/api';
 import { toast } from 'sonner';
-import { FileText, Printer, IndianRupee, ShoppingCart, Clock, TrendingUp, CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { FileText, Printer, IndianRupee, ShoppingCart, Clock, TrendingUp, CreditCard, Banknote, Smartphone, Download, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '../../components/ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ReactMarkdown from 'react-markdown';
 
 export default function DayCloseReport({ sessionId, open, onClose }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [aiInsights, setAiInsights] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const printRef = useRef(null);
 
   useEffect(() => {
     if (sessionId && open) {
       setLoading(true);
-      dayReportAPI.get(sessionId).then(res => setReport(res.data)).catch(() => toast.error('Failed to load report')).finally(() => setLoading(false));
+      setAiInsights('');
+      dayReportAPI.get(sessionId).then(res => {
+        setReport(res.data);
+        fetchAiInsights();
+      }).catch(() => toast.error('Failed to load report')).finally(() => setLoading(false));
     }
   }, [sessionId, open]);
+
+  const fetchAiInsights = async () => {
+    setAiLoading(true);
+    try {
+      const res = await dayReportAPI.getAiInsights(sessionId);
+      setAiInsights(res.data.insights || '');
+    } catch {
+      setAiInsights('AI insights temporarily unavailable.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handlePrint = () => {
     const win = window.open('', '_blank', 'width=700,height=900');
@@ -29,18 +48,42 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
     win.print();
   };
 
+  const handleDownloadPdf = async () => {
+    try {
+      toast.info('Generating PDF report...');
+      const res = await dayReportAPI.getPdf(sessionId);
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      // Open in new tab for viewing
+      window.open(url, '_blank');
+      // Also trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `day-report-${report?.session?.date || 'report'}.pdf`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      toast.error('Failed to generate PDF');
+    }
+  };
+
   if (!open) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="rounded-2xl max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="rounded-2xl max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="day-close-report-modal">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2"><FileText className="w-5 h-5" /> Day Close Report</DialogTitle>
             {report && (
-              <Button onClick={handlePrint} variant="outline" className="h-8 rounded-lg text-xs gap-1.5" data-testid="print-report-btn">
-                <Printer className="w-3.5 h-3.5" /> Print
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={handleDownloadPdf} variant="outline" className="h-8 rounded-lg text-xs gap-1.5" data-testid="download-pdf-btn">
+                  <Download className="w-3.5 h-3.5" /> PDF
+                </Button>
+                <Button onClick={handlePrint} variant="outline" className="h-8 rounded-lg text-xs gap-1.5" data-testid="print-report-btn">
+                  <Printer className="w-3.5 h-3.5" /> Print
+                </Button>
+              </div>
             )}
           </div>
         </DialogHeader>
@@ -146,6 +189,25 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
                 </ResponsiveContainer>
               </div>
             )}
+
+            {/* AI Insights */}
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 mb-2 border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-500" /> AI Insights & Tomorrow's Suggestions
+              </h2>
+              {aiLoading ? (
+                <div className="flex items-center gap-2 py-6 justify-center text-slate-400">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">Generating AI insights...</span>
+                </div>
+              ) : aiInsights ? (
+                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 prose prose-sm max-w-none text-slate-700" data-testid="ai-insights-section">
+                  <ReactMarkdown>{aiInsights}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm text-center py-4">No AI insights available</p>
+              )}
+            </div>
           </div>
         ) : (
           <p className="text-center text-slate-400 py-8">No report data available</p>

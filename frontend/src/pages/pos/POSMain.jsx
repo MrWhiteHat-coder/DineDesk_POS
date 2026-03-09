@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { menuAPI, orderAPI, tableAPI, receiptAPI } from '../../lib/api';
+import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -14,7 +14,7 @@ import {
 } from '../../components/ui/dialog';
 import {
   Plus, Minus, Trash2, ShoppingCart, Search, AlertCircle, X, Pencil, RefreshCw, Tag,
-  Banknote, CreditCard, Smartphone, CheckCircle2, Utensils, Printer, Check,
+  Banknote, CreditCard, Smartphone, CheckCircle2, Utensils, Printer, Check, User,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -50,6 +50,32 @@ export default function POSMain() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
   const receiptRef = useRef(null);
+  // Customer details
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestTimeout = useRef(null);
+
+  const lookupCustomer = useCallback((phone) => {
+    if (suggestTimeout.current) clearTimeout(suggestTimeout.current);
+    if (phone.length < 3) { setSuggestions([]); return; }
+    suggestTimeout.current = setTimeout(async () => {
+      try {
+        const res = await customerAPI.lookup(phone);
+        setSuggestions(res.data);
+        setShowSuggestions(res.data.length > 0);
+      } catch { setSuggestions([]); }
+    }, 300);
+  }, []);
+
+  const selectCustomer = (c) => {
+    setCustomerName(c.name || '');
+    setCustomerPhone(c.phone || '');
+    setCustomerEmail(c.email || '');
+    setShowSuggestions(false);
+  };
 
   const fetchAndShowReceipt = async (orderId) => {
     try {
@@ -142,7 +168,7 @@ export default function POSMain() {
   };
 
   const removeFromCart = (itemId) => setCart((prev) => prev.filter((c) => c.item.id !== itemId));
-  const clearCart = () => { setCart([]); generateOrderNumber(); setSelectedRunningOrder(null); };
+  const clearCart = () => { setCart([]); generateOrderNumber(); setSelectedRunningOrder(null); setCustomerName(''); setCustomerPhone(''); setCustomerEmail(''); };
 
   const subtotal = cart.reduce((sum, c) => sum + c.item.price * c.quantity, 0);
   const discountAmount = applyDiscount && subtotal >= 50 ? subtotal * 0.1 : 0;
@@ -153,13 +179,14 @@ export default function POSMain() {
   // Place order for dine-in (hold table, pending payment)
   const handlePlaceOrder = async () => {
     if (cart.length === 0) { toast.error('Cart is empty'); return; }
+    if (!customerName.trim()) { toast.error('Customer name is required'); return; }
+    if (!customerPhone.trim()) { toast.error('Customer phone is required'); return; }
 
     if (orderType === 'dine_in') {
       // If updating an existing running order
       if (selectedRunningOrder) {
         setCheckoutLoading(true);
         try {
-          // Find new items (not in original) and updated quantities
           const originalItems = selectedRunningOrder.items || [];
           const newItems = cart.filter(c => !c.isExisting);
           const hasChanges = newItems.length > 0 || cart.length !== originalItems.length ||
@@ -196,6 +223,9 @@ export default function POSMain() {
           items: cart.map((c) => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })),
           payment_method: 'pending',
           discount_amount: discountAmount,
+          customer_name: customerName.trim(),
+          customer_phone: customerPhone.trim(),
+          customer_email: customerEmail.trim() || null,
         };
         const res = await orderAPI.create(orderData);
         toast.success(`Order #${res.data.order_number} placed! Table held.`);
@@ -224,6 +254,9 @@ export default function POSMain() {
         items: cart.map((c) => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })),
         payment_method: method,
         discount_amount: discountAmount,
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        customer_email: customerEmail.trim() || null,
       };
       const res = await orderAPI.create(orderData);
       toast.success(`Order #${res.data.order_number} completed!`);
@@ -504,6 +537,28 @@ export default function POSMain() {
             </button>
           )}
 
+          {/* Customer Details */}
+          {cart.length > 0 && (
+            <div className="space-y-2 pt-1 border-t border-slate-100">
+              <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1"><User className="w-3.5 h-3.5" /> Customer Details</p>
+              <div className="relative">
+                <Input placeholder="Phone *" value={customerPhone} onChange={e => { setCustomerPhone(e.target.value); lookupCustomer(e.target.value); }} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-phone" />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+                    {suggestions.map((s, i) => (
+                      <button key={i} onClick={() => selectCustomer(s)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0" data-testid={`customer-suggestion-${i}`}>
+                        <span className="font-semibold text-slate-800">{s.name}</span> <span className="text-slate-400">{s.phone}</span>
+                        <span className="text-[9px] text-slate-400 ml-1">({s.order_count} orders)</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Input placeholder="Name *" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-name" />
+              <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-email" />
+            </div>
+          )}
+
           {/* Action Buttons */}
           {cart.length > 0 && (
             <Button
@@ -605,6 +660,8 @@ export default function POSMain() {
                 <div className="flex justify-between"><span>Type</span><span className="capitalize">{receiptData.order.order_type?.replace('_', ' ')}</span></div>
                 <div className="flex justify-between"><span>Payment</span><span className="capitalize">{receiptData.order.payment_method}</span></div>
                 <div className="flex justify-between"><span>Date</span><span>{new Date(receiptData.order.created_at).toLocaleString()}</span></div>
+                {receiptData.order.customer_name && <div className="flex justify-between"><span>Customer</span><span>{receiptData.order.customer_name}</span></div>}
+                {receiptData.order.customer_phone && <div className="flex justify-between"><span>Phone</span><span>{receiptData.order.customer_phone}</span></div>}
               </div>
               <hr className="border-dashed border-slate-300 my-1" />
               <div className="space-y-1 text-[11px]">
