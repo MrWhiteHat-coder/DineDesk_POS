@@ -30,10 +30,17 @@ import {
   Image,
   Leaf,
   Clock,
-  DollarSign,
+  Upload,
+  X,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `${API_URL}${imageUrl}`;
+};
 
 export default function MenuManagement() {
   const [categories, setCategories] = useState([]);
@@ -136,7 +143,6 @@ export default function MenuManagement() {
       });
     } else {
       setEditingItem(null);
-      // Always set a valid category_id if categories exist
       const defaultCategoryId = selectedCategory || (categories.length > 0 ? categories[0].id : '');
       setItemForm({
         name: '',
@@ -156,12 +162,25 @@ export default function MenuManagement() {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
     setUploadingImage(true);
     try {
       const url = await uploadFile(file);
-      setItemForm((prev) => ({ ...prev, image_url: `${API_URL}${url}` }));
-      toast.success('Image uploaded');
+      setItemForm((prev) => ({ ...prev, image_url: url }));
+      toast.success('Image uploaded successfully');
     } catch (err) {
+      console.error('Upload error:', err);
       toast.error('Failed to upload image');
     } finally {
       setUploadingImage(false);
@@ -225,6 +244,10 @@ export default function MenuManagement() {
     ? menuItems.filter((i) => i.category_id === selectedCategory)
     : menuItems;
 
+  const getCategoryCount = (catId) => {
+    return menuItems.filter(i => i.category_id === catId).length;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -238,10 +261,11 @@ export default function MenuManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold text-slate-900">Menu Management</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button
             variant="outline"
             onClick={() => setShowCategoryModal(true)}
+            className="h-11 px-4 rounded-xl"
             data-testid="add-category-btn"
           >
             <FolderPlus className="w-4 h-4 mr-2" />
@@ -249,7 +273,7 @@ export default function MenuManagement() {
           </Button>
           <Button
             onClick={() => openItemModal()}
-            className="bg-orange-500 hover:bg-orange-600"
+            className="h-11 px-4 rounded-xl bg-orange-500 hover:bg-orange-600"
             data-testid="add-item-btn"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -259,28 +283,42 @@ export default function MenuManagement() {
       </div>
 
       {/* Categories */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-3 overflow-x-auto pb-2">
         <Button
           variant={!selectedCategory ? 'default' : 'outline'}
           onClick={() => setSelectedCategory(null)}
-          className={!selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : ''}
+          className={`flex-shrink-0 h-11 px-5 rounded-xl ${
+            !selectedCategory ? 'bg-orange-500 hover:bg-orange-600' : ''
+          }`}
         >
-          All ({menuItems.length})
+          All Items
+          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+            !selectedCategory ? 'bg-white/20' : 'bg-slate-100'
+          }`}>
+            {menuItems.length}
+          </span>
         </Button>
         {categories.map((cat) => (
           <div key={cat.id} className="flex items-center gap-1">
             <Button
               variant={selectedCategory === cat.id ? 'default' : 'outline'}
               onClick={() => setSelectedCategory(cat.id)}
-              className={selectedCategory === cat.id ? 'bg-orange-500 hover:bg-orange-600' : ''}
+              className={`flex-shrink-0 h-11 px-5 rounded-xl ${
+                selectedCategory === cat.id ? 'bg-orange-500 hover:bg-orange-600' : ''
+              }`}
             >
-              {cat.name} ({menuItems.filter((i) => i.category_id === cat.id).length})
+              {cat.name}
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                selectedCategory === cat.id ? 'bg-white/20' : 'bg-slate-100'
+              }`}>
+                {getCategoryCount(cat.id)}
+              </span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleDeleteCategory(cat.id)}
-              className="text-slate-400 hover:text-red-500 h-8 w-8 p-0"
+              className="text-slate-400 hover:text-red-500 h-8 w-8 p-0 rounded-lg"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -290,32 +328,35 @@ export default function MenuManagement() {
 
       {/* Items Grid */}
       {filteredItems.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden" data-testid={`menu-item-card-${item.id}`}>
-              <div className="relative">
+            <Card key={item.id} className="overflow-hidden rounded-2xl border-slate-200" data-testid={`menu-item-card-${item.id}`}>
+              <div className="relative aspect-square bg-slate-100">
                 <img
-                  src={item.image_url || 'https://via.placeholder.com/300x200?text=Food'}
+                  src={getImageUrl(item.image_url) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop'}
                   alt={item.name}
-                  className="w-full h-40 object-cover"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop';
+                  }}
                 />
-                <div className="absolute top-2 right-2 flex gap-1">
+                <div className="absolute top-3 right-3 flex gap-2">
                   {item.is_vegetarian && (
-                    <Badge className="bg-green-500">
-                      <Leaf className="w-3 h-3" />
-                    </Badge>
+                    <div className="w-6 h-6 bg-white rounded flex items-center justify-center border-2 border-green-500">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    </div>
                   )}
-                  <Badge className={item.is_available ? 'bg-green-500' : 'bg-red-500'}>
+                  <Badge className={`px-2 py-1 text-xs ${item.is_available ? 'bg-green-500' : 'bg-red-500'}`}>
                     {item.is_available ? 'Available' : 'Unavailable'}
                   </Badge>
                 </div>
               </div>
               <CardContent className="p-4">
-                <h3 className="font-semibold text-slate-900 mb-1">{item.name}</h3>
+                <h3 className="font-semibold text-slate-900 mb-1 truncate">{item.name}</h3>
                 {item.description && (
                   <p className="text-sm text-slate-500 mb-2 line-clamp-2">{item.description}</p>
                 )}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                   <span className="font-numbers text-xl font-bold text-orange-500">
                     ₹{item.price.toFixed(2)}
                   </span>
@@ -325,16 +366,20 @@ export default function MenuManagement() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <Switch
-                    checked={item.is_available}
-                    onCheckedChange={() => handleToggleAvailability(item)}
-                    data-testid={`toggle-availability-${item.id}`}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={item.is_available}
+                      onCheckedChange={() => handleToggleAvailability(item)}
+                      data-testid={`toggle-availability-${item.id}`}
+                    />
+                    <span className="text-xs text-slate-500">Available</span>
+                  </div>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => openItemModal(item)}
+                      className="h-8 w-8 p-0 rounded-lg"
                       data-testid={`edit-item-${item.id}`}
                     >
                       <Pencil className="w-4 h-4" />
@@ -343,7 +388,7 @@ export default function MenuManagement() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteItem(item.id)}
-                      className="text-red-500 hover:text-red-600"
+                      className="h-8 w-8 p-0 rounded-lg text-red-500 hover:text-red-600"
                       data-testid={`delete-item-${item.id}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -355,9 +400,10 @@ export default function MenuManagement() {
           ))}
         </div>
       ) : (
-        <Card className="p-12 text-center">
+        <Card className="p-12 text-center rounded-2xl">
+          <Image className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No menu items yet</p>
-          <Button onClick={() => openItemModal()} className="bg-orange-500 hover:bg-orange-600">
+          <Button onClick={() => openItemModal()} className="bg-orange-500 hover:bg-orange-600 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>
@@ -366,9 +412,9 @@ export default function MenuManagement() {
 
       {/* Category Modal */}
       <Dialog open={showCategoryModal} onOpenChange={setShowCategoryModal}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="font-heading">Add Category</DialogTitle>
+            <DialogTitle className="font-heading text-xl">Add Category</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -377,6 +423,7 @@ export default function MenuManagement() {
                 value={categoryName}
                 onChange={(e) => setCategoryName(e.target.value)}
                 placeholder="e.g., Starters, Main Course"
+                className="h-11 rounded-xl"
                 data-testid="category-name-input"
               />
             </div>
@@ -386,18 +433,19 @@ export default function MenuManagement() {
                 value={categoryDescription}
                 onChange={(e) => setCategoryDescription(e.target.value)}
                 placeholder="Optional description"
+                className="rounded-xl"
                 data-testid="category-description-input"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCategoryModal(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowCategoryModal(false)} className="rounded-xl">
               Cancel
             </Button>
             <Button
               onClick={handleCreateCategory}
               disabled={categoryLoading}
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-orange-500 hover:bg-orange-600 rounded-xl"
               data-testid="save-category-btn"
             >
               {categoryLoading ? 'Creating...' : 'Create Category'}
@@ -408,9 +456,9 @@ export default function MenuManagement() {
 
       {/* Item Modal */}
       <Dialog open={showItemModal} onOpenChange={setShowItemModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="font-heading">
+            <DialogTitle className="font-heading text-xl">
               {editingItem ? 'Edit Menu Item' : 'Add Menu Item'}
             </DialogTitle>
           </DialogHeader>
@@ -418,36 +466,46 @@ export default function MenuManagement() {
             {/* Image Upload */}
             <div className="space-y-2">
               <Label>Item Image</Label>
-              <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center">
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-4">
                 {itemForm.image_url ? (
                   <div className="relative">
                     <img
-                      src={itemForm.image_url}
+                      src={getImageUrl(itemForm.image_url)}
                       alt="Preview"
-                      className="w-full h-32 object-cover rounded-lg"
+                      className="w-full h-40 object-cover rounded-xl"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=200&fit=crop';
+                      }}
                     />
                     <Button
-                      variant="ghost"
+                      variant="destructive"
                       size="sm"
                       onClick={() => setItemForm((prev) => ({ ...prev, image_url: '' }))}
-                      className="absolute top-2 right-2 bg-white/80"
+                      className="absolute top-2 right-2 h-8 w-8 p-0 rounded-lg"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ) : (
-                  <label className="cursor-pointer">
+                  <label className="cursor-pointer block">
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
                     />
-                    <div className="flex flex-col items-center gap-2 py-4">
-                      <Image className="w-8 h-8 text-slate-400" />
-                      <span className="text-sm text-slate-500">
-                        {uploadingImage ? 'Uploading...' : 'Click to upload image'}
-                      </span>
+                    <div className="flex flex-col items-center gap-3 py-6">
+                      {uploadingImage ? (
+                        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Upload className="w-10 h-10 text-slate-400" />
+                      )}
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-slate-700">
+                          {uploadingImage ? 'Uploading...' : 'Click to upload image'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB</p>
+                      </div>
                     </div>
                   </label>
                 )}
@@ -461,6 +519,7 @@ export default function MenuManagement() {
                 value={itemForm.name}
                 onChange={(e) => setItemForm((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g., Butter Chicken"
+                className="h-11 rounded-xl"
                 data-testid="item-name-input"
               />
             </div>
@@ -471,6 +530,7 @@ export default function MenuManagement() {
                 value={itemForm.description}
                 onChange={(e) => setItemForm((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Brief description of the item"
+                className="rounded-xl"
                 data-testid="item-description-input"
               />
             </div>
@@ -483,21 +543,22 @@ export default function MenuManagement() {
                   value={itemForm.price}
                   onChange={(e) => setItemForm((prev) => ({ ...prev, price: e.target.value }))}
                   placeholder="0.00"
+                  className="h-11 rounded-xl"
                   data-testid="item-price-input"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Category *</Label>
                 {categories.length === 0 ? (
-                  <p className="text-sm text-amber-600 p-2 bg-amber-50 rounded-lg">
-                    Please create a category first before adding items
+                  <p className="text-sm text-amber-600 p-3 bg-amber-50 rounded-xl">
+                    Please create a category first
                   </p>
                 ) : (
                   <Select
                     value={itemForm.category_id}
                     onValueChange={(val) => setItemForm((prev) => ({ ...prev, category_id: val }))}
                   >
-                    <SelectTrigger data-testid="item-category-select">
+                    <SelectTrigger className="h-11 rounded-xl" data-testid="item-category-select">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -521,41 +582,46 @@ export default function MenuManagement() {
                   setItemForm((prev) => ({ ...prev, preparation_time: e.target.value }))
                 }
                 placeholder="15"
+                className="h-11 rounded-xl"
                 data-testid="item-prep-time-input"
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={itemForm.is_vegetarian}
-                  onCheckedChange={(checked) =>
-                    setItemForm((prev) => ({ ...prev, is_vegetarian: checked }))
-                  }
-                  data-testid="item-veg-switch"
-                />
-                <Label>Vegetarian</Label>
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-white rounded flex items-center justify-center border-2 border-green-500">
+                  <div className={`w-3 h-3 rounded-full ${itemForm.is_vegetarian ? 'bg-green-500' : 'bg-transparent'}`}></div>
+                </div>
+                <Label className="cursor-pointer">Vegetarian</Label>
               </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={itemForm.is_available}
-                  onCheckedChange={(checked) =>
-                    setItemForm((prev) => ({ ...prev, is_available: checked }))
-                  }
-                  data-testid="item-available-switch"
-                />
-                <Label>Available</Label>
-              </div>
+              <Switch
+                checked={itemForm.is_vegetarian}
+                onCheckedChange={(checked) =>
+                  setItemForm((prev) => ({ ...prev, is_vegetarian: checked }))
+                }
+                data-testid="item-veg-switch"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+              <Label className="cursor-pointer">Available for ordering</Label>
+              <Switch
+                checked={itemForm.is_available}
+                onCheckedChange={(checked) =>
+                  setItemForm((prev) => ({ ...prev, is_available: checked }))
+                }
+                data-testid="item-available-switch"
+              />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowItemModal(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowItemModal(false)} className="rounded-xl">
               Cancel
             </Button>
             <Button
               onClick={handleSaveItem}
               disabled={itemLoading}
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-orange-500 hover:bg-orange-600 rounded-xl"
               data-testid="save-item-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}
