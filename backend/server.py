@@ -36,9 +36,8 @@ JWT_EXPIRATION_HOURS = 24
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
 # Twilio Config
-TWILIO_API_KEY_SID = os.environ.get('TWILIO_API_KEY_SID')
-TWILIO_API_KEY_SECRET = os.environ.get('TWILIO_API_KEY_SECRET')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
 # Create the main app
@@ -1898,8 +1897,8 @@ async def send_order_notification(order_data: dict, restaurant: dict):
 
     try:
         from twilio.rest import Client as TwilioClient
-        if TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET and TWILIO_ACCOUNT_SID:
-            twilio_client = TwilioClient(TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET, TWILIO_ACCOUNT_SID)
+        if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+            twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
             # Send SMS
             try:
                 msg = twilio_client.messages.create(

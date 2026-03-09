@@ -57,7 +57,7 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 - **Analytics date picker**: Select any previous date to view that day's report, Today button to reset
 - **Dashboard online orders**: Order type chart dynamically includes all types (dine-in, takeaway, online)
 - **Wallet date picker**: Select specific date for wallet/sales report alongside period buttons
-- **SMS/WhatsApp Notifications**: Twilio-powered order confirmation via SMS/WhatsApp, notification settings page with toggles, notification logs, test send. Note: Twilio Account SID needed for live SMS delivery.
+- **SMS/WhatsApp Notifications**: Twilio-powered order confirmation via SMS and WhatsApp, notification settings page with toggles, notification logs. Live and working with Twilio Account SID + Auth Token.
 - **Analytics branch selector**: Owner/Manager can filter analytics by specific branch or view all branches combined
 
 ## Mocked Integrations
