@@ -118,7 +118,7 @@ export default function AdminAnalytics() {
                     yAxisId="left"
                     type="monotone"
                     dataKey="orders"
-                    stroke="#F97316"
+                    stroke="#3B82F6"
                     strokeWidth={2}
                     dot={false}
                     name="Orders"
@@ -166,7 +166,7 @@ export default function AdminAnalytics() {
                       borderRadius: '8px',
                     }}
                   />
-                  <Bar dataKey="orders" fill="#F97316" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="orders" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

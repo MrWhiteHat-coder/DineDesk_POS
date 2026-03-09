@@ -11,6 +11,7 @@ Build a cloud-based Restaurant POS SaaS platform for small and medium food busin
 - **Integrations**: Mock Swiggy/Zomato UI + webhook-ready endpoints
 - **Image Storage**: Local file storage
 - **Brand**: FoodFlow POS
+- **Color Theme**: Dark navy/slate (NO orange) — premium professional look
 
 ## Architecture
 
@@ -22,10 +23,10 @@ Build a cloud-based Restaurant POS SaaS platform for small and medium food busin
 
 ### Frontend (React)
 - `/app/frontend/src/` - React application
-- Tailwind CSS with dark navy theme (redesigned)
-- Shadcn/UI components
+- Tailwind CSS with dark navy/slate theme
+- Shadcn/UI components (primary: slate-800)
 - React Router for navigation
-- Recharts for analytics
+- Recharts for analytics (blue chart color)
 
 ### Database Collections
 - users, restaurants, subscriptions
@@ -45,7 +46,7 @@ Build a cloud-based Restaurant POS SaaS platform for small and medium food busin
 ### Platform 2: Restaurant POS Application
 
 #### Authentication & Onboarding
-- [x] User registration and login
+- [x] User registration and login (dark navy theme)
 - [x] Business category selection
 - [x] 3-step restaurant setup
 - [x] Mock Razorpay subscription (₹2999/year)
@@ -53,47 +54,34 @@ Build a cloud-based Restaurant POS SaaS platform for small and medium food busin
 #### POS Features (Redesigned 2026-03-09)
 - [x] Dashboard with daily/weekly/monthly sales
 - [x] Day Open/Close system
-- [x] Menu Management with image upload (bug fixed)
-- [x] POS Main Screen - redesigned with reference image
+- [x] Menu Management with image upload
+  - Compact 5-column card grid
+  - Smaller card sizes for better overview
+- [x] POS Main Screen - reference-based redesign
   - Light white sidebar with dark navy active states
-  - Expandable navigation sections (Manage Table, Manage Dish)
+  - Auto-expanding navigation sections
   - Food card grid with availability badges
-  - "Add to Cart" / "Add More (X)" button states
-  - Order summary right panel with totals, discount, payment
-  - Category horizontal tabs with item counts
-  - Search and refresh functionality
+  - "Add to Cart" / "Add More" button states
+  - Order summary right panel
 - [x] Order Management
 - [x] Tables Management
 - [x] Inventory Management
-- [x] Analytics Dashboard
+- [x] Analytics Dashboard (blue chart theme)
 - [x] Staff Management
 - [x] Settings page
 - [x] Online Orders (Mock Swiggy/Zomato)
 
-## Bug Fixes (2026-03-09)
-- [x] Image URL construction: Now stores relative paths, constructs full URL at display time using getImageUrl() helper
-- [x] Works across different preview environments
-
-## API Endpoints (27 total)
-- Auth: /api/auth/register, /api/auth/login, /api/auth/me
-- Restaurant: /api/restaurants/onboard, /api/restaurants/my
-- Subscription: /api/subscriptions/create, /api/subscriptions/my
-- Menu: /api/menu/categories, /api/menu/items
-- Orders: /api/orders, /api/orders/today, /api/orders/{id}/status
-- Day Session: /api/day-session/open, /api/day-session/close
-- Inventory: /api/inventory
-- Tables: /api/tables
-- Staff: /api/staff
-- Analytics: /api/analytics
-- Upload: /api/upload
-- Admin: /api/admin/stats, /api/admin/restaurants, etc.
-- Webhooks: /api/webhooks/swiggy, /api/webhooks/zomato
+## Bug Fixes & UI Updates (2026-03-09)
+- [x] Image URL construction: relative paths + getImageUrl() helper
+- [x] Complete orange→dark navy theme migration (all pages, CSS vars, charts, hex codes)
+- [x] Sidebar auto-expand for active sub-routes
+- [x] Menu Management card sizes reduced
 
 ## Demo Credentials
 - **Admin**: admin@foodflow.com / admin123
 - **Restaurant Owner**: demo@restaurant.com / demo123456
 
-## P0/P1/P2 Features Remaining
+## P1/P2 Features Remaining
 
 ### P1 (Important)
 - [ ] Inventory Automation - auto-deduct stock on item sale
@@ -111,4 +99,4 @@ Build a cloud-based Restaurant POS SaaS platform for small and medium food busin
 - [ ] Multi-branch support
 
 ## Refactoring Needed
-- [ ] Break down monolithic server.py into modular routers (routes/auth.py, routes/menu.py, etc.)
+- [ ] Break down monolithic server.py into modular routers

@@ -25,7 +25,7 @@ import {
   Cell,
 } from 'recharts';
 
-const COLORS = ['#F97316', '#22C55E', '#3B82F6', '#EAB308'];
+const COLORS = ['#3B82F6', '#22C55E', '#3B82F6', '#EAB308'];
 
 export default function POSDashboard() {
   const { restaurant } = useAuth();
@@ -173,8 +173,8 @@ export default function POSDashboard() {
                 <AreaChart data={salesChartData}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#F97316" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
@@ -190,7 +190,7 @@ export default function POSDashboard() {
                   <Area
                     type="monotone"
                     dataKey="sales"
-                    stroke="#F97316"
+                    stroke="#3B82F6"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorSales)"

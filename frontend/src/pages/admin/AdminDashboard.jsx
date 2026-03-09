@@ -145,8 +145,8 @@ export default function AdminDashboard() {
                   <AreaChart data={analytics.orders_by_day}>
                     <defs>
                       <linearGradient id="colorOrdersAdmin" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#F97316" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
                     <Area
                       type="monotone"
                       dataKey="orders"
-                      stroke="#F97316"
+                      stroke="#3B82F6"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#colorOrdersAdmin)"

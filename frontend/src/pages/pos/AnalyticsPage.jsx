@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 import { DollarSign, ShoppingCart, TrendingUp, Clock } from 'lucide-react';
 
-const COLORS = ['#F97316', '#22C55E', '#3B82F6', '#EAB308', '#8B5CF6'];
+const COLORS = ['#3B82F6', '#22C55E', '#3B82F6', '#EAB308', '#8B5CF6'];
 
 export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState(null);
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
                       }}
                       formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']}
                     />
-                    <Bar dataKey="value" fill="#F97316" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -218,8 +218,8 @@ export default function AnalyticsPage() {
                 <AreaChart data={hourlyData}>
                   <defs>
                     <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#F97316" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
@@ -241,7 +241,7 @@ export default function AnalyticsPage() {
                   <Area
                     type="monotone"
                     dataKey="orders"
-                    stroke="#F97316"
+                    stroke="#3B82F6"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorOrders)"
