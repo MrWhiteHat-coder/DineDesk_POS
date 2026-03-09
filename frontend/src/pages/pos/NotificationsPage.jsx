@@ -117,7 +117,7 @@ export default function NotificationsPage() {
             <Switch checked={settings.whatsapp_enabled} onCheckedChange={(v) => updateSettings('whatsapp_enabled', v)} data-testid="whatsapp-toggle" />
           </div>
           <p className="text-xs text-slate-400 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            Notifications are sent automatically after every paid order to the customer's phone number. Powered by Twilio.
+            <span className="font-semibold text-amber-700">[DEMO MODE]</span> Notifications are currently logged but not sent. Provide production Twilio/WhatsApp Business credentials to enable live delivery.
           </p>
         </CardContent>
       </Card>

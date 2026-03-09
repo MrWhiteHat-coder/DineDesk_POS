@@ -133,15 +133,15 @@ export default function QuickPOSPage() {
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="h-[calc(100vh-7rem)] flex gap-3" data-testid="quick-pos-page">
+    <div className="h-[calc(100vh-7rem)] flex flex-col lg:flex-row gap-3" data-testid="quick-pos-page">
       {/* Left: Items Grid */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="flex items-center gap-1.5 text-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+          <div className="flex items-center gap-1.5 text-slate-800 flex-shrink-0">
             <Zap className="w-5 h-5" />
             <h1 className="font-bold text-lg">Quick POS</h1>
           </div>
-          <div className="flex gap-1.5 ml-4 overflow-x-auto flex-1">
+          <div className="flex gap-1.5 overflow-x-auto flex-1 pb-1 sm:pb-0">
             <button onClick={() => setSelectedCat(null)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${!selectedCat ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>All</button>
             {categories.map(c => (
               <button key={c.id} onClick={() => setSelectedCat(c.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${selectedCat === c.id ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>{c.name}</button>
@@ -149,11 +149,11 @@ export default function QuickPOSPage() {
           </div>
           <div className="relative flex-shrink-0">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-            <Input placeholder="Search" value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 w-36 text-xs rounded-lg" />
+            <Input placeholder="Search" value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 w-full sm:w-36 text-xs rounded-lg" />
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto grid grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 content-start">
+        <div className="flex-1 overflow-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 content-start">
           {filtered.map(item => {
             const inCart = cart.find(c => c.id === item.id);
             return (
@@ -173,7 +173,7 @@ export default function QuickPOSPage() {
       </div>
 
       {/* Right: Cart + Payment */}
-      <div className="w-[260px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden flex-shrink-0">
+      <div className="w-full lg:w-[260px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden lg:flex-shrink-0 max-h-[45vh] lg:max-h-none">
         {/* Order Type Toggle */}
         <div className="p-2.5 border-b border-slate-100 flex gap-1.5">
           {['takeaway', 'dine_in'].map(t => (

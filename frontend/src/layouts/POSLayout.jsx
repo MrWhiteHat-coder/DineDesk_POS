@@ -15,19 +15,18 @@ import {
   Users,
   Settings,
   LogOut,
-  Sun,
-  Moon,
   Globe,
   ChevronDown,
   ChevronUp,
   CalendarDays,
-  RefreshCw,
   Bell,
   ChefHat,
   Wallet,
   Building2,
   Zap,
   Truck,
+  Menu,
+  X,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -39,6 +38,11 @@ import {
 } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from '../components/ui/sheet';
 
 const navItems = [
   { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true, feature: 'dashboard' },
@@ -68,6 +72,9 @@ export default function POSLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Close mobile menu on route change
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
+
   // Role-based access
   const ROLE_ACCESS = {
     owner: new Set(['dashboard', 'menu_order', 'analytics', 'kds', 'tables', 'menu', 'inventory', 'staff', 'settings', 'online_orders', 'wallet', 'branches', 'purchase_orders', 'notifications']),
@@ -88,6 +95,7 @@ export default function POSLayout() {
   const [loading, setLoading] = useState(false);
   const [showDayReport, setShowDayReport] = useState(false);
   const [reportSessionId, setReportSessionId] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Auto-expand sidebar sections based on current route
   const isTableRoute = ['/pos/tables', '/pos/order-management'].some(p => location.pathname.startsWith(p));
@@ -175,10 +183,165 @@ export default function POSLayout() {
     hour12: true,
   });
 
+  // Sidebar navigation content - shared between desktop and mobile
+  const SidebarNav = () => (
+    <>
+      {/* Navigation */}
+      <nav className="flex-1 py-4 px-3 overflow-y-auto">
+        <div className="space-y-0.5">
+          {navItems.filter(item => hasAccess(item.feature)).map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.exact}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
+                  isActive
+                    ? 'bg-slate-800 text-white'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`
+              }
+              data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+
+          {/* Manage Table - Expandable */}
+          {hasAccess('tables') && (
+          <div>
+            <button
+              onClick={() => toggleSection('tables')}
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+              data-testid="nav-manage-table"
+            >
+              <div className="flex items-center gap-3">
+                <SquareStack className="w-[18px] h-[18px]" />
+                <span>Manage Table</span>
+              </div>
+              {expandedSections.tables ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+            {expandedSections.tables && (
+              <div className="ml-9 space-y-0.5 mt-0.5">
+                {manageTableItems.map((sub) => (
+                  <NavLink
+                    key={sub.to}
+                    to={sub.to}
+                    className={({ isActive }) =>
+                      `block px-3 py-2 rounded-lg text-[13px] transition-all ${
+                        isActive
+                          ? 'text-slate-900 font-medium bg-slate-100'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`
+                    }
+                  >
+                    {sub.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* Manage Dish - Expandable */}
+          {hasAccess('menu') && (
+          <div>
+            <button
+              onClick={() => toggleSection('dishes')}
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+              data-testid="nav-manage-dish"
+            >
+              <div className="flex items-center gap-3">
+                <UtensilsCrossed className="w-[18px] h-[18px]" />
+                <span>Manage Dish</span>
+              </div>
+              {expandedSections.dishes ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+            {expandedSections.dishes && (
+              <div className="ml-9 space-y-0.5 mt-0.5">
+                {manageDishItems.map((sub) => (
+                  <NavLink
+                    key={sub.to}
+                    to={sub.to}
+                    className={({ isActive }) =>
+                      `block px-3 py-2 rounded-lg text-[13px] transition-all ${
+                        isActive
+                          ? 'text-slate-900 font-medium bg-slate-100'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`
+                    }
+                  >
+                    {sub.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* Staff */}
+          {hasAccess('staff') && (
+          <NavLink
+            to="/pos/staff"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
+                isActive
+                  ? 'bg-slate-800 text-white'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`
+            }
+            data-testid="nav-staff"
+          >
+            <Users className="w-[18px] h-[18px]" />
+            <span>Staff</span>
+          </NavLink>
+          )}
+        </div>
+      </nav>
+
+      {/* Bottom Section */}
+      <div className="px-3 py-3 border-t border-slate-100 space-y-0.5">
+        {hasAccess('settings') && (
+        <NavLink
+          to="/pos/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
+              isActive
+                ? 'bg-slate-800 text-white'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`
+          }
+          data-testid="nav-settings"
+        >
+          <Settings className="w-[18px] h-[18px]" />
+          <span>Settings</span>
+        </NavLink>
+        )}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-[13px] font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all"
+          data-testid="logout-btn"
+        >
+          <LogOut className="w-[18px] h-[18px]" />
+          <span>Logout</span>
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-[#F4F5F7] flex" data-testid="pos-layout">
-      {/* Sidebar - Light Theme */}
-      <aside className="w-[240px] bg-white flex flex-col border-r border-slate-200 flex-shrink-0">
+      {/* Desktop Sidebar - hidden on mobile */}
+      <aside className="hidden lg:flex w-[240px] bg-white flex-col border-r border-slate-200 flex-shrink-0">
         {/* Logo */}
         <div className="h-[68px] flex items-center gap-3 px-5 border-b border-slate-100">
           <div className="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -189,211 +352,83 @@ export default function POSLayout() {
             <p className="text-[10px] text-slate-400 leading-tight">Cashier Daily Assistant</p>
           </div>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 py-4 px-3 overflow-y-auto">
-          <div className="space-y-0.5">
-            {navItems.filter(item => hasAccess(item.feature)).map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.exact}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
-                    isActive
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`
-                }
-                data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-
-            {/* Manage Table - Expandable */}
-            {hasAccess('tables') && (
-            <div>
-              <button
-                onClick={() => toggleSection('tables')}
-                className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
-                data-testid="nav-manage-table"
-              >
-                <div className="flex items-center gap-3">
-                  <SquareStack className="w-[18px] h-[18px]" />
-                  <span>Manage Table</span>
-                </div>
-                {expandedSections.tables ? (
-                  <ChevronUp className="w-4 h-4 text-slate-400" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-              {expandedSections.tables && (
-                <div className="ml-9 space-y-0.5 mt-0.5">
-                  {manageTableItems.map((sub) => (
-                    <NavLink
-                      key={sub.to}
-                      to={sub.to}
-                      className={({ isActive }) =>
-                        `block px-3 py-2 rounded-lg text-[13px] transition-all ${
-                          isActive
-                            ? 'text-slate-900 font-medium bg-slate-100'
-                            : 'text-slate-500 hover:text-slate-700'
-                        }`
-                      }
-                    >
-                      {sub.label}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-            )}
-
-            {/* Manage Dish - Expandable */}
-            {hasAccess('menu') && (
-            <div>
-              <button
-                onClick={() => toggleSection('dishes')}
-                className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
-                data-testid="nav-manage-dish"
-              >
-                <div className="flex items-center gap-3">
-                  <UtensilsCrossed className="w-[18px] h-[18px]" />
-                  <span>Manage Dish</span>
-                </div>
-                {expandedSections.dishes ? (
-                  <ChevronUp className="w-4 h-4 text-slate-400" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                )}
-              </button>
-              {expandedSections.dishes && (
-                <div className="ml-9 space-y-0.5 mt-0.5">
-                  {manageDishItems.map((sub) => (
-                    <NavLink
-                      key={sub.to}
-                      to={sub.to}
-                      className={({ isActive }) =>
-                        `block px-3 py-2 rounded-lg text-[13px] transition-all ${
-                          isActive
-                            ? 'text-slate-900 font-medium bg-slate-100'
-                            : 'text-slate-500 hover:text-slate-700'
-                        }`
-                      }
-                    >
-                      {sub.label}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-            )}
-
-            {/* Staff */}
-            {hasAccess('staff') && (
-            <NavLink
-              to="/pos/staff"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
-                  isActive
-                    ? 'bg-slate-800 text-white'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`
-              }
-              data-testid="nav-staff"
-            >
-              <Users className="w-[18px] h-[18px]" />
-              <span>Staff</span>
-            </NavLink>
-            )}
-          </div>
-        </nav>
-
-        {/* Bottom Section */}
-        <div className="px-3 py-3 border-t border-slate-100 space-y-0.5">
-          {hasAccess('settings') && (
-          <NavLink
-            to="/pos/settings"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-[13px] font-medium ${
-                isActive
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`
-            }
-            data-testid="nav-settings"
-          >
-            <Settings className="w-[18px] h-[18px]" />
-            <span>Settings</span>
-          </NavLink>
-          )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-[13px] font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all"
-            data-testid="logout-btn"
-          >
-            <LogOut className="w-[18px] h-[18px]" />
-            <span>Logout</span>
-          </button>
-        </div>
+        <SidebarNav />
       </aside>
+
+      {/* Mobile Sidebar - Sheet drawer */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="w-[260px] p-0 flex flex-col" data-testid="mobile-sidebar">
+          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+          {/* Logo */}
+          <div className="h-[68px] flex items-center gap-3 px-5 border-b border-slate-100">
+            <div className="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center flex-shrink-0">
+              <UtensilsCrossed className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-heading font-bold text-slate-900 text-base leading-tight">FoodFlow</h1>
+              <p className="text-[10px] text-slate-400 leading-tight">Cashier Daily Assistant</p>
+            </div>
+          </div>
+          <SidebarNav />
+        </SheetContent>
+      </Sheet>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-5 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+        <header className="h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-5 flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-3">
+            <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100" data-testid="mobile-menu-btn">
+              <Menu className="w-5 h-5 text-slate-700" />
+            </button>
+            <div className="flex items-center gap-2 bg-slate-50 px-2 md:px-3 py-1.5 rounded-lg border border-slate-200">
               <div className="w-2 h-2 rounded-full bg-slate-600"></div>
-              <span className="text-sm font-medium text-slate-800">
+              <span className="text-xs md:text-sm font-medium text-slate-800 truncate max-w-[120px] md:max-w-none">
                 {restaurant?.name || 'Restaurant'}
               </span>
             </div>
             {isDayOpen ? (
               <button
                 onClick={() => setShowDayCloseModal(true)}
-                className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-200 hover:bg-green-100 transition-colors"
+                className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2 md:px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-200 hover:bg-green-100 transition-colors"
                 data-testid="close-day-btn"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                Open
+                <span className="hidden sm:inline">Open</span>
               </button>
             ) : (
               <button
                 onClick={() => setShowDayOpenModal(true)}
-                className="flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 hover:bg-red-100 transition-colors"
+                className="flex items-center gap-1.5 bg-red-50 text-red-700 px-2 md:px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 hover:bg-red-100 transition-colors"
                 data-testid="open-day-btn"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                Closed
+                <span className="hidden sm:inline">Closed</span>
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-slate-500 text-xs">
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="hidden md:flex items-center gap-2 text-slate-500 text-xs">
               <CalendarDays className="w-3.5 h-3.5" />
               <span>{currentTime}</span>
             </div>
-            <div className="w-px h-6 bg-slate-200"></div>
+            <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
             {user && (
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-xs">
                     {user.name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-slate-700">{user.name}</span>
+                <span className="hidden md:block text-sm font-medium text-slate-700">{user.name}</span>
               </div>
             )}
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-5">
+        <main className="flex-1 overflow-auto p-3 md:p-5">
           <Outlet context={{ isDayOpen, currentSession, refreshSession: fetchDaySession }} />
         </main>
       </div>

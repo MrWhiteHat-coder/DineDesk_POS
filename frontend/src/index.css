@@ -208,3 +208,24 @@ button:active:not(:disabled) {
 main > * {
     animation: fadeInUp 0.25s ease;
 }
+
+
+/* Mobile responsiveness */
+@media (max-width: 1023px) {
+    .font-heading { font-size: 1.25rem; }
+    main > * { animation: none; }
+}
+
+/* Hide scrollbar on mobile nav */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 2px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 2px;
+}
+
+/* Safe area padding for mobile */
+@supports (padding: env(safe-area-inset-bottom)) {
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+}

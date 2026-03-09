@@ -1896,41 +1896,12 @@ async def send_order_notification(order_data: dict, restaurant: dict):
     }
 
     try:
-        from twilio.rest import Client as TwilioClient
-        if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
-            twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-            # Send SMS
-            try:
-                msg = twilio_client.messages.create(
-                    body=message_body,
-                    from_=TWILIO_PHONE_NUMBER,
-                    to=clean_phone
-                )
-                notif_log["status"] = "sent"
-                notif_log["twilio_sid"] = msg.sid
-                logger.info(f"SMS sent to {clean_phone}: {msg.sid}")
-            except Exception as sms_err:
-                notif_log["status"] = "failed"
-                notif_log["error"] = str(sms_err)[:200]
-                logger.warning(f"SMS failed for {clean_phone}: {sms_err}")
-
-            # Try WhatsApp
-            try:
-                wa_msg = twilio_client.messages.create(
-                    body=message_body,
-                    from_='whatsapp:+14155238886',
-                    to=f"whatsapp:{clean_phone}"
-                )
-                notif_log["whatsapp_status"] = "sent"
-                notif_log["whatsapp_sid"] = wa_msg.sid
-                logger.info(f"WhatsApp sent to {clean_phone}: {wa_msg.sid}")
-            except Exception as wa_err:
-                notif_log["whatsapp_status"] = "failed"
-                notif_log["whatsapp_error"] = str(wa_err)[:200]
-                logger.warning(f"WhatsApp failed for {clean_phone}: {wa_err}")
-        else:
-            notif_log["status"] = "skipped"
-            notif_log["error"] = "Twilio credentials not configured"
+        # DEMO MODE: Log notification without sending via Twilio
+        # To enable live SMS/WhatsApp, replace with Twilio credentials
+        notif_log["status"] = "demo"
+        notif_log["channel"] = "demo"
+        notif_log["whatsapp_status"] = "demo"
+        logger.info(f"[DEMO] Notification logged for {clean_phone}: Order #{order_number}")
     except Exception as e:
         notif_log["status"] = "failed"
         notif_log["error"] = str(e)[:200]

@@ -77,9 +77,9 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6" data-testid="analytics-page">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-heading text-2xl font-bold text-slate-900">Analytics</h1>
-        <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 className="font-heading text-xl sm:text-2xl font-bold text-slate-900">Analytics</h1>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Branch Selector */}
           {isOwnerOrManager && branches.length > 0 && (
             <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5">

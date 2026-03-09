@@ -313,9 +313,9 @@ export default function POSMain() {
   }
 
   return (
-    <div className="h-[calc(100vh-7rem)] flex gap-4" data-testid="pos-main">
+    <div className="h-[calc(100vh-7rem)] flex flex-col lg:flex-row gap-3 lg:gap-4" data-testid="pos-main">
       {/* Left: Menu Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Running Orders Bar */}
         {runningOrders.length > 0 && (
           <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
@@ -344,8 +344,8 @@ export default function POSMain() {
         )}
 
         {/* Category Tabs + Search */}
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2 overflow-x-auto flex-1 pb-1">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 mb-3 md:mb-4">
+          <div className="flex items-center gap-2 overflow-x-auto flex-1 pb-1 w-full md:w-auto">
             <button
               onClick={() => setSelectedCategory(null)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
@@ -368,13 +368,13 @@ export default function POSMain() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={fetchMenu} className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg transition-colors" data-testid="refresh-menu-btn">
+          <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto">
+            <button onClick={fetchMenu} className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded-lg transition-colors" data-testid="refresh-menu-btn">
               <RefreshCw className="w-3.5 h-3.5" /> Refresh
             </button>
-            <div className="relative">
+            <div className="relative flex-1 md:flex-none">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input placeholder="Search Menu" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-9 w-48 bg-white border-slate-200 rounded-lg text-sm" data-testid="menu-search-input" />
+              <Input placeholder="Search Menu" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-9 w-full md:w-48 bg-white border-slate-200 rounded-lg text-sm" data-testid="menu-search-input" />
             </div>
           </div>
         </div>
@@ -382,7 +382,7 @@ export default function POSMain() {
         {/* Menu Grid */}
         <ScrollArea className="flex-1 -mr-2 pr-2">
           {filteredItems.length > 0 ? (
-            <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3">
               {filteredItems.map((item) => {
                 const qty = getCartQuantity(item.id);
                 const imgSrc = getImageUrl(item.image_url) || FALLBACK_IMG;
@@ -428,7 +428,7 @@ export default function POSMain() {
       </div>
 
       {/* Right: Order Summary Panel */}
-      <div className="w-[320px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden flex-shrink-0">
+      <div className="w-full lg:w-[320px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden lg:flex-shrink-0 max-h-[45vh] lg:max-h-none">
         <div className="px-4 py-3 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-slate-900">
