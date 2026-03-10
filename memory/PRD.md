@@ -38,17 +38,24 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 - Customer details mandatory at checkout
 - SMS/WhatsApp Notifications (Twilio - demo mode)
 
-### Mobile Responsiveness (Completed March 9, 2026)
+### Mobile Responsiveness (March 9, 2026)
 - Shadcn Sheet-based mobile sidebar, hamburger menu, responsive grids
 
-### Premium Auth Pages (Completed March 9, 2026)
-- Two-column layout: 60% marketing / 40% auth, feature highlights, demo credentials
+### Premium Auth Pages (March 9, 2026)
+- Two-column layout: 60% marketing / 40% auth, feature highlights
 
-### UI/UX Theme Redesign (Completed March 9, 2026)
-- Teal/amber/cream color scheme inspired by premium POS reference designs
-- Teal sidebar active states, amber CTA buttons, warm cream backgrounds
-- Teal chart colors, teal stat cards, consistent theme across all pages
-- Updated: Login, Register, Dashboard, Create Order, Quick POS, Wallet, Analytics, all POS pages
+### UI/UX Theme Redesign (March 9, 2026)
+- Teal/amber/cream color scheme across all pages
+
+### Operations Dashboard Redesign (March 10, 2026)
+- **Row 1**: 4 stats cards - New Orders (teal), Total Orders (clickable), Waiting List, Create New Order (amber CTA)
+- **Row 2**: 3-column operations panels:
+  - Order List: Search + filter tabs (All/On Process/Completed) + order rows with colored table badges
+  - Payment: Search + unpaid orders with Pay Now buttons
+  - Popular Dishes + Out of Stock (with inventory data)
+- **Row 3**: Charts (Sales Trend, Order Types) pushed to bottom
+- Receipt/bill modal with print functionality preserved
+- Orders detail modal preserved
 
 ## Mocked Integrations
 - Razorpay payments, Swiggy/Zomato webhooks, Twilio (demo mode)
@@ -61,8 +68,8 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
 
 ## Key Files
 - `backend/server.py` - All backend logic
-- `frontend/src/layouts/POSLayout.jsx` - POS navigation (teal theme)
+- `frontend/src/layouts/POSLayout.jsx` - POS navigation
 - `frontend/src/pages/auth/LoginPage.jsx` - Premium login
 - `frontend/src/pages/auth/RegisterPage.jsx` - Premium register
-- `frontend/src/pages/pos/POSDashboard.jsx` - Dashboard (teal stats cards)
+- `frontend/src/pages/pos/POSDashboard.jsx` - Operations dashboard
 - `frontend/src/pages/pos/` - All POS pages
