@@ -48,7 +48,7 @@ export default function WalletPage() {
   if (loading || !summary) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -70,14 +70,14 @@ export default function WalletPage() {
               key={p.value}
               onClick={() => handlePeriodChange(p.value)}
               className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
-                period === p.value && !selectedDate ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                period === p.value && !selectedDate ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
               data-testid={`period-${p.value}`}
             >
               {p.label}
             </button>
           ))}
-          <div className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 ${selectedDate ? 'bg-teal-700 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 ${selectedDate ? 'bg-black border-black' : 'bg-white border-slate-200'}`}>
             <CalendarDays className={`w-4 h-4 ${selectedDate ? 'text-white' : 'text-slate-500'}`} />
             <Input
               type="date"
@@ -128,7 +128,7 @@ export default function WalletPage() {
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-300 bg-teal-700 p-4 text-white">
+        <div className="rounded-xl border border-slate-300 bg-black p-4 text-white">
           <div className="flex items-center gap-3">
             <ArrowUpDown className="w-8 h-8 opacity-70" />
             <div>

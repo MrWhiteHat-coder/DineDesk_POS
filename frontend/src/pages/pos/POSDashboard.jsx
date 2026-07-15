@@ -29,17 +29,17 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 
-const COLORS = ['#0F766E', '#22C55E', '#0EA5E9', '#F59E0B'];
+const COLORS = ['#000000', '#374151', '#6B7280', '#9CA3AF'];
 
 const STATUS_STYLES = {
   ready: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Ready' },
-  completed: { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Completed' },
-  preparing: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'In Progress' },
+  completed: { bg: 'bg-gray-200', text: 'text-gray-700', label: 'Completed' },
+  preparing: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'In Progress' },
   pending: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Pending' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled' },
 };
 
-const TABLE_COLORS = ['bg-teal-700', 'bg-amber-500', 'bg-emerald-600', 'bg-rose-500', 'bg-sky-600', 'bg-violet-600'];
+const TABLE_COLORS = ['bg-black', 'bg-gray-700', 'bg-gray-600', 'bg-gray-800', 'bg-gray-500', 'bg-gray-900'];
 
 function getTableColor(tableNum) {
   if (!tableNum) return 'bg-slate-500';
@@ -169,7 +169,7 @@ export default function POSDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-teal-700 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-gray-800 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -189,25 +189,25 @@ export default function POSDashboard() {
 
       {/* === ROW 1: Stats Cards === */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-teal-700 border-teal-700 text-white shadow-lg shadow-teal-700/20" data-testid="new-orders-card">
+        <Card className="bg-black border-black text-white shadow-lg shadow-black/10" data-testid="new-orders-card">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-teal-100">New Orders</p>
+              <p className="text-sm font-medium text-gray-300">New Orders</p>
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <ClipboardList className="w-5 h-5 text-white" />
               </div>
             </div>
             <p className="font-numbers text-3xl font-bold">{newOrders}</p>
-            <p className="text-[10px] text-teal-200 mt-1">Updated every new order</p>
+            <p className="text-[10px] text-gray-400 mt-1">Updated every new order</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200/60 cursor-pointer hover:shadow-md transition-all" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
+        <Card className="bg-white border-gray-200" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-slate-500">Total Orders</p>
-              <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-teal-700" />
+              <p className="text-sm font-medium text-gray-500">Total Orders</p>
+              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-gray-700" />
               </div>
             </div>
             <p className="font-numbers text-3xl font-bold text-slate-900">{totalOrders}</p>
@@ -215,12 +215,12 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-slate-200/60" data-testid="waiting-list-card">
+        <Card className="bg-white border-gray-200" data-testid="waiting-list-card">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-slate-500">Waiting List</p>
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-600" />
+              <p className="text-sm font-medium text-gray-500">Waiting List</p>
+              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                <Clock className="w-5 h-5 text-gray-600" />
               </div>
             </div>
             <p className="font-numbers text-3xl font-bold text-slate-900">{waitingList}</p>
@@ -230,7 +230,7 @@ export default function POSDashboard() {
 
         <button
           onClick={() => navigate('/pos/orders')}
-          className="bg-amber-400 hover:bg-amber-500 rounded-xl border-0 shadow-lg shadow-amber-400/20 text-slate-900 font-bold flex items-center justify-center gap-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="bg-black hover:bg-gray-800 rounded-xl border-0 shadow-lg shadow-black/10 text-white font-bold flex items-center justify-center gap-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
           data-testid="create-new-order-btn"
         >
           <Plus className="w-5 h-5" />
@@ -268,7 +268,7 @@ export default function POSDashboard() {
                   key={tab.key}
                   onClick={() => setOrderFilter(tab.key)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    orderFilter === tab.key ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    orderFilter === tab.key ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                   data-testid={`order-filter-${tab.key}`}
                 >
@@ -344,7 +344,7 @@ export default function POSDashboard() {
                       </div>
                       <button
                         onClick={() => handleViewReceipt(order)}
-                        className="flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-slate-900 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                        className="flex items-center gap-1 bg-black hover:bg-gray-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
                         data-testid={`pay-now-${order.id}`}
                       >
                         Pay Now <ArrowRight className="w-3 h-3" />
@@ -364,7 +364,7 @@ export default function POSDashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-heading font-bold text-slate-900 text-base">Popular Dishes</h3>
-                <button onClick={() => navigate('/pos/analytics')} className="text-[11px] text-teal-700 font-semibold hover:underline">View All</button>
+                <button onClick={() => navigate('/pos/analytics')} className="text-[11px] text-black font-semibold hover:underline">View All</button>
               </div>
               <div className="text-[10px] text-slate-400 flex items-center gap-4 mb-2 border-b border-slate-100 pb-1.5">
                 <span className="w-6">Rank</span>
@@ -375,12 +375,12 @@ export default function POSDashboard() {
                   {analytics.top_items.slice(0, 4).map((item, idx) => (
                     <div key={item.name} className="flex items-center gap-3">
                       <span className="text-xs font-bold text-slate-400 w-6">0{idx + 1}</span>
-                      <div className="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Package className="w-4 h-4 text-amber-600" />
+                      <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Package className="w-4 h-4 text-gray-600" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900 truncate">{item.name}</p>
-                        <p className="text-[10px] text-teal-600 font-medium">Orders: {item.count}</p>
+                        <p className="text-[10px] text-gray-600 font-medium">Orders: {item.count}</p>
                       </div>
                     </div>
                   ))}
@@ -396,7 +396,7 @@ export default function POSDashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-heading font-bold text-slate-900 text-base">Out of Stock</h3>
-                <button onClick={() => navigate('/pos/inventory')} className="text-[11px] text-teal-700 font-semibold hover:underline">View All</button>
+                <button onClick={() => navigate('/pos/inventory')} className="text-[11px] text-black font-semibold hover:underline">View All</button>
               </div>
               {lowStockItems.length > 0 ? (
                 <div className="space-y-2.5">
@@ -429,15 +429,15 @@ export default function POSDashboard() {
                 <AreaChart data={salesChartData}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0F766E" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#000000" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#000000" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94A3B8" />
                   <YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" />
                   <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="sales" stroke="#0F766E" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+                  <Area type="monotone" dataKey="sales" stroke="#000000" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -532,7 +532,7 @@ export default function POSDashboard() {
                     </div>
                     <button
                       onClick={() => handleViewReceipt(order)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 text-slate-900 text-xs font-semibold hover:bg-amber-500 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-semibold hover:bg-gray-800 transition-colors"
                       data-testid={`view-receipt-${order.id}`}
                     >
                       <Printer className="w-3.5 h-3.5" /> Print Bill
@@ -594,7 +594,7 @@ export default function POSDashboard() {
           )}
           <button
             onClick={handlePrintReceipt}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-400 text-slate-900 text-sm font-semibold hover:bg-amber-500 transition-colors mt-2"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors mt-2"
             data-testid="dashboard-print-receipt-btn"
           >
             <Printer className="w-4 h-4" /> Print Receipt

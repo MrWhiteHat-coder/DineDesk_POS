@@ -56,7 +56,7 @@ export default function KDSPage() {
     : filter === 'delayed' ? orders.filter(o => isDelayed(o.created_at))
     : orders;
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-teal-700 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-gray-800 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
     <div data-testid="kds-page">
@@ -73,7 +73,7 @@ export default function KDSPage() {
             { key: 'kitchen', label: 'In Kitchen' },
             { key: 'delayed', label: 'Delayed' },
           ].map(f => (
-            <button key={f.key} onClick={() => setFilter(f.key)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f.key ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`} data-testid={`kds-filter-${f.key}`}>
+            <button key={f.key} onClick={() => setFilter(f.key)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f.key ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`} data-testid={`kds-filter-${f.key}`}>
               {f.label}
             </button>
           ))}

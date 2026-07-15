@@ -141,7 +141,7 @@ export default function POSMain() {
 
   const getCategoryCount = (catId) => menuItems.filter(i => i.category_id === catId).length;
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-teal-700 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-gray-800 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
     <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:h-[calc(100vh-7rem)]" data-testid="pos-main">
@@ -152,7 +152,7 @@ export default function POSMain() {
           <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
             <span className="text-xs text-slate-500 whitespace-nowrap font-medium">Running:</span>
             {runningOrders.map(ro => (
-              <button key={ro.id} onClick={() => selectRunningOrder(ro)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition-all ${selectedRunningOrder?.id === ro.id ? 'bg-teal-700 text-white border-teal-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`} data-testid={`running-order-${ro.id}`}>
+              <button key={ro.id} onClick={() => selectRunningOrder(ro)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition-all ${selectedRunningOrder?.id === ro.id ? 'bg-black text-white border-black' : 'bg-slate-50 text-slate-600 hover:bg-slate-50'}`} data-testid={`running-order-${ro.id}`}>
                 <Utensils className="w-3 h-3" /> T-{ro.table_number} #{ro.order_number?.slice(-4)}
               </button>
             ))}
@@ -163,12 +163,12 @@ export default function POSMain() {
         {/* Category Tabs + Search */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 mb-3 md:mb-4">
           <div className="flex items-center gap-2 overflow-x-auto flex-1 pb-1 w-full md:w-auto">
-            <button onClick={() => setSelectedCategory(null)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${!selectedCategory ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`} data-testid="category-all">
-              All <span className={`text-xs px-1.5 py-0.5 rounded-md ${!selectedCategory ? 'bg-white/20' : 'bg-slate-100'}`}>{menuItems.length}</span>
+            <button onClick={() => setSelectedCategory(null)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${!selectedCategory ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`} data-testid="category-all">
+              All <span className={`text-xs px-1.5 py-0.5 rounded-md ${!selectedCategory ? 'bg-white/20' : 'bg-gray-100'}`}>{menuItems.length}</span>
             </button>
             {categories.map(cat => (
-              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${selectedCategory === cat.id ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`} data-testid={`category-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}>
-                {cat.name} <span className={`text-xs px-1.5 py-0.5 rounded-md ${selectedCategory === cat.id ? 'bg-white/20' : 'bg-slate-100'}`}>{getCategoryCount(cat.id)}</span>
+              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${selectedCategory === cat.id ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`} data-testid={`category-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                {cat.name} <span className={`text-xs px-1.5 py-0.5 rounded-md ${selectedCategory === cat.id ? 'bg-white/20' : 'bg-gray-100'}`}>{getCategoryCount(cat.id)}</span>
               </button>
             ))}
           </div>
@@ -182,7 +182,7 @@ export default function POSMain() {
         </div>
 
         {/* Menu Grid */}
-        <div className="flex-1 overflow-auto lg:-mr-2 lg:pr-2">
+        <div className="flex-1 lg:overflow-auto lg:-mr-2 lg:pr-2">
           {filteredItems.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 md:gap-3">
               {filteredItems.map(item => {
@@ -196,7 +196,7 @@ export default function POSMain() {
                         <span className={`w-1.5 h-1.5 rounded-full ${item.is_available ? 'bg-green-500' : 'bg-red-500'}`}></span>
                         {item.is_available ? 'Available' : 'Not Available'}
                       </span>
-                      {qty > 0 && <span className="absolute top-2.5 left-2.5 w-6 h-6 bg-amber-400 text-slate-900 rounded-full text-[11px] font-bold flex items-center justify-center">{qty}</span>}
+                      {qty > 0 && <span className="absolute top-2.5 left-2.5 w-6 h-6 bg-black text-white rounded-full text-[11px] font-bold flex items-center justify-center">{qty}</span>}
                     </div>
                     <div className="p-3">
                       <div className="flex items-start justify-between mb-3">
@@ -208,7 +208,7 @@ export default function POSMain() {
                       ) : qty > 0 ? (
                         <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors" data-testid={`add-more-${item.id}`}>Add More ({qty})</button>
                       ) : (
-                        <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-400 text-slate-900 text-xs font-semibold hover:bg-amber-500 transition-colors" data-testid={`add-item-${item.id}`}><Plus className="w-3.5 h-3.5" /> Add to Cart</button>
+                        <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-black text-white text-xs font-semibold hover:bg-gray-800 transition-colors" data-testid={`add-item-${item.id}`}><Plus className="w-3.5 h-3.5" /> Add to Cart</button>
                       )}
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export default function POSMain() {
       </div>
 
       {/* Right: Order Summary */}
-      <div className="w-full lg:w-[320px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden lg:flex-shrink-0 max-h-[45vh] lg:max-h-none">
+      <div className="w-full lg:w-[320px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden lg:flex-shrink-0 lg:max-h-none">
         <div className="px-4 py-3 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-slate-900">{selectedRunningOrder ? `Table ${selectedRunningOrder.table_number}` : 'Order Summary'}</h2>
@@ -320,7 +320,7 @@ export default function POSMain() {
           )}
 
           {cart.length > 0 && (
-            <Button onClick={handlePlaceOrder} className="w-full h-11 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-900 font-semibold text-sm" disabled={!isDayOpen || checkoutLoading} data-testid="place-order-btn">
+            <Button onClick={handlePlaceOrder} className="w-full h-11 rounded-lg bg-black hover:bg-gray-800 text-white font-semibold text-sm" disabled={!isDayOpen || checkoutLoading} data-testid="place-order-btn">
               {checkoutLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : selectedRunningOrder ? 'Update Order' : orderType === 'dine_in' ? 'Place Order & Hold Table' : 'Proceed to Payment'}
             </Button>
           )}
@@ -329,9 +329,9 @@ export default function POSMain() {
             <div className="space-y-2">
               <p className="text-[11px] font-medium text-slate-500 text-center">Release Table & Collect Payment</p>
               <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'cash')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-slate-200 hover:bg-green-50 hover:border-green-300 transition-all text-slate-600 hover:text-green-700" data-testid="pay-cash"><Banknote className="w-5 h-5" /><span className="text-[10px] font-semibold">Cash</span></button>
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'card')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-all text-slate-600 hover:text-blue-700" data-testid="pay-card"><CreditCard className="w-5 h-5" /><span className="text-[10px] font-semibold">Card</span></button>
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'upi')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-slate-200 hover:bg-purple-50 hover:border-purple-300 transition-all text-slate-600 hover:text-purple-700" data-testid="pay-upi"><Smartphone className="w-5 h-5" /><span className="text-[10px] font-semibold">UPI</span></button>
+                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'cash')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-cash"><Banknote className="w-5 h-5" /><span className="text-[10px] font-semibold">Cash</span></button>
+                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'card')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-card"><CreditCard className="w-5 h-5" /><span className="text-[10px] font-semibold">Card</span></button>
+                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'upi')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-upi"><Smartphone className="w-5 h-5" /><span className="text-[10px] font-semibold">UPI</span></button>
               </div>
             </div>
           )}
@@ -344,8 +344,8 @@ export default function POSMain() {
           <DialogHeader><DialogTitle className="text-center">Select Payment Method</DialogTitle></DialogHeader>
           <div className="py-4 space-y-3">
             <div className="text-center mb-4"><p className="text-2xl font-bold text-slate-900">₹{total.toFixed(2)}</p><p className="text-xs text-slate-500">Total Amount</p></div>
-            {[{ method: 'cash', icon: Banknote, label: 'Cash', color: 'hover:bg-green-50 hover:border-green-300' }, { method: 'card', icon: CreditCard, label: 'Card', color: 'hover:bg-blue-50 hover:border-blue-300' }, { method: 'upi', icon: Smartphone, label: 'UPI', color: 'hover:bg-purple-50 hover:border-purple-300' }].map(({ method, icon: Icon, label, color }) => (
-              <button key={method} onClick={() => handleCheckoutWithPayment(method)} disabled={checkoutLoading} className={`w-full flex items-center gap-4 p-4 rounded-xl border border-slate-200 transition-all ${color}`} data-testid={`checkout-${method}`}><Icon className="w-6 h-6" /><span className="text-sm font-semibold">{label}</span></button>
+            {[{ method: 'cash', icon: Banknote, label: 'Cash', color: 'hover:bg-gray-100 hover:border-gray-400' }, { method: 'card', icon: CreditCard, label: 'Card', color: 'hover:bg-gray-100 hover:border-gray-400' }, { method: 'upi', icon: Smartphone, label: 'UPI', color: 'hover:bg-gray-100 hover:border-gray-400' }].map(({ method, icon: Icon, label, color }) => (
+              <button key={method} onClick={() => handleCheckoutWithPayment(method)} disabled={checkoutLoading} className={`w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 transition-all ${color}`} data-testid={`checkout-${method}`}><Icon className="w-6 h-6" /><span className="text-sm font-semibold">{label}</span></button>
             ))}
           </div>
         </DialogContent>
@@ -384,7 +384,7 @@ export default function POSMain() {
               <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>
             </div>
           )}
-          <button onClick={handlePrintReceipt} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-400 text-slate-900 text-sm font-semibold hover:bg-amber-500 transition-colors mt-2" data-testid="print-receipt-btn"><Printer className="w-4 h-4" /> Print Receipt</button>
+          <button onClick={handlePrintReceipt} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors mt-2" data-testid="print-receipt-btn"><Printer className="w-4 h-4" /> Print Receipt</button>
         </DialogContent>
       </Dialog>
     </div>

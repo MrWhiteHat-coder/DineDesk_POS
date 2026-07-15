@@ -95,7 +95,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-teal-700 hover:bg-teal-800"
+            className="bg-black hover:bg-gray-800"
             data-testid="save-settings-btn"
           >
             <Save className="w-4 h-4 mr-2" />
@@ -159,7 +159,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="flex gap-2">
               {restaurant.delivery_platforms?.includes('swiggy') && (
-                <Badge className="bg-teal-700">Swiggy</Badge>
+                <Badge className="bg-black">Swiggy</Badge>
               )}
               {restaurant.delivery_platforms?.includes('zomato') && (
                 <Badge className="bg-red-500">Zomato</Badge>

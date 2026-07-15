@@ -43,10 +43,10 @@ export default function AdminLayout() {
         }`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-black">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-teal-700 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <span className="font-heading font-bold text-white">Admin Panel</span>
@@ -56,7 +56,7 @@ export default function AdminLayout() {
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-slate-400 hover:text-white hover:bg-teal-700"
+            className="text-slate-400 hover:text-white hover:bg-black"
             data-testid="admin-sidebar-toggle"
           >
             {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -73,8 +73,8 @@ export default function AdminLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-3 mb-1 rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-teal-700 text-white'
-                    : 'text-slate-400 hover:bg-teal-700 hover:text-white'
+                    ? 'bg-black text-white'
+                    : 'text-slate-400 hover:bg-black hover:text-white'
                 }`
               }
               data-testid={`admin-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -86,7 +86,7 @@ export default function AdminLayout() {
         </nav>
 
         {/* Logout */}
-        <div className="p-2 border-t border-slate-800">
+        <div className="p-2 border-t border-black">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-3 w-full rounded-lg text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
