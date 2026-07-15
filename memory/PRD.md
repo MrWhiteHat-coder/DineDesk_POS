@@ -1,60 +1,60 @@
-# OrderNest POS - Product Requirements Document
+# OrderNest - Restaurant POS SaaS Platform
 
 ## Original Problem Statement
-Build a multi-tenant, cloud-based Restaurant POS SaaS platform with two parts:
-1. **SaaS Admin Dashboard** - Platform-wide management
-2. **Restaurant POS Application** - Restaurant daily operations
+Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
+- **Platform 1 (Admin Dashboard):** Master dashboard for platform-wide stats, restaurant management, subscription management.
+- **Platform 2 (Restaurant POS):** Complete POS interface with menu management, order management, KDS, inventory, AI-analytics, multi-branch support, staff roles.
 
-## Brand: OrderNest
-## Color Scheme: Primary Teal (#0F766E) | Accent Amber (#F59E0B) | Background Warm Cream (#F5F1EB)
+## Tech Stack
+- **Frontend:** React, Tailwind CSS, Shadcn/UI, Recharts
+- **Backend:** FastAPI, Motor (async MongoDB driver), JWT auth
+- **Database:** MongoDB
+- **AI:** Claude Sonnet 4.5 via Emergent LLM Key (Analytics)
+- **Architecture:** Multi-tenant SaaS, Monolithic Backend
 
-## Architecture
-- **Backend**: FastAPI + MongoDB (monolithic `server.py`)
-- **Frontend**: React + Tailwind CSS + Shadcn/UI
-- **Auth**: JWT-based (PyJWT)
-- **AI**: Claude Sonnet 4.5 via `emergentintegrations`
-- **Database**: MongoDB via Motor async driver
+## Theme
+- **Current:** Clean White + Black theme (white backgrounds, black buttons, grayscale accents)
+- **Previous:** Teal/Amber/Cream (deprecated as of July 2026)
 
-## Demo Credentials
-- Admin: `admin@foodflow.com` / `admin123`
-- Restaurant Owner: `demo@restaurant.com` / `demo123456`
+## What's Been Implemented
+- Full authentication system (JWT) with admin, owner, manager, cashier, captain, chef roles
+- Restaurant onboarding flow (business category, restaurant setup, subscription)
+- Operations Dashboard with stats, order list, payment panel, charts
+- POS Create Order page (2-panel: menu grid + cart/checkout)
+- Quick POS page (fast checkout mode)
+- Kitchen Display System (KDS) with status management
+- Menu Management (categories + items with images)
+- Table Management (add, edit, status tracking)
+- Inventory Management with low-stock alerts
+- Staff Management with role-based access
+- Wallet/Financial overview
+- Online Orders page (Swiggy/Zomato - mocked)
+- Multi-branch support
+- Purchase Orders
+- Notifications (Twilio - mocked/demo)
+- AI Analytics (Claude Sonnet 4.5)
+- Day open/close sessions with reports
+- Customer lookup and auto-complete
+- Receipt generation and printing
+- Mobile responsive sidebar (Sheet/Drawer)
+- Full rebranding from FoodFlow to OrderNest
+- Clean White/Black UI theme overhaul (July 15, 2026)
+- Mobile scrolling fixes for QuickPOS and CreateOrder pages
 
-## Completed Features
+## Mocked/Demo Integrations
+- **Razorpay:** Payment processing is mocked
+- **Twilio:** SMS/WhatsApp notifications are in demo mode
+- **Online Orders:** Swiggy/Zomato webhooks are placeholder
 
-### Core POS Features
-- Day Open/Close, Menu Management, Order Management (dine-in/takeaway/online)
-- Quick POS, KDS, Purchase Orders, Receipt Printing, Inventory
-- Analytics + AI insights, Staff Management (5 roles), Wallet, Multi-Branch
-- Customer mandatory at checkout, Twilio notifications (demo mode)
+## Credentials
+- Admin: admin@ordernest.com / admin123
+- Restaurant Owner: demo@restaurant.com / demo123456
 
-### UI/UX Redesigns Completed
+## Backlog (P0-P2)
+### P1
+- Full Payment Integration (Replace mock Razorpay with live)
+- Activate Twilio Notifications (live credentials needed)
 
-#### Premium Auth Pages (March 9, 2026)
-- Two-column layout: 60% teal marketing / 40% auth card
-
-#### Operations Dashboard (March 10, 2026)
-- Row 1: 4 stats cards - New Orders (teal), Total Orders (clickable), Waiting List, CREATE NEW ORDER (amber)
-- Row 2: Order List (search + filter: All/On Process/Completed) | Payment (search + Pay Now) | Popular Dishes + Out of Stock
-- Row 3: Sales Trend chart + Order Types pie chart (secondary)
-
-#### 3-Column POS Create Order (March 13, 2026)
-- LEFT (~160px): Vertical category sidebar with counts (hidden on mobile, horizontal tabs instead)
-- CENTER: Search bar + product grid (4 cols desktop, 2 cols mobile), click-to-add items
-- RIGHT (~320px): Cart items with qty +/- controls, billing summary (subtotal, discount, tax, round off, payable), customer fields, action buttons (Hold, Discount, Confirm)
-
-#### KDS Redesign (March 13, 2026)
-- Color-coded order cards: green (received), amber (preparing), rose (delayed >20min)
-- Colored headers with customer name, order type badge, order number, token, time
-- Items list, progress bars, timers, filter tabs (All/New/In Kitchen/Delayed)
-
-### Mobile Responsiveness
-- Sheet-based mobile sidebar, responsive grids, stacked panels on mobile
-
-## Mocked Integrations
-- Razorpay, Swiggy/Zomato, Twilio (demo mode)
-
-## Backlog
-- P1: Full Razorpay payment integration
-- P1: Activate Twilio notifications
-- P2: Swiggy/Zomato live integration
-- P2: Backend refactoring into modular routers
+### P2
+- Live Delivery Platform Integration (Swiggy/Zomato webhooks)
+- Backend Refactoring (Break server.py into modular APIRouters)
