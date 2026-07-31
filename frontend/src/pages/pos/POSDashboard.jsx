@@ -154,10 +154,12 @@ export default function POSDashboard() {
   const handlePrintReceipt = () => {
     if (!receiptRef.current) return;
     const win = window.open('', '_blank', 'width=320,height=600');
-    win.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:10px}h2{text-align:center;margin:4px 0}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.center{text-align:center}p{margin:2px 0}</style></head><body>`);
-    win.document.write(receiptRef.current.innerHTML);
-    win.document.write('</body></html>');
-    win.document.close();
+    if (!win) return;
+    const style = win.document.createElement('style');
+    style.textContent = 'body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:10px}h2{text-align:center;margin:4px 0}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.center{text-align:center}p{margin:2px 0}';
+    win.document.head.appendChild(style);
+    win.document.title = 'Receipt';
+    win.document.body.innerHTML = receiptRef.current.innerHTML;
     win.print();
   };
 
@@ -523,7 +525,7 @@ export default function POSDashboard() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 mb-3">
                       {(order.items || []).map((item, idx) => (
-                        <div key={idx} className="bg-white rounded-lg px-2.5 py-1.5 text-xs border border-slate-100">
+                        <div key={`${item.name}-${item.quantity}-${idx}`} className="bg-white rounded-lg px-2.5 py-1.5 text-xs border border-slate-100">
                           <span className="font-semibold text-slate-800">{item.quantity}x</span>{' '}
                           <span className="text-slate-600">{item.name}</span>
                           <span className="text-slate-400 ml-1">₹{item.total?.toFixed(0)}</span>

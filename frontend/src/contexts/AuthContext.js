@@ -18,8 +18,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
-      const savedUser = localStorage.getItem('user');
+      const token = sessionStorage.getItem('token');
+      const savedUser = sessionStorage.getItem('user');
       
       if (token && savedUser) {
         try {
@@ -36,8 +36,8 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } catch (e) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
         }
       }
       setLoading(false);
@@ -50,8 +50,8 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.login({ email, password });
     const { access_token, user: userData } = response.data;
     
-    localStorage.setItem('token', access_token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('token', access_token);
+    sessionStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     
     // Fetch restaurant if exists
@@ -71,16 +71,16 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.register({ name, email, password });
     const { access_token, user: userData } = response.data;
     
-    localStorage.setItem('token', access_token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('token', access_token);
+    sessionStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     
     return userData;
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setUser(null);
     setRestaurant(null);
   };
@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (updates) => {
     const updated = { ...user, ...updates };
     setUser(updated);
-    localStorage.setItem('user', JSON.stringify(updated));
+    sessionStorage.setItem('user', JSON.stringify(updated));
   };
 
   const updateRestaurant = (data) => {

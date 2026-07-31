@@ -201,7 +201,7 @@ export default function OnlineOrdersPage() {
                     {/* Items */}
                     <div className="mt-4 p-3 bg-slate-50 rounded-lg">
                       {order.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm py-1">
+                        <div key={`${item.name}-${item.quantity}-${idx}`} className="flex justify-between text-sm py-1">
                           <span>
                             {item.quantity}x {item.name}
                           </span>

@@ -35,10 +35,9 @@ export default function OrderManagement() {
 
   useEffect(() => {
     fetchOrders();
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchOrders, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only init with interval
 
   const fetchOrders = async () => {
     try {
@@ -182,7 +181,7 @@ function OrderCard({ order, onUpdateStatus }) {
         {/* Items */}
         <div className="space-y-2 mb-4">
           {order.items.map((item, idx) => (
-            <div key={idx} className="flex justify-between text-sm">
+            <div key={`${item.name}-${item.quantity}-${idx}`} className="flex justify-between text-sm">
               <span className="text-slate-700">
                 {item.quantity}x {item.name}
               </span>

@@ -67,7 +67,7 @@ export default function MenuManagement() {
   useEffect(() => {
     fetchMenu();
     fetchInventory();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only init
 
   const fetchInventory = async () => {
     try {
@@ -637,7 +637,7 @@ export default function MenuManagement() {
               ) : (
                 <div className="space-y-2">
                   {itemForm.recipe.map((ing, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={ing.inventory_item_id || `recipe-${idx}`} className="flex items-center gap-2">
                       <Select
                         value={ing.inventory_item_id}
                         onValueChange={(val) => {

@@ -63,12 +63,16 @@ export default function POSMain() {
   const handlePrintReceipt = () => {
     if (!receiptRef.current) return;
     const win = window.open('', '_blank', 'width=320,height=600');
-    win.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:10px}h2{text-align:center;margin:4px 0}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.center{text-align:center}p{margin:2px 0}</style></head><body>`);
-    win.document.write(receiptRef.current.innerHTML);
-    win.document.write('</body></html>'); win.document.close(); win.print();
+    if (!win) return;
+    const style = win.document.createElement('style');
+    style.textContent = 'body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:10px}h2{text-align:center;margin:4px 0}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.center{text-align:center}p{margin:2px 0}';
+    win.document.head.appendChild(style);
+    win.document.title = 'Receipt';
+    win.document.body.innerHTML = receiptRef.current.innerHTML;
+    win.print();
   };
 
-  useEffect(() => { fetchMenu(); fetchTables(); fetchRunningOrders(); generateOrderNumber(); }, []);
+  useEffect(() => { fetchMenu(); fetchTables(); fetchRunningOrders(); generateOrderNumber(); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only init
   const generateOrderNumber = () => setOrderNumber(`B${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`);
   const fetchMenu = async () => {
     try { const [catRes, itemsRes] = await Promise.all([menuAPI.getCategories(), menuAPI.getItems()]); setCategories(catRes.data); setMenuItems(itemsRes.data); } catch (err) { console.error(err); } finally { setLoading(false); }
@@ -307,7 +311,7 @@ export default function POSMain() {
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
                     {suggestions.map((s, i) => (
-                      <button key={i} onClick={() => selectCustomer(s)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0" data-testid={`customer-suggestion-${i}`}>
+                      <button key={s.phone || `suggestion-${i}`} onClick={() => selectCustomer(s)} className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0" data-testid={`customer-suggestion-${i}`}>
                         <span className="font-semibold text-slate-800">{s.name}</span> <span className="text-slate-400">{s.phone}</span>
                       </button>
                     ))}
@@ -372,7 +376,7 @@ export default function POSMain() {
               </div>
               <hr className="border-dashed border-slate-300 my-1" />
               <div className="space-y-1 text-[11px]">
-                {(receiptData.order.items || []).map((item, i) => <div key={i} className="flex justify-between"><span>{item.quantity}x {item.name}</span><span>₹{item.total?.toFixed(2)}</span></div>)}
+                {(receiptData.order.items || []).map((item, i) => <div key={`${item.name}-${item.quantity}-${i}`} className="flex justify-between"><span>{item.quantity}x {item.name}</span><span>₹{item.total?.toFixed(2)}</span></div>)}
               </div>
               <hr className="border-dashed border-slate-300 my-1" />
               <div className="text-[11px] space-y-0.5">

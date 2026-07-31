@@ -44,7 +44,7 @@ export default function QuickPOSPage() {
         setShowSuggestions(res.data.length > 0);
       } catch { setSuggestions([]); }
     }, 300);
-  }, []);
+  }, [suggestTimeout]);
 
   const selectCustomer = (c) => {
     setCustomerName(c.name || '');
@@ -121,10 +121,15 @@ export default function QuickPOSPage() {
   const handlePrint = () => {
     if (receiptRef.current) {
       const win = window.open('', '_blank', 'width=320,height=600');
-      win.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:10px}h2{text-align:center;margin:4px 0}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.center{text-align:center}p{margin:2px 0}</style></head><body>`);
-      win.document.write(receiptRef.current.innerHTML);
-      win.document.write('</body></html>');
-      win.document.close();
+      if (!win) return;
+      const doc = win.document;
+      doc.open();
+      const style = doc.createElement('style');
+      style.textContent = 'body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:10px}h2{text-align:center;margin:4px 0}hr{border:none;border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between}.center{text-align:center}p{margin:2px 0}';
+      doc.head.appendChild(style);
+      doc.title = 'Receipt';
+      doc.body.innerHTML = receiptRef.current.innerHTML;
+      doc.close();
       win.print();
     }
   };
@@ -282,7 +287,7 @@ export default function QuickPOSPage() {
               <hr className="border-dashed border-gray-300 my-1" />
               <div className="space-y-1 text-[11px]">
                 {(receiptData.order.items || []).map((item, i) => (
-                  <div key={i} className="flex justify-between">
+                  <div key={`${item.name}-${item.quantity}-${i}`} className="flex justify-between">
                     <span>{item.quantity}x {item.name}</span>
                     <span>{'\u20B9'}{item.total?.toFixed(2)}</span>
                   </div>

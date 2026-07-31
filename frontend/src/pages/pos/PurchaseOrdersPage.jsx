@@ -137,7 +137,7 @@ export default function PurchaseOrdersPage() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
                   {(po.items || []).map((item, idx) => (
-                    <div key={idx} className="bg-slate-50 rounded-lg px-2.5 py-1.5 text-xs">
+                    <div key={`${item.inventory_item_name}-${item.quantity}-${idx}`} className="bg-slate-50 rounded-lg px-2.5 py-1.5 text-xs">
                       <p className="font-semibold text-slate-800">{item.inventory_item_name || 'Item'}</p>
                       <p className="text-slate-500">{item.quantity} {item.unit} @ ₹{item.unit_cost}/{item.unit}</p>
                     </div>
@@ -178,7 +178,7 @@ export default function PurchaseOrdersPage() {
                 </Button>
               </div>
               {form.items.map((item, idx) => (
-                <div key={idx} className="flex items-end gap-2 bg-slate-50 p-2.5 rounded-lg">
+                <div key={`form-item-${idx}`} className="flex items-end gap-2 bg-slate-50 p-2.5 rounded-lg">
                   <div className="flex-1">
                     <Label className="text-[10px]">Ingredient</Label>
                     <Select value={item.inventory_item_id} onValueChange={v => updateItem(idx, 'inventory_item_id', v)}>

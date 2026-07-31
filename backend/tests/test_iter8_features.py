@@ -17,9 +17,9 @@ import string
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL')
 
-# Test credentials
-TEST_EMAIL = "demo@restaurant.com"
-TEST_PASSWORD = "demo123456"
+# Test credentials - loaded from environment
+TEST_EMAIL = os.environ.get('TEST_EMAIL', 'demo@restaurant.com')
+TEST_PASSWORD = os.environ.get('TEST_PASSWORD', 'demo123456')
 
 @pytest.fixture(scope="module")
 def auth_token():

@@ -127,7 +127,7 @@ export default function KDSPage() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Order Items</p>
                   <div className="space-y-1.5">
                     {(order.items || []).map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
+                      <div key={`${item.name}-${item.quantity}-${idx}`} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="w-5 h-5 bg-slate-100 rounded text-[10px] font-bold text-slate-600 flex items-center justify-center">{item.quantity}</span>
                           <span className="text-[13px] text-slate-800">{item.name}</span>

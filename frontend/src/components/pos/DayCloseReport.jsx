@@ -25,7 +25,7 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
         fetchAiInsights();
       }).catch(() => toast.error('Failed to load report')).finally(() => setLoading(false));
     }
-  }, [sessionId, open]);
+  }, [sessionId, open]); // eslint-disable-line react-hooks/exhaustive-deps -- fetchAiInsights is stable
 
   const fetchAiInsights = async () => {
     setAiLoading(true);
@@ -41,10 +41,12 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
 
   const handlePrint = () => {
     const win = window.open('', '_blank', 'width=700,height=900');
-    win.document.write(`<html><head><title>Day Close Report</title><style>body{font-family:system-ui,-apple-system,sans-serif;font-size:13px;max-width:650px;margin:0 auto;padding:20px}h1{font-size:20px;text-align:center;margin-bottom:4px}h2{font-size:15px;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}.row{display:flex;justify-content:space-between;padding:3px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}table{width:100%;border-collapse:collapse;margin:8px 0}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #eee}th{font-weight:600;background:#f5f5f5}.center{text-align:center}.bold{font-weight:bold}.big{font-size:18px}</style></head><body>`);
-    win.document.write(printRef.current?.innerHTML || '');
-    win.document.write('</body></html>');
-    win.document.close();
+    if (!win) return;
+    const style = win.document.createElement('style');
+    style.textContent = 'body{font-family:system-ui,-apple-system,sans-serif;font-size:13px;max-width:650px;margin:0 auto;padding:20px}h1{font-size:20px;text-align:center;margin-bottom:4px}h2{font-size:15px;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}.row{display:flex;justify-content:space-between;padding:3px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}table{width:100%;border-collapse:collapse;margin:8px 0}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #eee}th{font-weight:600;background:#f5f5f5}.center{text-align:center}.bold{font-weight:bold}.big{font-size:18px}';
+    win.document.head.appendChild(style);
+    win.document.title = 'Day Close Report';
+    win.document.body.innerHTML = printRef.current?.innerHTML || '';
     win.print();
   };
 
@@ -166,7 +168,7 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
                     <thead><tr className="bg-slate-50"><th className="text-left px-3 py-2 font-semibold text-slate-600">Item</th><th className="text-right px-3 py-2 font-semibold text-slate-600">Qty</th><th className="text-right px-3 py-2 font-semibold text-slate-600">Revenue</th></tr></thead>
                     <tbody>
                       {report.top_items.map((item, i) => (
-                        <tr key={i} className="border-t border-slate-100"><td className="px-3 py-1.5 text-slate-800">{item.name}</td><td className="px-3 py-1.5 text-right text-slate-600">{item.quantity}</td><td className="px-3 py-1.5 text-right font-semibold text-slate-800">₹{item.revenue.toFixed(2)}</td></tr>
+                        <tr key={`${item.name}-${item.quantity}`} className="border-t border-slate-100"><td className="px-3 py-1.5 text-slate-800">{item.name}</td><td className="px-3 py-1.5 text-right text-slate-600">{item.quantity}</td><td className="px-3 py-1.5 text-right font-semibold text-slate-800">₹{item.revenue.toFixed(2)}</td></tr>
                       ))}
                     </tbody>
                   </table>
