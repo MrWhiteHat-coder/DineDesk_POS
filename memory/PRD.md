@@ -14,7 +14,6 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
 
 ## Theme
 - **Current:** Clean White + Black theme (white backgrounds, black buttons, grayscale accents)
-- **Previous:** Teal/Amber/Cream (deprecated as of July 2026)
 
 ## What's Been Implemented
 - Full authentication system (JWT) with admin, owner, manager, cashier, captain, chef roles
@@ -38,8 +37,10 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
 - Receipt generation and printing
 - Mobile responsive sidebar (Sheet/Drawer)
 - Full rebranding from FoodFlow to OrderNest
-- Clean White/Black UI theme overhaul (July 15, 2026)
-- Mobile scrolling fixes for QuickPOS and CreateOrder pages
+- Clean White/Black UI theme overhaul
+- Mobile scrolling fixes for all pages
+- Code quality fixes: XSS removal, sessionStorage, array keys, hook deps
+- Production build fix (syntax error in QuickPOSPage.jsx)
 
 ## Mocked/Demo Integrations
 - **Razorpay:** Payment processing is mocked
@@ -50,7 +51,7 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
 - Admin: admin@ordernest.com / admin123
 - Restaurant Owner: demo@restaurant.com / demo123456
 
-## Backlog (P0-P2)
+## Backlog (P1-P2)
 ### P1
 - Full Payment Integration (Replace mock Razorpay with live)
 - Activate Twilio Notifications (live credentials needed)
@@ -58,3 +59,4 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
 ### P2
 - Live Delivery Platform Integration (Swiggy/Zomato webhooks)
 - Backend Refactoring (Break server.py into modular APIRouters)
+- Split oversized frontend components (MenuManagement, POSDashboard, POSMain)
