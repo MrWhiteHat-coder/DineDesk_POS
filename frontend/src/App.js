@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
-
+import VerifyEmailPage from './pages/auth/VerifyEmailPage';
 // Onboarding Pages
 import BusinessCategoryPage from './pages/onboarding/BusinessCategoryPage';
 import RestaurantSetupPage from './pages/onboarding/RestaurantSetupPage';
@@ -106,7 +106,7 @@ function AppRoutes() {
       {/* Public Routes */}
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-
+<Route path="/verify-email" element={<VerifyEmailPage />} />
       {/* Onboarding Routes */}
       <Route path="/onboarding" element={<ProtectedRoute><BusinessCategoryPage /></ProtectedRoute>} />
       <Route path="/onboarding/setup" element={<ProtectedRoute><RestaurantSetupPage /></ProtectedRoute>} />
