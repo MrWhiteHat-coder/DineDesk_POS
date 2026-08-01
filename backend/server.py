@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
 import shutil
-
+import resend
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -39,7 +39,9 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
-
+# Resend Email Config
+resend.api_key = os.environ.get('RESEND_API_KEY', 're_jQjxzNN1_4BiPKztay3CGzQ3vP7gBBGAa')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://revontechnologies.in')
 # Create the main app
 app = FastAPI(title="OrderNest POS API")
 
