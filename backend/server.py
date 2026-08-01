@@ -16,6 +16,7 @@ import jwt
 import bcrypt
 import shutil
 import resend
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -39,9 +40,11 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
+
 # Resend Email Config
 resend.api_key = os.environ.get('RESEND_API_KEY', 're_jQjxzNN1_4BiPKztay3CGzQ3vP7gBBGAa')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://revontechnologies.in')
+
 # Create the main app
 app = FastAPI(title="OrderNest POS API")
 
@@ -80,6 +83,16 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+class RegisterResponse(BaseModel):
+    message: str
+    email: str
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
 
 # Restaurant Models
 class RestaurantOnboarding(BaseModel):
@@ -496,15 +509,37 @@ async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: f
     }
     await db.wallet_transactions.insert_one(txn)
 
+async def send_verification_email(email: str, name: str, token: str):
+    """Send email verification link to newly registered user."""
+    verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
+    try:
+        resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": email,
+            "subject": "Verify your DineDesk account",
+            "html": f"""
+                <p>Hi {name},</p>
+                <p>Thanks for signing up for DineDesk. Please verify your email by clicking the link below:</p>
+                <p><a href="{verify_link}">Verify Email</a></p>
+                <p>This link expires in 24 hours.</p>
+            """
+        })
+        logger.info(f"Verification email sent to {email}")
+    except Exception as e:
+        logger.error(f"Failed to send verification email: {e}")
+
 # ============== AUTH ROUTES ==============
 
-@api_router.post("/auth/register", response_model=TokenResponse)
+@api_router.post("/auth/register", response_model=RegisterResponse)
 async def register(user_data: UserCreate):
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user_id = str(uuid.uuid4())
+    verification_token = str(uuid.uuid4())
+    verification_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+
     user = {
         "id": user_id,
         "email": user_data.email,
@@ -514,23 +549,77 @@ async def register(user_data: UserCreate):
         "restaurant_id": None,
         "branch_id": None,
         "onboarding_complete": False,
+        "is_verified": False,
+        "verification_token": verification_token,
+        "verification_token_expires": verification_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
 
-    token = create_token(user_id, "owner")
+    await send_verification_email(user_data.email, user_data.name, verification_token)
+
+    return RegisterResponse(
+        message="Registration successful. Please check your email to verify your account before logging in.",
+        email=user_data.email
+    )
+
+@api_router.post("/auth/verify-email", response_model=TokenResponse)
+async def verify_email(data: VerifyEmailRequest):
+    user = await db.users.find_one({"verification_token": data.token}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
+
+    expires = user.get("verification_token_expires")
+    if expires:
+        try:
+            if datetime.fromisoformat(expires) < datetime.now(timezone.utc):
+                raise HTTPException(status_code=400, detail="Verification link has expired. Please request a new one.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"is_verified": True}, "$unset": {"verification_token": "", "verification_token_expires": ""}}
+    )
+    await log_action("auth", "email_verified", user_id=user["id"])
+
+    token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     return TokenResponse(
         access_token=token,
         token_type="bearer",
-        user=UserResponse(id=user_id, email=user_data.email, name=user_data.name, role="owner", restaurant_id=None, branch_id=None, created_at=user["created_at"])
+        user=UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user["role"],
+                          restaurant_id=user.get("restaurant_id"), branch_id=user.get("branch_id"),
+                          created_at=user["created_at"])
     )
+
+@api_router.post("/auth/resend-verification")
+async def resend_verification(data: ResendVerificationRequest):
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    if not user:
+        return {"message": "If that email is registered, a verification link has been sent."}
+    if user.get("is_verified"):
+        return {"message": "This account is already verified. Please log in."}
+
+    verification_token = str(uuid.uuid4())
+    verification_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"verification_token": verification_token, "verification_token_expires": verification_expires}}
+    )
+    await send_verification_email(user["email"], user["name"], verification_token)
+    return {"message": "Verification email sent. Please check your inbox."}
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.get("is_verified", False):
+        raise HTTPException(status_code=403, detail="Please verify your email before logging in. Check your inbox for the verification link.")
 
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     await log_action("auth", "user_login", user_id=user["id"])
@@ -628,7 +717,6 @@ async def create_branch(data: BranchCreate, user: dict = Depends(get_current_use
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
 
-    # Validate login credentials
     if not data.login_email or not data.login_password:
         raise HTTPException(status_code=400, detail="Login email and password are required for branch")
     if len(data.login_password) < 6:
@@ -654,7 +742,6 @@ async def create_branch(data: BranchCreate, user: dict = Depends(get_current_use
     }
     await db.branches.insert_one(branch)
 
-    # Create branch manager user account
     branch_user_id = str(uuid.uuid4())
     branch_user = {
         "id": branch_user_id,
@@ -665,6 +752,7 @@ async def create_branch(data: BranchCreate, user: dict = Depends(get_current_use
         "restaurant_id": user["restaurant_id"],
         "branch_id": branch_id,
         "is_active": True,
+        "is_verified": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(branch_user)
@@ -972,7 +1060,6 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
     tax_amount = round(subtotal * tax_rate, 2)
     total_amount = round(subtotal + tax_amount - data.discount_amount, 2)
 
-    # For dine-in with pending payment, payment_status is "pending"
     is_pending_payment = data.payment_method == "pending"
     order_id = str(uuid.uuid4())
     order = {
@@ -1000,20 +1087,16 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
     }
     await db.orders.insert_one(order)
 
-    # Update table status if dine-in
     if data.order_type == "dine_in" and data.table_number:
         await db.tables.update_one(
             {"restaurant_id": user["restaurant_id"], "table_number": data.table_number},
             {"$set": {"status": "occupied", "current_order_id": order_id}}
         )
 
-    # Deduct inventory
     await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
 
-    # Record wallet transaction if paid
     if not is_pending_payment:
         await record_wallet_transaction(user["restaurant_id"], "sale", total_amount, data.payment_method, order_id, session["id"])
-        # Send SMS/WhatsApp notification
         try:
             settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]})
             if not settings or settings.get("sms_enabled", True):
@@ -1065,7 +1148,6 @@ async def update_order_status(order_id: str, data: OrderUpdate, user: dict = Dep
         raise HTTPException(status_code=404, detail="Order not found")
     await db.orders.update_one({"id": order_id}, {"$set": {"status": data.status}})
 
-    # Free table if completed and dine-in
     if data.status == "completed" and order["order_type"] == "dine_in" and order.get("table_number"):
         await db.tables.update_one(
             {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"]},
@@ -1132,20 +1214,17 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
         {"$set": {"payment_method": data.payment_method, "payment_status": "paid", "status": "completed"}}
     )
 
-    # Free table
     if order["order_type"] == "dine_in" and order.get("table_number"):
         await db.tables.update_one(
             {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"]},
             {"$set": {"status": "available", "current_order_id": None}}
         )
 
-    # Record wallet transaction
     await record_wallet_transaction(
         user["restaurant_id"], "sale", order["total_amount"],
         data.payment_method, order_id, order.get("day_session_id")
     )
 
-    # Send SMS/WhatsApp notification
     try:
         settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]})
         if not settings or settings.get("sms_enabled", True):
@@ -1314,6 +1393,7 @@ async def create_staff(data: StaffCreate, user: dict = Depends(get_current_user)
         "restaurant_id": user["restaurant_id"],
         "branch_id": None,
         "is_active": True,
+        "is_verified": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(staff)
@@ -1330,7 +1410,6 @@ async def get_staff(user: dict = Depends(get_current_user)):
     ).to_list(100)
     result = []
     for s in staff:
-        # Ensure is_active exists (default to True for old records)
         if "is_active" not in s:
             s["is_active"] = True
         data = {k: v for k, v in s.items() if k not in ["branch_id", "onboarding_complete"]}
@@ -1362,7 +1441,6 @@ async def get_wallet_summary(period: str = "today", date: Optional[str] = None, 
     now = datetime.now(timezone.utc)
 
     if date:
-        # Specific date selected
         try:
             selected = datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
         except:
@@ -1412,7 +1490,6 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
         raise HTTPException(status_code=400, detail="No restaurant associated")
 
     now = datetime.now(timezone.utc)
-    # If specific date provided, use that date's start/end
     if date:
         try:
             selected = datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
@@ -1433,7 +1510,6 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
 
     all_orders = await db.orders.find(order_query, {"_id": 0}).to_list(10000)
 
-    # Filter for the selected day
     day_orders = [o for o in all_orders if day_start.isoformat() <= o["created_at"] < day_end.isoformat()] if date else [o for o in all_orders if o["created_at"] >= day_start.isoformat()]
     daily_sales = sum(o["total_amount"] for o in day_orders)
     weekly_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= week_start.isoformat())
@@ -1479,7 +1555,6 @@ async def get_ai_insights(user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
 
-    # Gather data
     now = datetime.now(timezone.utc)
     month_start = (now - timedelta(days=30)).isoformat()
     week_start = (now - timedelta(days=7)).isoformat()
@@ -1496,7 +1571,6 @@ async def get_ai_insights(user: dict = Depends(get_current_user)):
     weekly_sales = sum(o["total_amount"] for o in weekly_orders)
     avg_order_value = monthly_sales / len(monthly_orders) if monthly_orders else 0
 
-    # Top items
     item_counts = {}
     for o in monthly_orders:
         for it in o.get("items", []):
@@ -1504,7 +1578,6 @@ async def get_ai_insights(user: dict = Depends(get_current_user)):
             item_counts[name] = item_counts.get(name, 0) + it.get("quantity", 1)
     top_items = sorted(item_counts.items(), key=lambda x: -x[1])[:5]
 
-    # Payment breakdown
     payment_methods = {}
     for o in monthly_orders:
         pm = o.get("payment_method", "unknown")
@@ -1515,7 +1588,6 @@ async def get_ai_insights(user: dict = Depends(get_current_user)):
         ot = o.get("order_type", "unknown")
         order_types[ot] = order_types.get(ot, 0) + 1
 
-    # Low stock items
     low_stock = await db.inventory.find({
         "restaurant_id": user["restaurant_id"],
         "is_low_stock": True
@@ -1524,11 +1596,11 @@ async def get_ai_insights(user: dict = Depends(get_current_user)):
     data_summary = f"""
 Restaurant Sales Report (Last 30 Days):
 - Total Orders: {len(monthly_orders)}
-- Monthly Revenue: ₹{monthly_sales:.2f}
-- Weekly Revenue: ₹{weekly_sales:.2f}
-- Average Order Value: ₹{avg_order_value:.2f}
+- Monthly Revenue: Rs.{monthly_sales:.2f}
+- Weekly Revenue: Rs.{weekly_sales:.2f}
+- Average Order Value: Rs.{avg_order_value:.2f}
 - Top Items: {', '.join(f'{name} ({count})' for name, count in top_items)}
-- Payment Methods: {', '.join(f'{k}: ₹{v:.2f}' for k, v in payment_methods.items())}
+- Payment Methods: {', '.join(f'{k}: Rs.{v:.2f}' for k, v in payment_methods.items())}
 - Order Types: {', '.join(f'{k}: {v}' for k, v in order_types.items())}
 - Low Stock Items: {', '.join(f'{i["name"]} ({i["quantity"]} {i.get("unit","")})' for i in low_stock) if low_stock else 'None'}
 """
@@ -1731,7 +1803,6 @@ async def receive_purchase_order(po_id: str, user: dict = Depends(get_current_us
     if po["status"] == "received":
         raise HTTPException(status_code=400, detail="Already received")
 
-    # Update inventory quantities
     for item in po["items"]:
         inv = await db.inventory.find_one({"id": item["inventory_item_id"], "restaurant_id": user["restaurant_id"]})
         if inv:
@@ -1797,19 +1868,16 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
     total_tax = sum(o.get("tax_amount", 0) for o in paid_orders)
     total_discount = sum(o.get("discount_amount", 0) for o in paid_orders)
 
-    # Payment breakdown
     payment_methods = {}
     for o in paid_orders:
         pm = o.get("payment_method", "unknown")
         payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
 
-    # Order type breakdown
     order_types = {}
     for o in paid_orders:
         ot = o.get("order_type", "unknown")
         order_types[ot] = order_types.get(ot, 0) + 1
 
-    # Top selling items
     item_counts = {}
     item_revenue = {}
     for o in paid_orders:
@@ -1820,7 +1888,6 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
             item_revenue[name] = item_revenue.get(name, 0) + item.get("total", 0)
     top_items = sorted([{"name": k, "quantity": item_counts[k], "revenue": item_revenue.get(k, 0)} for k in item_counts], key=lambda x: -x["revenue"])[:10]
 
-    # Hourly breakdown
     hourly = {}
     for o in paid_orders:
         try:
@@ -1865,7 +1932,6 @@ async def send_order_notification(order_data: dict, restaurant: dict):
     if not phone:
         return
 
-    # Format phone to E.164
     clean_phone = phone.strip().replace(" ", "")
     if not clean_phone.startswith("+"):
         clean_phone = "+91" + clean_phone.lstrip("0")
@@ -1883,7 +1949,6 @@ async def send_order_notification(order_data: dict, restaurant: dict):
         f"Thank you for your order!"
     )
 
-    # Log notification attempt
     notif_log = {
         "id": str(uuid.uuid4()),
         "restaurant_id": order_data.get("restaurant_id"),
@@ -1898,8 +1963,6 @@ async def send_order_notification(order_data: dict, restaurant: dict):
     }
 
     try:
-        # DEMO MODE: Log notification without sending via Twilio
-        # To enable live SMS/WhatsApp, replace with Twilio credentials
         notif_log["status"] = "demo"
         notif_log["channel"] = "demo"
         notif_log["whatsapp_status"] = "demo"
@@ -2027,7 +2090,6 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         except:
             pass
 
-    # Generate AI insights
     ai_insights = ""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -2054,13 +2116,11 @@ Day Close Report - {session.get('date', 'Today')}:
         logger.error(f"AI insights for PDF error: {e}")
         ai_insights = "AI insights unavailable at this time."
 
-    # Generate PDF
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
-    # Header
-    pdf.set_fill_color(30, 41, 59)  # slate-800
+    pdf.set_fill_color(30, 41, 59)
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 22)
@@ -2080,9 +2140,8 @@ Day Close Report - {session.get('date', 'Today')}:
     pdf.set_y(48)
     pdf.set_text_color(0, 0, 0)
 
-    # Sales Summary Section
     pdf.set_font("Helvetica", "B", 14)
-    pdf.set_fill_color(241, 245, 249)  # slate-100
+    pdf.set_fill_color(241, 245, 249)
     pdf.cell(0, 10, "  Sales Summary", fill=True, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
 
@@ -2103,7 +2162,6 @@ Day Close Report - {session.get('date', 'Today')}:
         pdf.set_font("Helvetica", "", 11)
     pdf.ln(4)
 
-    # Payment Breakdown
     pdf.set_font("Helvetica", "B", 14)
     pdf.cell(0, 10, "  Payment Breakdown", fill=True, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
@@ -2115,7 +2173,6 @@ Day Close Report - {session.get('date', 'Today')}:
         pdf.set_font("Helvetica", "", 11)
     pdf.ln(4)
 
-    # Cash Drawer
     opening_cash = session.get("opening_cash", 0)
     closing_cash = session.get("closing_cash")
     cash_sales = payment_methods.get("cash", 0)
@@ -2137,14 +2194,12 @@ Day Close Report - {session.get('date', 'Today')}:
         pdf.set_font("Helvetica", "", 11)
     pdf.ln(4)
 
-    # Top Selling Items Table
     if top_items:
         pdf.set_font("Helvetica", "B", 14)
         pdf.cell(0, 10, "  Top Selling Items", fill=True, new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
-        # Table header
         pdf.set_font("Helvetica", "B", 10)
-        pdf.set_fill_color(226, 232, 240)  # slate-200
+        pdf.set_fill_color(226, 232, 240)
         pdf.cell(10, 7, "#", border=1, fill=True, align="C")
         pdf.cell(80, 7, "Item Name", border=1, fill=True)
         pdf.cell(30, 7, "Qty Sold", border=1, fill=True, align="C")
@@ -2159,7 +2214,6 @@ Day Close Report - {session.get('date', 'Today')}:
             pdf.ln()
         pdf.ln(4)
 
-    # Hourly Breakdown
     if hourly:
         pdf.set_font("Helvetica", "B", 14)
         pdf.cell(0, 10, "  Hourly Breakdown", fill=True, new_x="LMARGIN", new_y="NEXT")
@@ -2178,7 +2232,6 @@ Day Close Report - {session.get('date', 'Today')}:
             pdf.ln()
         pdf.ln(4)
 
-    # AI Insights Section
     pdf.add_page()
     pdf.set_fill_color(30, 41, 59)
     pdf.rect(0, 0, 210, 25, 'F')
@@ -2189,10 +2242,8 @@ Day Close Report - {session.get('date', 'Today')}:
     pdf.set_y(32)
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Helvetica", "", 11)
-    # Clean markdown from AI response and replace unsupported Unicode characters
     clean_insights = ai_insights.replace("**", "").replace("##", "").replace("# ", "")
-    # Replace Unicode bullets with ASCII dashes (Helvetica doesn't support •)
-    clean_insights = clean_insights.replace("•", "-").replace("→", "->").replace("—", "-")
+    clean_insights = clean_insights.replace("\u2022", "-").replace("\u2192", "->").replace("\u2014", "-")
     for line in clean_insights.split("\n"):
         line = line.strip()
         if not line:
@@ -2210,7 +2261,6 @@ Day Close Report - {session.get('date', 'Today')}:
             pdf.set_font("Helvetica", "", 11)
     pdf.ln(8)
 
-    # Footer
     pdf.set_font("Helvetica", "I", 9)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 8, f"Generated by OrderNest POS on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", align="C")
@@ -2292,13 +2342,10 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
-# Include the router
 app.include_router(api_router)
 
-# Mount uploads directory
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -2319,6 +2366,7 @@ async def startup():
             "role": "admin",
             "restaurant_id": None,
             "branch_id": None,
+            "is_verified": True,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(admin_user)
