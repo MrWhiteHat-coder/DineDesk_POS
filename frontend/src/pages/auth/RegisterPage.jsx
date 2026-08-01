@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
 import {
-  Mail, Lock, ArrowRight, User, Zap, Globe, UtensilsCrossed, BarChart3, Package,
+  Mail, Lock, ArrowRight, User, Zap, Globe, UtensilsCrossed, BarChart3, Package, MailCheck,
 } from 'lucide-react';
+
+const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
 
 const features = [
   { icon: Zap, title: 'Fast POS Billing', desc: 'Process restaurant orders quickly with an intuitive POS interface.' },
@@ -16,13 +18,12 @@ const features = [
 ];
 
 export default function RegisterPage() {
-  const { register } = useAuth();
-  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,13 +31,22 @@ export default function RegisterPage() {
     if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
     setLoading(true);
     try {
-      await register(name, email, password);
-      toast.success('Account created successfully!');
-      navigate('/onboarding');
+      await axios.post(`${API}/api/auth/register`, { name, email, password });
+      setRegistered(true);
+      toast.success('Registration successful! Check your email to verify your account.');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Registration failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      await axios.post(`${API}/api/auth/resend-verification`, { email });
+      toast.success('Verification email resent.');
+    } catch (err) {
+      toast.error('Could not resend. Try again shortly.');
     }
   };
 
@@ -81,80 +91,99 @@ export default function RegisterPage() {
       {/* RIGHT — Auth Panel */}
       <div className="lg:w-[40%] bg-white flex items-center justify-center p-6 sm:p-10 lg:p-12">
         <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Create Your Account</h2>
-              <p className="text-sm text-gray-500">Start managing your restaurant today.</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Restaurant Owner Name</label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe"
-                    className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
-                    required data-testid="register-name-input" />
-                </div>
+          {registered ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8 text-center">
+              <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+                <MailCheck className="w-7 h-7 text-green-600" />
               </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-                    className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
-                    required data-testid="register-email-input" />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters"
-                    className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
-                    required data-testid="register-password-input" />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat your password"
-                    className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
-                    required data-testid="register-confirm-password-input" />
-                </div>
-              </div>
-
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Check your email</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                We've sent a verification link to <span className="font-semibold text-gray-700">{email}</span>. Click the link to activate your account before logging in.
+              </p>
               <button
-                type="submit"
-                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-1"
-                disabled={loading} data-testid="register-submit-btn"
+                onClick={handleResend}
+                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:border-black hover:text-black transition-colors mb-3"
               >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>Create Account <ArrowRight className="w-4 h-4" /></>
-                )}
+                Resend Verification Email
               </button>
-            </form>
-
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-[11px] text-gray-400 font-medium uppercase">or</span>
-              <div className="flex-1 h-px bg-gray-200" />
+              <Link to="/login" className="text-sm text-gray-500 underline">Back to Login</Link>
             </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Create Your Account</h2>
+                <p className="text-sm text-gray-500">Start managing your restaurant today.</p>
+              </div>
 
-            <Link
-              to="/login"
-              className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors"
-              data-testid="login-link"
-            >
-              Sign In to Existing Account
-            </Link>
-          </div>
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Restaurant Owner Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe"
+                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      required data-testid="register-name-input" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
+                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      required data-testid="register-email-input" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters"
+                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      required data-testid="register-password-input" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat your password"
+                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      required data-testid="register-confirm-password-input" />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-1"
+                  disabled={loading} data-testid="register-submit-btn"
+                >
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>Create Account <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </button>
+              </form>
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-[11px] text-gray-400 font-medium uppercase">or</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+
+              <Link
+                to="/login"
+                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors"
+                data-testid="login-link"
+              >
+                Sign In to Existing Account
+              </Link>
+            </div>
+          )}
 
           <p className="text-center text-[11px] text-gray-400 mt-5">
             By creating an account, you agree to the Terms of Service and Privacy Policy.
