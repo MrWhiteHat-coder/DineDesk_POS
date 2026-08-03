@@ -15,7 +15,8 @@ from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
 import shutil
-import resend
+import smtplib
+from email.mime.text import MIMEText
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,8 +42,9 @@ TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
-# Resend Email Config
-resend.api_key = os.environ.get('RESEND_API_KEY', 're_jQjxzNN1_4BiPKztay3CGzQ3vP7gBBGAa')
+# Gmail SMTP Config
+GMAIL_USER = os.environ.get('GMAIL_USER', 'support@revontechnologies.in')
+GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', 'rwwgtmcuxytmuyyv')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://revontechnologies.in')
 
 # Create the main app
@@ -238,13 +240,13 @@ class OrderItemCreate(BaseModel):
     notes: Optional[str] = None
 
 class OrderCreate(BaseModel):
-    order_type: str  # dine_in, takeaway, online
+    order_type: str
     table_number: Optional[int] = None
     items: List[OrderItemCreate]
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     customer_email: Optional[str] = None
-    payment_method: str = "pending"  # cash, card, upi, pending
+    payment_method: str = "pending"
     discount_amount: float = 0
     platform: Optional[str] = None
 
@@ -252,10 +254,10 @@ class OrderAddItems(BaseModel):
     items: List[OrderItemCreate]
 
 class OrderUpdate(BaseModel):
-    status: str  # received, preparing, ready, served, completed, cancelled
+    status: str
 
 class OrderPayment(BaseModel):
-    payment_method: str  # cash, card, upi
+    payment_method: str
 
 class OrderResponse(BaseModel):
     id: str
@@ -323,7 +325,7 @@ class StaffCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
-    role: str  # manager, cashier, captain, chef
+    role: str
 
 class StaffResponse(BaseModel):
     id: str
@@ -349,9 +351,9 @@ class TableResponse(BaseModel):
 
 # Wallet Models
 class WalletTransactionCreate(BaseModel):
-    transaction_type: str  # sale, refund, adjustment
+    transaction_type: str
     amount: float
-    payment_method: str  # cash, card, upi
+    payment_method: str
     reference_id: Optional[str] = None
     notes: Optional[str] = None
 
@@ -509,21 +511,28 @@ async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: f
     }
     await db.wallet_transactions.insert_one(txn)
 
+def _send_email_sync(to_email: str, subject: str, html_body: str):
+    msg = MIMEText(html_body, "html")
+    msg["Subject"] = subject
+    msg["From"] = GMAIL_USER
+    msg["To"] = to_email
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        server.sendmail(GMAIL_USER, [to_email], msg.as_string())
+
 async def send_verification_email(email: str, name: str, token: str):
-    """Send email verification link to newly registered user."""
+    """Send email verification link to newly registered user via Gmail SMTP."""
     verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
+    subject = "Verify your DineDesk account"
+    html_body = f"""
+        <p>Hi {name},</p>
+        <p>Thanks for signing up for DineDesk. Please verify your email by clicking the link below:</p>
+        <p><a href="{verify_link}">Verify Email</a></p>
+        <p>This link expires in 24 hours.</p>
+    """
     try:
-        resend.Emails.send({
-            "from": "onboarding@resend.dev",
-            "to": email,
-            "subject": "Verify your DineDesk account",
-            "html": f"""
-                <p>Hi {name},</p>
-                <p>Thanks for signing up for DineDesk. Please verify your email by clicking the link below:</p>
-                <p><a href="{verify_link}">Verify Email</a></p>
-                <p>This link expires in 24 hours.</p>
-            """
-        })
+        await asyncio.to_thread(_send_email_sync, email, subject, html_body)
         logger.info(f"Verification email sent to {email}")
     except Exception as e:
         logger.error(f"Failed to send verification email: {e}")
