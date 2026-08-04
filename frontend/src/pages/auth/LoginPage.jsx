@@ -50,14 +50,14 @@ export default function LoginPage() {
             <div className="w-11 h-11 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
               <UtensilsCrossed className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">OrderNest</span>
+            <span className="text-2xl font-bold tracking-tight">DineDesk</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
             Smart Restaurant POS Built for Speed and Simplicity
           </h1>
           <p className="text-white/60 text-base sm:text-lg leading-relaxed mb-10 max-w-lg">
-            OrderNest helps restaurants manage orders, menus, inventory, and online deliveries from one powerful dashboard.
+            DineDesk helps restaurants manage orders, menus, inventory, and online deliveries from one powerful dashboard.
           </p>
 
           <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -81,7 +81,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome to OrderNest</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome to DineDesk</h2>
               <p className="text-sm text-gray-500">Sign in to manage your restaurant operations.</p>
             </div>
 
