@@ -15,8 +15,8 @@ from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
 import shutil
-import smtplib
-from email.mime.text import MIMEText
+import sendgrid
+from sendgrid.helpers.mail import Mail
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -513,14 +513,14 @@ async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: f
     await db.wallet_transactions.insert_one(txn)
 
 def _send_email_sync(to_email: str, subject: str, html_body: str):
-    msg = MIMEText(html_body, "html")
-    msg["Subject"] = subject
-    msg["From"] = GMAIL_USER
-    msg["To"] = to_email
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.starttls()
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, [to_email], msg.as_string())
+    sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
+    message = Mail(
+        from_email=GMAIL_USER,
+        to_emails=to_email,
+        subject=subject,
+        html_content=html_body
+    )
+    sg.send(message)
 
 async def send_otp_email(email: str, name: str, otp: str):
     subject = "Your DineDesk Verification Code"
