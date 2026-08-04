@@ -90,8 +90,9 @@ class RegisterResponse(BaseModel):
     message: str
     email: str
 
-class VerifyEmailRequest(BaseModel):
-    token: str
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str
 
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
@@ -521,21 +522,28 @@ def _send_email_sync(to_email: str, subject: str, html_body: str):
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, [to_email], msg.as_string())
 
-async def send_verification_email(email: str, name: str, token: str):
-    """Send email verification link to newly registered user via Gmail SMTP."""
-    verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
-    subject = "Verify your DineDesk account"
+async def send_otp_email(email: str, name: str, otp: str):
+    subject = "Your DineDesk Verification Code"
     html_body = f"""
-        <p>Hi {name},</p>
-        <p>Thanks for signing up for DineDesk. Please verify your email by clicking the link below:</p>
-        <p><a href="{verify_link}">Verify Email</a></p>
-        <p>This link expires in 24 hours.</p>
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <h2 style="color:#111827;font-size:24px;font-weight:700;margin:0;">DineDesk</h2>
+      </div>
+      <div style="background:#ffffff;border-radius:10px;padding:28px;border:1px solid #e5e7eb;">
+        <p style="color:#374151;font-size:15px;margin:0 0 8px;">Hi <strong>{name}</strong>,</p>
+        <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Your verification code (expires in 10 minutes):</p>
+        <div style="background:#f3f4f6;border-radius:8px;padding:20px;text-align:center;letter-spacing:12px;font-size:36px;font-weight:700;color:#111827;margin-bottom:24px;">
+          {otp}
+        </div>
+        <p style="color:#9ca3af;font-size:12px;margin:0;">If you didn't sign up for DineDesk, ignore this email.</p>
+      </div>
+    </div>
     """
     try:
         await asyncio.to_thread(_send_email_sync, email, subject, html_body)
-        logger.info(f"Verification email sent to {email}")
+        logger.info(f"OTP email sent to {email}")
     except Exception as e:
-        logger.error(f"Failed to send verification email: {e}")
+        logger.error(f"Failed to send OTP email: {e}")
 
 # ============== AUTH ROUTES ==============
 
@@ -545,9 +553,10 @@ async def register(user_data: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    import random
+    otp = f"{random.randint(100000, 999999)}"
+    otp_expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     user_id = str(uuid.uuid4())
-    verification_token = str(uuid.uuid4())
-    verification_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
 
     user = {
         "id": user_id,
@@ -559,39 +568,39 @@ async def register(user_data: UserCreate):
         "branch_id": None,
         "onboarding_complete": False,
         "is_verified": False,
-        "verification_token": verification_token,
-        "verification_token_expires": verification_expires,
+        "otp": otp,
+        "otp_expires": otp_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
-
-    await send_verification_email(user_data.email, user_data.name, verification_token)
+    await send_otp_email(user_data.email, user_data.name, otp)
 
     return RegisterResponse(
-        message="Registration successful. Please check your email to verify your account before logging in.",
+        message="Registration successful. Please check your email for the 6-digit verification code.",
         email=user_data.email
     )
 
 @api_router.post("/auth/verify-email", response_model=TokenResponse)
-async def verify_email(data: VerifyEmailRequest):
-    user = await db.users.find_one({"verification_token": data.token}, {"_id": 0})
+async def verify_email(data: VerifyOtpRequest):
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
+        raise HTTPException(status_code=400, detail="Invalid email")
 
-    expires = user.get("verification_token_expires")
-    if expires:
-        try:
-            if datetime.fromisoformat(expires) < datetime.now(timezone.utc):
-                raise HTTPException(status_code=400, detail="Verification link has expired. Please request a new one.")
-        except HTTPException:
-            raise
-        except Exception:
-            pass
+    if user.get("is_verified"):
+        raise HTTPException(status_code=400, detail="Account already verified. Please login.")
+
+    if user.get("otp") != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP. Please check your email and try again.")
+
+    otp_expires = user.get("otp_expires")
+    if otp_expires:
+        if datetime.fromisoformat(otp_expires) < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
 
     await db.users.update_one(
         {"id": user["id"]},
-        {"$set": {"is_verified": True}, "$unset": {"verification_token": "", "verification_token_expires": ""}}
+        {"$set": {"is_verified": True}, "$unset": {"otp": "", "otp_expires": ""}}
     )
     await log_action("auth", "email_verified", user_id=user["id"])
 
@@ -612,14 +621,14 @@ async def resend_verification(data: ResendVerificationRequest):
     if user.get("is_verified"):
         return {"message": "This account is already verified. Please log in."}
 
-    verification_token = str(uuid.uuid4())
-    verification_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    import random
+    otp = f"{random.randint(100000, 999999)}"
+    otp_expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     await db.users.update_one(
         {"id": user["id"]},
-        {"$set": {"verification_token": verification_token, "verification_token_expires": verification_expires}}
+        {"$set": {"otp": otp, "otp_expires": otp_expires}}
     )
-    await send_verification_email(user["email"], user["name"], verification_token)
-    return {"message": "Verification email sent. Please check your inbox."}
+    await send_otp_email(user["email"], user["name"], otp)
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
