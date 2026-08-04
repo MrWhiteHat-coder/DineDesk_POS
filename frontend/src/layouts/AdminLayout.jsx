@@ -104,7 +104,7 @@ export default function AdminLayout() {
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
           <div>
             <h1 className="font-heading font-semibold text-lg text-slate-900">
-              OrderNest Platform Admin
+              DineDesk Platform Admin
             </h1>
           </div>
 
