@@ -270,12 +270,12 @@ export default function POSLayout() {
             <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-heading font-bold text-gray-900 text-base leading-tight">OrderNest</h1>
-            <p className="text-[10px] text-gray-400 leading-tight">Restaurant POS</p>
+           <h1 className="font-heading font-bold text-gray-900 text-base leading-tight">DineDesk</h1>
+              <p className="text-[10px] text-gray-400 leading-tight">Restaurant POS</p>
+            </div>
           </div>
-        </div>
-        <SidebarNav />
-      </aside>
+          <SidebarNav />
+        </aside>
 
       {/* Mobile Sidebar */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -286,7 +286,7 @@ export default function POSLayout() {
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-gray-900 text-base leading-tight">OrderNest</h1>
+              <h1 className="font-heading font-bold text-gray-900 text-base leading-tight">DineDesk</h1>
               <p className="text-[10px] text-gray-400 leading-tight">Restaurant POS</p>
             </div>
           </div>
