@@ -454,13 +454,13 @@ export default function MenuManagement() {
 
       {/* Item Modal */}
       <Dialog open={showItemModal} onOpenChange={setShowItemModal}>
-        <DialogContent className="max-w-lg rounded-2xl">
+       <DialogContent className="max-w-lg rounded-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">
               {editingItem ? 'Edit Menu Item' : 'Add Menu Item'}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+         <div className="space-y-4 py-4">
             {/* Image Upload */}
             <div className="space-y-2">
               <Label>Item Image</Label>
