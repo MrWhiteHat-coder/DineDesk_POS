@@ -140,6 +140,9 @@ export default function POSMain() {
 
   const selectRunningOrder = (order) => {
     setSelectedRunningOrder(order); setOrderType('dine_in'); setTableNumber(order.table_number?.toString() || '');
+    setCustomerName(order.customer_name || '');
+    setCustomerPhone(order.customer_phone || '');
+    setCustomerEmail(order.customer_email || '');
     setCart((order.items || []).map(item => { const mi = menuItems.find(m => m.id === item.menu_item_id); return { item: mi || { id: item.menu_item_id, name: item.name, price: item.price, image_url: null, is_available: true }, quantity: item.quantity, notes: item.notes || '', isExisting: true }; }));
   };
 
