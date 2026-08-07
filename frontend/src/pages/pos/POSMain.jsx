@@ -135,7 +135,7 @@ export default function POSMain() {
   };
 
   const handleReleaseAndPay = async (orderId, method) => {
-    try { await orderAPI.pay(orderId, { payment_method: method }); toast.success('Payment confirmed!'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); setSelectedRunningOrder(null); } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
+    try { await orderAPI.pay(orderId, { payment_method: method }); toast.success('Payment confirmed!'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
   };
 
   const selectRunningOrder = (order) => {
