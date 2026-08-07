@@ -229,7 +229,7 @@ export default function POSMain() {
       </div>
 
       {/* Right: Order Summary */}
-      <div className="w-full lg:w-[320px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden lg:flex-shrink-0 lg:max-h-none">
+      <div className="w-full lg:w-[320px] flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden lg:flex-shrink-0 lg:h-full">
         <div className="px-4 py-3 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-slate-900">{selectedRunningOrder ? `Table ${selectedRunningOrder.table_number}` : 'Order Summary'}</h2>
@@ -237,7 +237,7 @@ export default function POSMain() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1 px-4 py-3">
+        <ScrollArea className="flex-1 min-h-0 px-4 py-3">
           {cart.length > 0 ? (
             <div className="space-y-3">
               {cart.map(cartItem => {
