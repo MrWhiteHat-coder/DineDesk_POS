@@ -15,8 +15,8 @@ from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
 import shutil
-import sendgrid
-from sendgrid.helpers.mail import Mail
+import smtplib
+from email.mime.text import MIMEText
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -90,9 +90,8 @@ class RegisterResponse(BaseModel):
     message: str
     email: str
 
-class VerifyOtpRequest(BaseModel):
-    email: EmailStr
-    otp: str
+class VerifyEmailRequest(BaseModel):
+    token: str
 
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
@@ -513,37 +512,30 @@ async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: f
     await db.wallet_transactions.insert_one(txn)
 
 def _send_email_sync(to_email: str, subject: str, html_body: str):
-    sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
-    message = Mail(
-        from_email=GMAIL_USER,
-        to_emails=to_email,
-        subject=subject,
-        html_content=html_body
-    )
-    sg.send(message)
+    msg = MIMEText(html_body, "html")
+    msg["Subject"] = subject
+    msg["From"] = GMAIL_USER
+    msg["To"] = to_email
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        server.sendmail(GMAIL_USER, [to_email], msg.as_string())
 
-async def send_otp_email(email: str, name: str, otp: str):
-    subject = "Your DineDesk Verification Code"
+async def send_verification_email(email: str, name: str, token: str):
+    """Send email verification link to newly registered user via Gmail SMTP."""
+    verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
+    subject = "Verify your DineDesk account"
     html_body = f"""
-    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
-      <div style="text-align:center;margin-bottom:24px;">
-        <h2 style="color:#111827;font-size:24px;font-weight:700;margin:0;">DineDesk</h2>
-      </div>
-      <div style="background:#ffffff;border-radius:10px;padding:28px;border:1px solid #e5e7eb;">
-        <p style="color:#374151;font-size:15px;margin:0 0 8px;">Hi <strong>{name}</strong>,</p>
-        <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Your verification code (expires in 10 minutes):</p>
-        <div style="background:#f3f4f6;border-radius:8px;padding:20px;text-align:center;letter-spacing:12px;font-size:36px;font-weight:700;color:#111827;margin-bottom:24px;">
-          {otp}
-        </div>
-        <p style="color:#9ca3af;font-size:12px;margin:0;">If you didn't sign up for DineDesk, ignore this email.</p>
-      </div>
-    </div>
+        <p>Hi {name},</p>
+        <p>Thanks for signing up for DineDesk. Please verify your email by clicking the link below:</p>
+        <p><a href="{verify_link}">Verify Email</a></p>
+        <p>This link expires in 24 hours.</p>
     """
     try:
         await asyncio.to_thread(_send_email_sync, email, subject, html_body)
-        logger.info(f"OTP email sent to {email}")
+        logger.info(f"Verification email sent to {email}")
     except Exception as e:
-        logger.error(f"Failed to send OTP email: {e}")
+        logger.error(f"Failed to send verification email: {e}")
 
 # ============== AUTH ROUTES ==============
 
@@ -553,10 +545,9 @@ async def register(user_data: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    import random
-    otp = f"{random.randint(100000, 999999)}"
-    otp_expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     user_id = str(uuid.uuid4())
+    verification_token = str(uuid.uuid4())
+    verification_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
 
     user = {
         "id": user_id,
@@ -568,39 +559,39 @@ async def register(user_data: UserCreate):
         "branch_id": None,
         "onboarding_complete": False,
         "is_verified": False,
-        "otp": otp,
-        "otp_expires": otp_expires,
+        "verification_token": verification_token,
+        "verification_token_expires": verification_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
-    await send_otp_email(user_data.email, user_data.name, otp)
+
+    await send_verification_email(user_data.email, user_data.name, verification_token)
 
     return RegisterResponse(
-        message="Registration successful. Please check your email for the 6-digit verification code.",
+        message="Registration successful. Please check your email to verify your account before logging in.",
         email=user_data.email
     )
 
 @api_router.post("/auth/verify-email", response_model=TokenResponse)
-async def verify_email(data: VerifyOtpRequest):
-    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+async def verify_email(data: VerifyEmailRequest):
+    user = await db.users.find_one({"verification_token": data.token}, {"_id": 0})
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid email")
+        raise HTTPException(status_code=400, detail="Invalid or expired verification link")
 
-    if user.get("is_verified"):
-        raise HTTPException(status_code=400, detail="Account already verified. Please login.")
-
-    if user.get("otp") != data.otp:
-        raise HTTPException(status_code=400, detail="Invalid OTP. Please check your email and try again.")
-
-    otp_expires = user.get("otp_expires")
-    if otp_expires:
-        if datetime.fromisoformat(otp_expires) < datetime.now(timezone.utc):
-            raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+    expires = user.get("verification_token_expires")
+    if expires:
+        try:
+            if datetime.fromisoformat(expires) < datetime.now(timezone.utc):
+                raise HTTPException(status_code=400, detail="Verification link has expired. Please request a new one.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
 
     await db.users.update_one(
         {"id": user["id"]},
-        {"$set": {"is_verified": True}, "$unset": {"otp": "", "otp_expires": ""}}
+        {"$set": {"is_verified": True}, "$unset": {"verification_token": "", "verification_token_expires": ""}}
     )
     await log_action("auth", "email_verified", user_id=user["id"])
 
@@ -621,14 +612,14 @@ async def resend_verification(data: ResendVerificationRequest):
     if user.get("is_verified"):
         return {"message": "This account is already verified. Please log in."}
 
-    import random
-    otp = f"{random.randint(100000, 999999)}"
-    otp_expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+    verification_token = str(uuid.uuid4())
+    verification_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
     await db.users.update_one(
         {"id": user["id"]},
-        {"$set": {"otp": otp, "otp_expires": otp_expires}}
+        {"$set": {"verification_token": verification_token, "verification_token_expires": verification_expires}}
     )
-    await send_otp_email(user["email"], user["name"], otp)
+    await send_verification_email(user["email"], user["name"], verification_token)
+    return {"message": "Verification email sent. Please check your inbox."}
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
@@ -1568,74 +1559,8 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
 
 @api_router.post("/analytics/ai-insights")
 async def get_ai_insights(user: dict = Depends(get_current_user)):
-    """Generate AI-powered sales insights using Claude."""
     check_role(user, "analytics")
-    if not user.get("restaurant_id"):
-        raise HTTPException(status_code=400, detail="No restaurant associated")
-
-    now = datetime.now(timezone.utc)
-    month_start = (now - timedelta(days=30)).isoformat()
-    week_start = (now - timedelta(days=7)).isoformat()
-
-    orders = await db.orders.find({
-        "restaurant_id": user["restaurant_id"],
-        "payment_status": "paid"
-    }, {"_id": 0}).to_list(5000)
-
-    monthly_orders = [o for o in orders if o["created_at"] >= month_start]
-    weekly_orders = [o for o in orders if o["created_at"] >= week_start]
-
-    monthly_sales = sum(o["total_amount"] for o in monthly_orders)
-    weekly_sales = sum(o["total_amount"] for o in weekly_orders)
-    avg_order_value = monthly_sales / len(monthly_orders) if monthly_orders else 0
-
-    item_counts = {}
-    for o in monthly_orders:
-        for it in o.get("items", []):
-            name = it.get("name", "Unknown")
-            item_counts[name] = item_counts.get(name, 0) + it.get("quantity", 1)
-    top_items = sorted(item_counts.items(), key=lambda x: -x[1])[:5]
-
-    payment_methods = {}
-    for o in monthly_orders:
-        pm = o.get("payment_method", "unknown")
-        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
-
-    order_types = {}
-    for o in monthly_orders:
-        ot = o.get("order_type", "unknown")
-        order_types[ot] = order_types.get(ot, 0) + 1
-
-    low_stock = await db.inventory.find({
-        "restaurant_id": user["restaurant_id"],
-        "is_low_stock": True
-    }, {"_id": 0, "name": 1, "quantity": 1, "unit": 1}).to_list(20)
-
-    data_summary = f"""
-Restaurant Sales Report (Last 30 Days):
-- Total Orders: {len(monthly_orders)}
-- Monthly Revenue: Rs.{monthly_sales:.2f}
-- Weekly Revenue: Rs.{weekly_sales:.2f}
-- Average Order Value: Rs.{avg_order_value:.2f}
-- Top Items: {', '.join(f'{name} ({count})' for name, count in top_items)}
-- Payment Methods: {', '.join(f'{k}: Rs.{v:.2f}' for k, v in payment_methods.items())}
-- Order Types: {', '.join(f'{k}: {v}' for k, v in order_types.items())}
-- Low Stock Items: {', '.join(f'{i["name"]} ({i["quantity"]} {i.get("unit","")})' for i in low_stock) if low_stock else 'None'}
-"""
-
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"analytics-{user['restaurant_id']}-{uuid.uuid4().hex[:8]}",
-            system_message="You are a restaurant business analyst. Analyze the sales data and provide actionable insights. Keep your response concise with 3-5 key insights and 3-5 improvement suggestions. Use bullet points. Focus on revenue growth, menu optimization, and operational efficiency. Format with markdown headers."
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-
-        response = await chat.send_message(UserMessage(text=f"Analyze this restaurant data and provide insights:\n{data_summary}"))
-        return {"insights": response, "data_summary": {"monthly_orders": len(monthly_orders), "monthly_sales": monthly_sales, "weekly_sales": weekly_sales, "avg_order_value": avg_order_value, "top_items": top_items}}
-    except Exception as e:
-        logger.error(f"AI insights error: {e}")
-        return {"insights": f"AI insights temporarily unavailable. Error: {str(e)}", "data_summary": {"monthly_orders": len(monthly_orders), "monthly_sales": monthly_sales}}
+    return {"insights": "AI insights feature is currently disabled.", "data_summary": {}}
 
 # ============== ADMIN ROUTES ==============
 
@@ -2058,7 +1983,7 @@ async def customer_lookup(phone: str = "", user: dict = Depends(get_current_user
 
 @api_router.get("/day-session/{session_id}/report-pdf")
 async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None, user: dict = Depends(get_current_user)):
-    """Generate a premium PDF day close report with AI insights."""
+    """Generate a premium PDF day close report."""
     from fastapi.responses import Response
     from fpdf import FPDF
 
@@ -2108,31 +2033,7 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         except:
             pass
 
-    ai_insights = ""
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        data_summary = f"""
-Day Close Report - {session.get('date', 'Today')}:
-- Total Paid Orders: {len(paid_orders)}
-- Total Sales: Rs.{total_sales:.2f}
-- Average Order Value: Rs.{avg_order:.2f}
-- Payment Methods: {', '.join(f'{k}: Rs.{v:.2f}' for k, v in payment_methods.items())}
-- Order Types: {', '.join(f'{k}: {v}' for k, v in order_types.items())}
-- Top Items: {', '.join(f'{i["name"]} ({i["quantity"]} sold, Rs.{i["revenue"]:.2f})' for i in top_items[:5])}
-- Pending Orders: {len(pending_orders)}
-- Cancelled Orders: {len(cancelled_orders)}
-- Peak Hours: {', '.join(f'{h}:00 ({d["orders"]} orders, Rs.{d["revenue"]:.2f})' for h, d in sorted(hourly.items(), key=lambda x: -x[1]["revenue"])[:3]) if hourly else 'N/A'}
-"""
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"dayclose-{session_id}-{uuid.uuid4().hex[:8]}",
-            system_message="You are a restaurant business consultant. Based on today's sales data, provide 3-5 actionable suggestions for tomorrow to improve sales and operations. Be specific and practical. Use bullet points. Keep it under 200 words."
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-        response = await chat.send_message(UserMessage(text=f"Based on today's performance, give me suggestions for tomorrow:\n{data_summary}"))
-        ai_insights = response
-    except Exception as e:
-        logger.error(f"AI insights for PDF error: {e}")
-        ai_insights = "AI insights unavailable at this time."
+    ai_insights = "AI insights feature is currently disabled."
 
     pdf = FPDF()
     pdf.add_page()
@@ -2293,62 +2194,7 @@ Day Close Report - {session.get('date', 'Today')}:
 @api_router.get("/day-session/{session_id}/ai-insights")
 async def get_day_close_ai_insights(session_id: str, user: dict = Depends(get_current_user)):
     """Get AI insights for a day session for in-app display."""
-    session = await db.day_sessions.find_one({"id": session_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0, "opened_by": 0})
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    orders = await db.orders.find({"day_session_id": session_id, "payment_status": "paid"}, {"_id": 0}).to_list(5000)
-    total_sales = sum(o["total_amount"] for o in orders)
-    avg_order = total_sales / len(orders) if orders else 0
-
-    payment_methods = {}
-    for o in orders:
-        pm = o.get("payment_method", "unknown")
-        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
-
-    order_types = {}
-    for o in orders:
-        ot = o.get("order_type", "unknown")
-        order_types[ot] = order_types.get(ot, 0) + 1
-
-    item_counts = {}
-    for o in orders:
-        for item in o.get("items", []):
-            name = item.get("name", "Unknown")
-            item_counts[name] = item_counts.get(name, 0) + item.get("quantity", 1)
-    top_items = sorted(item_counts.items(), key=lambda x: -x[1])[:5]
-
-    hourly = {}
-    for o in orders:
-        try:
-            hour = datetime.fromisoformat(o["created_at"]).hour
-            hourly[hour] = hourly.get(hour, 0) + 1
-        except:
-            pass
-    peak_hours = sorted(hourly.items(), key=lambda x: -x[1])[:3]
-
-    data_summary = f"""
-Day Close Report - {session.get('date', 'Today')}:
-- Total Paid Orders: {len(orders)}
-- Total Sales: Rs.{total_sales:.2f}
-- Average Order Value: Rs.{avg_order:.2f}
-- Payment Methods: {', '.join(f'{k}: Rs.{v:.2f}' for k, v in payment_methods.items())}
-- Order Types: {', '.join(f'{k}: {v}' for k, v in order_types.items())}
-- Top Items: {', '.join(f'{name} ({count} sold)' for name, count in top_items)}
-- Peak Hours: {', '.join(f'{h}:00 ({c} orders)' for h, c in peak_hours) if peak_hours else 'N/A'}
-"""
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"dayclose-insights-{session_id}-{uuid.uuid4().hex[:8]}",
-            system_message="You are a restaurant business consultant. Based on today's sales data, provide 3-5 actionable suggestions for tomorrow to improve sales and operations. Be specific and practical. Use bullet points. Keep it under 200 words."
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-        response = await chat.send_message(UserMessage(text=f"Based on today's performance, give me suggestions for tomorrow:\n{data_summary}"))
-        return {"insights": response}
-    except Exception as e:
-        logger.error(f"Day close AI insights error: {e}")
-        return {"insights": "AI insights temporarily unavailable."}
+    return {"insights": "AI insights feature is currently disabled."}
 
 # ============== UTILITY ROUTES ==============
 
