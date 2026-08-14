@@ -2220,30 +2220,33 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    admin = await db.users.find_one({"email": "admin@foodflow.com"})
-    if not admin:
-        admin_user = {
-            "id": str(uuid.uuid4()),
-            "email": "admin@foodflow.com",
-            "password": hash_password("admin123"),
-            "name": "Platform Admin",
-            "role": "admin",
-            "restaurant_id": None,
-            "branch_id": None,
-            "is_verified": True,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.users.insert_one(admin_user)
-        logger.info("Admin user created: admin@foodflow.com / admin123")
+    try:
+        admin = await db.users.find_one({"email": "admin@foodflow.com"})
+        if not admin:
+            admin_user = {
+                "id": str(uuid.uuid4()),
+                "email": "admin@foodflow.com",
+                "password": hash_password("admin123"),
+                "name": "Platform Admin",
+                "role": "admin",
+                "restaurant_id": None,
+                "branch_id": None,
+                "is_verified": True,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(admin_user)
+            logger.info("Admin user created: admin@foodflow.com / admin123")
 
-    await db.users.create_index("email", unique=True)
-    await db.restaurants.create_index("owner_id")
-    await db.orders.create_index([("restaurant_id", 1), ("created_at", -1)])
-    await db.menu_items.create_index([("restaurant_id", 1), ("category_id", 1)])
-    await db.wallet_transactions.create_index([("restaurant_id", 1), ("created_at", -1)])
-    await db.branches.create_index("restaurant_id")
-    await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
-    logger.info("Database indexes created")
+        await db.users.create_index("email", unique=True)
+        await db.restaurants.create_index("owner_id")
+        await db.orders.create_index([("restaurant_id", 1), ("created_at", -1)])
+        await db.menu_items.create_index([("restaurant_id", 1), ("category_id", 1)])
+        await db.wallet_transactions.create_index([("restaurant_id", 1), ("created_at", -1)])
+        await db.branches.create_index("restaurant_id")
+        await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
+        logger.info("Database indexes created")
+    except Exception as e:
+        logger.warning(f"Startup DB init skipped (will retry on first request): {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
