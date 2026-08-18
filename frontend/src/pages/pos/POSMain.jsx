@@ -1,5 +1,5 @@
 import Lottie from 'lottie-react';
-import foodDeliveredAnimation from '../../../public/food-delivered.json';
+import foodDeliveredAnimation from '../../assets/food-delivered.json';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
