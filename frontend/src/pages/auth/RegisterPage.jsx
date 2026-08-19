@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
@@ -18,17 +18,13 @@ const features = [
 ];
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState('register'); // 'register' | 'otp'
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [verifying, setVerifying] = useState(false);
+  const [step, setStep] = useState('register'); // 'register' | 'check-email'
   const [resending, setResending] = useState(false);
-  const inputsRef = useRef([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,8 +33,8 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await axios.post(`${API}/api/auth/register`, { name, email, password });
-      setStep('otp');
-      toast.success('OTP sent! Check your email.');
+      setStep('check-email');
+      toast.success('Check your email to verify your account.');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Registration failed');
     } finally {
@@ -46,44 +42,11 @@ export default function RegisterPage() {
     }
   };
 
-  const handleOtpChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 5) inputsRef.current[index + 1]?.focus();
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputsRef.current[index - 1]?.focus();
-    }
-  };
-
-  const handleVerify = async () => {
-    const otpValue = otp.join('');
-    if (otpValue.length !== 6) { toast.error('Enter the 6-digit OTP'); return; }
-    setVerifying(true);
-    try {
-      const res = await axios.post(`${API}/api/auth/verify-email`, { email, otp: otpValue });
-      localStorage.setItem('token', res.data.access_token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      toast.success('Email verified! Welcome to DineDesk 🎉');
-      setTimeout(() => navigate('/pos'), 1000);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Verification failed');
-    } finally {
-      setVerifying(false);
-    }
-  };
-
   const handleResend = async () => {
     setResending(true);
     try {
       await axios.post(`${API}/api/auth/resend-verification`, { email });
-      setOtp(['', '', '', '', '', '']);
-      inputsRef.current[0]?.focus();
-      toast.success('New OTP sent! Check your email.');
+      toast.success('Verification email sent! Check your inbox.');
     } catch (err) {
       toast.error('Could not resend. Try again shortly.');
     } finally {
@@ -129,53 +92,32 @@ export default function RegisterPage() {
       {/* RIGHT */}
       <div className="lg:w-[40%] bg-white flex items-center justify-center p-6 sm:p-10 lg:p-12">
         <div className="w-full max-w-sm">
-          {step === 'otp' ? (
+          {step === 'check-email' ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8 text-center">
               <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Verify your email</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Check your email</h2>
               <p className="text-sm text-gray-500 mb-6">
-                We sent a 6-digit code to <span className="font-semibold text-gray-700">{email}</span>. Enter it below to activate your account.
+                We sent a verification link to <span className="font-semibold text-gray-700">{email}</span>. Click it to activate your account, then sign in.
               </p>
-
-              <div className="flex justify-center gap-2 mb-6">
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => (inputsRef.current[i] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(i, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    className="w-11 h-12 text-center text-xl font-bold border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors"
-                  />
-                ))}
-              </div>
-
-              <button
-                onClick={handleVerify}
-                disabled={verifying}
-                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mb-3"
-              >
-                {verifying ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>Verify & Continue <ArrowRight className="w-4 h-4" /></>
-                )}
-              </button>
 
               <button
                 onClick={handleResend}
                 disabled={resending}
-                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:border-black hover:text-black transition-colors disabled:opacity-60"
+                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:border-black hover:text-black transition-colors disabled:opacity-60 mb-3"
               >
-                {resending ? 'Sending...' : 'Resend OTP'}
+                {resending ? 'Sending...' : 'Resend Email'}
               </button>
 
-              <p className="text-xs text-gray-400 mt-4">Code expires in 10 minutes</p>
+              <Link
+                to="/login"
+                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                Go to Sign In <ArrowRight className="w-4 h-4" />
+              </Link>
+
+              <p className="text-xs text-gray-400 mt-4">Link expires in 24 hours</p>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
