@@ -8,11 +8,11 @@ import {
 } from 'lucide-react';
 
 const features = [
-  { icon: Zap, title: 'Fast POS Billing', desc: 'Process restaurant orders quickly with an intuitive POS interface.' },
-  { icon: Globe, title: 'Online Order Integration', desc: 'Manage delivery orders from Swiggy and Zomato directly inside the POS.' },
-  { icon: UtensilsCrossed, title: 'Smart Menu Management', desc: 'Add, edit, and organize menu items with images, categories, and pricing.' },
-  { icon: BarChart3, title: 'Daily Sales Insights', desc: 'Track daily revenue, orders, and top-selling dishes with real-time analytics.' },
-  { icon: Package, title: 'Inventory Tracking', desc: 'Monitor ingredient stock levels and receive low-stock alerts.' },
+  { icon: Zap, title: 'Lightning POS', desc: '3-click order placement. Touch-optimized. Works offline.' },
+  { icon: Globe, title: 'Online Orders', desc: 'Swiggy & Zomato integrated directly into your dashboard.' },
+  { icon: UtensilsCrossed, title: 'Menu Management', desc: 'Categories, variants, images, pricing — all in one place.' },
+  { icon: BarChart3, title: 'Real-time Analytics', desc: 'Sales trends, peak hours, top dishes — updated live.' },
+  { icon: Package, title: 'Inventory & CRM', desc: 'Stock alerts, customer loyalty, Trident Coins, Gift Cards.' },
 ];
 
 export default function LoginPage() {
@@ -50,14 +50,17 @@ export default function LoginPage() {
             <div className="w-11 h-11 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
               <UtensilsCrossed className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">DineDesk</span>
+            <div>
+              <span className="text-2xl font-bold tracking-tight">DineDesk</span>
+              <p className="text-[10px] text-white/40 -mt-0.5">by Trident Ventures</p>
+            </div>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
-            Smart Restaurant POS Built for Speed and Simplicity
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading-xl font-black leading-tight mb-4">
+            Absorbs chaos.<br />Serves calm.
           </h1>
-          <p className="text-white/60 text-base sm:text-lg leading-relaxed mb-10 max-w-lg">
-            DineDesk helps restaurants manage orders, menus, inventory, and online deliveries from one powerful dashboard.
+          <p className="text-white/50 text-base sm:text-lg leading-relaxed mb-10 max-w-lg">
+            Restaurant POS + CRM + Loyalty + Gift Cards — built for teams that refuse to compromise.
           </p>
 
           <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -81,8 +84,8 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Welcome to DineDesk</h2>
-              <p className="text-sm text-gray-500">Sign in to manage your restaurant operations.</p>
+              <h2 className="text-xl font-heading font-bold text-gray-900 mb-1">Welcome back</h2>
+              <p className="text-sm text-gray-500">Sign in to your DineDesk dashboard.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -114,7 +117,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+                className="w-full h-11 rounded-xl bg-dd-blue hover:bg-dd-blue-light text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 shadow-blue"
                 disabled={loading} data-testid="login-submit-btn"
               >
                 {loading ? (
@@ -137,7 +140,7 @@ export default function LoginPage() {
 
             <Link
               to="/register"
-              className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors"
+              className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-dd-blue hover:text-dd-blue transition-colors"
               data-testid="register-link"
             >
               Create New Account

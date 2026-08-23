@@ -29,6 +29,10 @@ import BranchesPage from './pages/pos/BranchesPage';
 import QuickPOSPage from './pages/pos/QuickPOSPage';
 import PurchaseOrdersPage from './pages/pos/PurchaseOrdersPage';
 import NotificationsPage from './pages/pos/NotificationsPage';
+import CustomersPage from './pages/pos/CustomersPage';
+import GiftCardsPage from './pages/pos/GiftCardsPage';
+import TridentCoinsPage from './pages/pos/TridentCoinsPage';
+import StorePage from './pages/pos/StorePage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -130,6 +134,10 @@ function AppRoutes() {
         <Route path="quick-pos" element={<QuickPOSPage />} />
         <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="gift-cards" element={<GiftCardsPage />} />
+        <Route path="trident-coins" element={<TridentCoinsPage />} />
+        <Route path="store" element={<StorePage />} />
       </Route>
 
       {/* Admin Routes */}

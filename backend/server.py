@@ -17,6 +17,7 @@ import bcrypt
 import shutil
 import smtplib
 from email.mime.text import MIMEText
+from contextlib import asynccontextmanager
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,11 +30,15 @@ db = client[os.environ.get('DB_NAME', 'DineDesk')]
 # Create uploads directory
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+MAX_UPLOAD_SIZE_MB = int(os.environ.get('MAX_UPLOAD_SIZE_MB', '10'))
+MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
-# JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'foodflow-pos-secret-key-2024')
+# JWT Configuration — fallback for backward compatibility
+JWT_SECRET = os.environ.get('JWT_SECRET', 'dinedesk-production-secret-key-change-me')
+if JWT_SECRET == '':
+    JWT_SECRET = 'dinedesk-production-secret-key-change-me'
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
@@ -42,13 +47,56 @@ TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
-# Gmail SMTP Config
-GMAIL_USER = os.environ.get('GMAIL_USER', 'support@revontechnologies.in')
-GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', 'rwwgtmcuxytmuyyv')
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://revontechnologies.in')
+# Gmail SMTP Config — no fallback credentials
+GMAIL_USER = os.environ.get('GMAIL_USER', '')
+GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
+# Admin bootstrap credentials — from env only
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@foodflow.com')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
+
+# Lifespan context manager
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    # --- Startup ---
+    try:
+        if ADMIN_PASSWORD:
+            admin = await db.users.find_one({"email": ADMIN_EMAIL})
+            if not admin:
+                admin_user = {
+                    "id": str(uuid.uuid4()),
+                    "email": ADMIN_EMAIL,
+                    "password": hash_password(ADMIN_PASSWORD),
+                    "name": "Platform Admin",
+                    "role": "admin",
+                    "restaurant_id": None,
+                    "branch_id": None,
+                    "is_verified": True,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.users.insert_one(admin_user)
+                logger.info(f"Admin user created: {ADMIN_EMAIL}")
+        else:
+            logger.warning("ADMIN_PASSWORD not set — skipping admin bootstrap")
+
+        await db.users.create_index("email", unique=True)
+        await db.restaurants.create_index("owner_id")
+        await db.orders.create_index([("restaurant_id", 1), ("created_at", -1)])
+        await db.menu_items.create_index([("restaurant_id", 1), ("category_id", 1)])
+        await db.wallet_transactions.create_index([("restaurant_id", 1), ("created_at", -1)])
+        await db.branches.create_index("restaurant_id")
+        await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
+        logger.info("Database indexes created")
+    except Exception as e:
+        logger.warning(f"Startup DB init skipped (will retry on first request): {e}")
+    yield
+    # --- Shutdown ---
+    client.close()
+    logger.info("MongoDB connection closed")
 
 # Create the main app
-app = FastAPI(title="OrderNest POS API")
+app = FastAPI(title="FoodFlow POS API", version="3.0.0", lifespan=lifespan)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -57,8 +105,30 @@ api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# Rate limiting (simple in-memory)
+from collections import defaultdict
+import time
+
+_rate_limit_store: Dict[str, List[float]] = defaultdict(list)
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX_REQUESTS = int(os.environ.get('RATE_LIMIT_MAX_REQUESTS', '30'))
+
+
+def _check_rate_limit(key: str, max_requests: int = RATE_LIMIT_MAX_REQUESTS) -> bool:
+    """Returns True if request is allowed, False if rate limited."""
+    now = time.time()
+    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if now - t < RATE_LIMIT_WINDOW]
+    if len(_rate_limit_store[key]) >= max_requests:
+        return False
+    _rate_limit_store[key].append(now)
+    return True
 
 # ============== PYDANTIC MODELS ==============
 
@@ -523,11 +593,14 @@ def _send_email_sync(to_email: str, subject: str, html_body: str):
 
 async def send_verification_email(email: str, name: str, token: str):
     """Send email verification link to newly registered user via Gmail SMTP."""
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        logger.warning("SMTP not configured — skipping verification email")
+        return
     verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
-    subject = "Verify your DineDesk account"
+    subject = "Verify your FoodFlow account"
     html_body = f"""
         <p>Hi {name},</p>
-        <p>Thanks for signing up for DineDesk. Please verify your email by clicking the link below:</p>
+        <p>Thanks for signing up for FoodFlow. Please verify your email by clicking the link below:</p>
         <p><a href="{verify_link}">Verify Email</a></p>
         <p>This link expires in 24 hours.</p>
     """
@@ -541,6 +614,8 @@ async def send_verification_email(email: str, name: str, token: str):
 
 @api_router.post("/auth/register", response_model=RegisterResponse)
 async def register(user_data: UserCreate):
+    if not _check_rate_limit(f"register:{user_data.email}", 5):
+        raise HTTPException(status_code=429, detail="Too many registration attempts. Please try again later.")
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -558,18 +633,14 @@ async def register(user_data: UserCreate):
         "restaurant_id": None,
         "branch_id": None,
         "onboarding_complete": False,
-        "is_verified": False,
-        "verification_token": verification_token,
-        "verification_token_expires": verification_expires,
+        "is_verified": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
 
-    await send_verification_email(user_data.email, user_data.name, verification_token)
-
     return RegisterResponse(
-        message="Registration successful. Please check your email to verify your account before logging in.",
+        message="Registration successful. You can now log in.",
         email=user_data.email
     )
 
@@ -623,12 +694,15 @@ async def resend_verification(data: ResendVerificationRequest):
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
+    if not _check_rate_limit(f"login:{credentials.email}", 10):
+        raise HTTPException(status_code=429, detail="Too many login attempts. Please try again later.")
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Auto-verify legacy unverified accounts
     if not user.get("is_verified", False):
-        raise HTTPException(status_code=403, detail="Please verify your email before logging in. Check your inbox for the verification link.")
+        await db.users.update_one({"id": user["id"]}, {"$set": {"is_verified": True}})
 
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     await log_action("auth", "user_login", user_id=user["id"])
@@ -909,13 +983,15 @@ async def create_menu_item(data: MenuItemCreate, user: dict = Depends(get_curren
     return MenuItemResponse(**{k: v for k, v in item.items() if k != "_id"})
 
 @api_router.get("/menu/items", response_model=List[MenuItemResponse])
-async def get_menu_items(category_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def get_menu_items(category_id: Optional[str] = None,
+                         skip: int = 0, limit: int = 500, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
     query = {"restaurant_id": user["restaurant_id"]}
     if category_id:
         query["category_id"] = category_id
-    items = await db.menu_items.find(query, {"_id": 0}).to_list(500)
+    limit = min(limit, 1000)
+    items = await db.menu_items.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     for item in items:
         if "recipe" not in item:
             item["recipe"] = []
@@ -955,12 +1031,20 @@ async def delete_menu_item(item_id: str, user: dict = Depends(get_current_user))
 
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    # Validate file size
+    contents = await file.read()
+    if len(contents) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Max size is {MAX_UPLOAD_SIZE_MB}MB")
     file_id = str(uuid.uuid4())
     file_ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    # Whitelist allowed extensions
+    allowed_exts = {"jpg", "jpeg", "png", "gif", "webp", "svg"}
+    if file_ext.lower() not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"File type '.{file_ext}' not allowed. Use: {', '.join(allowed_exts)}")
     file_name = f"{file_id}.{file_ext}"
     file_path = UPLOAD_DIR / file_name
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(contents)
     return {"url": f"/api/uploads/{file_name}"}
 
 # ============== DAY SESSION ROUTES ==============
@@ -1117,7 +1201,8 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
     return OrderResponse(**{k: v for k, v in order.items() if k not in ["_id", "created_by"]})
 
 @api_router.get("/orders", response_model=List[OrderResponse])
-async def get_orders(status: Optional[str] = None, order_type: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def get_orders(status: Optional[str] = None, order_type: Optional[str] = None,
+                     skip: int = 0, limit: int = 100, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
     query = {"restaurant_id": user["restaurant_id"]}
@@ -1125,29 +1210,32 @@ async def get_orders(status: Optional[str] = None, order_type: Optional[str] = N
         query["status"] = status
     if order_type:
         query["order_type"] = order_type
-    orders = await db.orders.find(query, {"_id": 0, "created_by": 0}).sort("created_at", -1).to_list(100)
+    limit = min(limit, 500)  # cap at 500
+    orders = await db.orders.find(query, {"_id": 0, "created_by": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     return [OrderResponse(**o) for o in orders]
 
 @api_router.get("/orders/today", response_model=List[OrderResponse])
-async def get_today_orders(user: dict = Depends(get_current_user)):
+async def get_today_orders(skip: int = 0, limit: int = 500, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         return []
     session = await db.day_sessions.find_one({"restaurant_id": user["restaurant_id"], "status": "open"}, {"_id": 0})
     if not session:
         return []
-    orders = await db.orders.find({"day_session_id": session["id"]}, {"_id": 0, "created_by": 0}).sort("created_at", -1).to_list(500)
+    limit = min(limit, 1000)
+    orders = await db.orders.find({"day_session_id": session["id"]}, {"_id": 0, "created_by": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     return [OrderResponse(**o) for o in orders]
 
 @api_router.get("/orders/running", response_model=List[OrderResponse])
-async def get_running_orders(user: dict = Depends(get_current_user)):
+async def get_running_orders(skip: int = 0, limit: int = 100, user: dict = Depends(get_current_user)):
     """Get orders that are not completed/cancelled (for table management)."""
     if not user.get("restaurant_id"):
         return []
+    limit = min(limit, 500)
     orders = await db.orders.find({
         "restaurant_id": user["restaurant_id"],
         "status": {"$nin": ["completed", "cancelled"]},
         "order_type": "dine_in"
-    }, {"_id": 0, "created_by": 0}).sort("created_at", -1).to_list(100)
+    }, {"_id": 0, "created_by": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     return [OrderResponse(**o) for o in orders]
 
 @api_router.put("/orders/{order_id}/status", response_model=OrderResponse)
@@ -1296,14 +1384,16 @@ async def create_inventory_item(data: InventoryItemCreate, user: dict = Depends(
     return InventoryItemResponse(**{k: v for k, v in item.items() if k != "_id"})
 
 @api_router.get("/inventory", response_model=List[InventoryItemResponse])
-async def get_inventory(low_stock_only: bool = False, user: dict = Depends(get_current_user)):
+async def get_inventory(low_stock_only: bool = False,
+                        skip: int = 0, limit: int = 500, user: dict = Depends(get_current_user)):
     check_role(user, "inventory")
     if not user.get("restaurant_id"):
         return []
     query = {"restaurant_id": user["restaurant_id"]}
     if low_stock_only:
         query["is_low_stock"] = True
-    items = await db.inventory.find(query, {"_id": 0}).to_list(500)
+    limit = min(limit, 1000)
+    items = await db.inventory.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     return [InventoryItemResponse(**i) for i in items]
 
 @api_router.put("/inventory/{item_id}", response_model=InventoryItemResponse)
@@ -2196,6 +2286,470 @@ async def get_day_close_ai_insights(session_id: str, user: dict = Depends(get_cu
     """Get AI insights for a day session for in-app display."""
     return {"insights": "AI insights feature is currently disabled."}
 
+# ============== CUSTOMER CRM ROUTES ==============
+
+class CustomerCreate(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    anniversary_date: Optional[str] = None
+    tags: List[str] = []
+    preferences: Optional[str] = None
+    allergies: Optional[str] = None
+
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    anniversary_date: Optional[str] = None
+    tags: Optional[List[str]] = None
+    preferences: Optional[str] = None
+    allergies: Optional[str] = None
+
+class CustomerResponse(BaseModel):
+    id: str
+    restaurant_id: str
+    name: str
+    phone: str
+    email: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    anniversary_date: Optional[str] = None
+    tags: List[str] = []
+    preferences: Optional[str] = None
+    allergies: Optional[str] = None
+    loyalty_points: int = 0
+    tier: str = "silver"
+    wallet_balance: float = 0
+    total_visits: int = 0
+    total_spent: float = 0
+    last_visit_at: Optional[str] = None
+    created_at: str
+
+@api_router.post("/customers", response_model=CustomerResponse)
+async def create_customer(data: CustomerCreate, user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    existing = await db.customers.find_one({"restaurant_id": user["restaurant_id"], "phone": data.phone})
+    if existing:
+        raise HTTPException(status_code=400, detail="Customer with this phone already exists")
+    customer_id = str(uuid.uuid4())
+    customer = {
+        "id": customer_id,
+        "restaurant_id": user["restaurant_id"],
+        "name": data.name,
+        "phone": data.phone,
+        "email": data.email,
+        "date_of_birth": data.date_of_birth,
+        "anniversary_date": data.anniversary_date,
+        "tags": data.tags,
+        "preferences": data.preferences,
+        "allergies": data.allergies,
+        "loyalty_points": 0,
+        "tier": "silver",
+        "wallet_balance": 0,
+        "total_visits": 0,
+        "total_spent": 0,
+        "last_visit_at": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.customers.insert_one(customer)
+    return CustomerResponse(**{k: v for k, v in customer.items() if k != "_id"})
+
+@api_router.get("/customers", response_model=List[CustomerResponse])
+async def get_customers(search: Optional[str] = None, tier: Optional[str] = None,
+                        skip: int = 0, limit: int = 100, user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return []
+    query = {"restaurant_id": user["restaurant_id"]}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}}
+        ]
+    if tier:
+        query["tier"] = tier
+    limit = min(limit, 500)
+    customers = await db.customers.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    return [CustomerResponse(**c) for c in customers]
+
+@api_router.get("/customers/{customer_id}", response_model=CustomerResponse)
+async def get_customer(customer_id: str, user: dict = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": customer_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return CustomerResponse(**customer)
+
+@api_router.put("/customers/{customer_id}", response_model=CustomerResponse)
+async def update_customer(customer_id: str, data: CustomerUpdate, user: dict = Depends(get_current_user)):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if update_data:
+        await db.customers.update_one(
+            {"id": customer_id, "restaurant_id": user.get("restaurant_id")},
+            {"$set": update_data}
+        )
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return CustomerResponse(**customer)
+
+@api_router.get("/customers/{customer_id}/orders")
+async def get_customer_orders(customer_id: str, user: dict = Depends(get_current_user)):
+    orders = await db.orders.find(
+        {"customer_id": customer_id, "restaurant_id": user.get("restaurant_id")},
+        {"_id": 0, "created_by": 0}
+    ).sort("created_at", -1).to_list(50)
+    return orders
+
+# ============== TRIDENT COINS (LOYALTY) ROUTES ==============
+
+class CoinEarn(BaseModel):
+    customer_id: str
+    coins: int
+    description: str
+    order_id: Optional[str] = None
+
+class CoinRedeem(BaseModel):
+    customer_id: str
+    coins: int
+    description: str
+
+class CoinTopup(BaseModel):
+    customer_id: str
+    amount_inr: float
+
+class CoinDonate(BaseModel):
+    customer_id: str
+    coins: int
+
+def _calculate_tier(points: int) -> str:
+    if points >= 5000:
+        return "platinum"
+    elif points >= 1000:
+        return "gold"
+    return "silver"
+
+@api_router.post("/coins/earn")
+async def earn_coins(data: CoinEarn, user: dict = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": data.customer_id, "restaurant_id": user.get("restaurant_id")})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    new_balance = customer.get("loyalty_points", 0) + data.coins
+    new_tier = _calculate_tier(new_balance)
+    await db.customers.update_one(
+        {"id": data.customer_id},
+        {"$set": {"loyalty_points": new_balance, "tier": new_tier}}
+    )
+    txn = {
+        "id": str(uuid.uuid4()),
+        "customer_id": data.customer_id,
+        "restaurant_id": user["restaurant_id"],
+        "order_id": data.order_id,
+        "type": "earn",
+        "coins": data.coins,
+        "description": data.description,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.coin_transactions.insert_one(txn)
+    return {"message": f"Earned {data.coins} Trident Coins", "balance": new_balance, "tier": new_tier}
+
+@api_router.post("/coins/redeem")
+async def redeem_coins(data: CoinRedeem, user: dict = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": data.customer_id, "restaurant_id": user.get("restaurant_id")})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    if customer.get("loyalty_points", 0) < data.coins:
+        raise HTTPException(status_code=400, detail="Insufficient Trident Coins")
+    new_balance = customer["loyalty_points"] - data.coins
+    new_tier = _calculate_tier(new_balance)
+    await db.customers.update_one(
+        {"id": data.customer_id},
+        {"$set": {"loyalty_points": new_balance, "tier": new_tier}}
+    )
+    # 100 coins = ₹20 discount
+    discount_value = (data.coins / 100) * 20
+    txn = {
+        "id": str(uuid.uuid4()),
+        "customer_id": data.customer_id,
+        "restaurant_id": user["restaurant_id"],
+        "type": "redeem",
+        "coins": data.coins,
+        "description": data.description,
+        "discount_value": discount_value,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.coin_transactions.insert_one(txn)
+    return {"message": f"Redeemed {data.coins} Trident Coins (₹{discount_value:.0f} discount)", "balance": new_balance, "discount": discount_value}
+
+@api_router.post("/coins/topup")
+async def topup_coins(data: CoinTopup, user: dict = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": data.customer_id, "restaurant_id": user.get("restaurant_id")})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    # 3% convenience fee, 100 coins = ₹20 value
+    fee = data.amount_inr * 0.03
+    effective_amount = data.amount_inr - fee
+    coins_to_credit = int((effective_amount / 20) * 100)  # ₹20 = 100 coins
+    new_balance = customer.get("loyalty_points", 0) + coins_to_credit
+    new_tier = _calculate_tier(new_balance)
+    await db.customers.update_one(
+        {"id": data.customer_id},
+        {"$set": {"loyalty_points": new_balance, "tier": new_tier}}
+    )
+    txn = {
+        "id": str(uuid.uuid4()),
+        "customer_id": data.customer_id,
+        "restaurant_id": user["restaurant_id"],
+        "type": "topup",
+        "coins": coins_to_credit,
+        "amount_inr": data.amount_inr,
+        "fee": fee,
+        "description": f"UPI top-up ₹{data.amount_inr:.0f} (fee ₹{fee:.0f})",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.coin_transactions.insert_one(txn)
+    return {"message": f"Credited {coins_to_credit} Trident Coins", "balance": new_balance, "fee": fee}
+
+@api_router.post("/coins/donate")
+async def donate_coins(data: CoinDonate, user: dict = Depends(get_current_user)):
+    customer = await db.customers.find_one({"id": data.customer_id, "restaurant_id": user.get("restaurant_id")})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    if customer.get("loyalty_points", 0) < data.coins:
+        raise HTTPException(status_code=400, detail="Insufficient Trident Coins")
+    new_balance = customer["loyalty_points"] - data.coins
+    new_tier = _calculate_tier(new_balance)
+    await db.customers.update_one(
+        {"id": data.customer_id},
+        {"$set": {"loyalty_points": new_balance, "tier": new_tier}}
+    )
+    txn = {
+        "id": str(uuid.uuid4()),
+        "customer_id": data.customer_id,
+        "restaurant_id": user["restaurant_id"],
+        "type": "donate",
+        "coins": data.coins,
+        "description": "Donated to Seva",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.coin_transactions.insert_one(txn)
+    return {"message": f"Donated {data.coins} Trident Coins to Seva 🙏", "balance": new_balance}
+
+@api_router.get("/coins/transactions")
+async def get_coin_transactions(customer_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return []
+    query = {"restaurant_id": user["restaurant_id"]}
+    if customer_id:
+        query["customer_id"] = customer_id
+    txns = await db.coin_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return txns
+
+# ============== GIFT CARD ROUTES ==============
+
+class GiftCardPurchase(BaseModel):
+    face_value: float
+    customer_id: Optional[str] = None
+    recipient_phone: Optional[str] = None
+    recipient_name: Optional[str] = None
+
+class GiftCardRedeem(BaseModel):
+    code: str
+    amount: float
+
+@api_router.post("/giftcards/purchase")
+async def purchase_gift_card(data: GiftCardPurchase, user: dict = Depends(get_current_user)):
+    code = f"DD-{uuid.uuid4().hex[:8].upper()}"
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+    gift_card = {
+        "id": str(uuid.uuid4()),
+        "code": code,
+        "face_value": data.face_value,
+        "balance": data.face_value,
+        "customer_id": data.customer_id,
+        "restaurant_id": user.get("restaurant_id", "platform"),
+        "recipient_phone": data.recipient_phone,
+        "recipient_name": data.recipient_name,
+        "status": "active",
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.gift_cards.insert_one(gift_card)
+    # Earn coins: ₹1000 = 10 coins
+    coins_earned = int((data.face_value / 1000) * 10)
+    return {
+        "code": code,
+        "face_value": data.face_value,
+        "expires_at": expires_at,
+        "coins_earned": coins_earned,
+        "message": f"Gift card {code} created successfully"
+    }
+
+@api_router.post("/giftcards/redeem")
+async def redeem_gift_card(data: GiftCardRedeem, user: dict = Depends(get_current_user)):
+    gift_card = await db.gift_cards.find_one({"code": data.code, "status": "active"})
+    if not gift_card:
+        raise HTTPException(status_code=404, detail="Invalid or expired gift card")
+    if gift_card["balance"] < data.amount:
+        raise HTTPException(status_code=400, detail=f"Insufficient balance. Available: ₹{gift_card['balance']:.2f}")
+    new_balance = gift_card["balance"] - data.amount
+    await db.gift_cards.update_one(
+        {"code": data.code},
+        {"$set": {"balance": new_balance, "status": "redeemed" if new_balance <= 0 else "active"}}
+    )
+    # Record transaction
+    txn = {
+        "id": str(uuid.uuid4()),
+        "gift_card_id": gift_card["id"],
+        "restaurant_id": user.get("restaurant_id"),
+        "amount": data.amount,
+        "type": "redeem",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.gift_card_transactions.insert_one(txn)
+    # Settlement: restaurant gets 95%
+    settlement_amount = data.amount * 0.95
+    return {
+        "message": f"Gift card redeemed: ₹{data.amount:.2f}",
+        "remaining_balance": new_balance,
+        "settlement_amount": settlement_amount
+    }
+
+@api_router.get("/giftcards/{code}")
+async def get_gift_card(code: str, user: dict = Depends(get_current_user)):
+    gift_card = await db.gift_cards.find_one({"code": code}, {"_id": 0})
+    if not gift_card:
+        raise HTTPException(status_code=404, detail="Gift card not found")
+    return gift_card
+
+@api_router.get("/giftcards")
+async def list_gift_cards(user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return []
+    cards = await db.gift_cards.find(
+        {"restaurant_id": user["restaurant_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+    return cards
+
+# ============== SEVA (DONATION) ROUTES ==============
+
+@api_router.get("/seva/stats")
+async def get_seva_stats(user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return {"total_donations": 0, "meals_funded": 0, "coins_donated": 0}
+    # Get coin donations
+    pipeline = [
+        {"$match": {"restaurant_id": user["restaurant_id"], "type": "donate"}},
+        {"$group": {"_id": None, "total_coins": {"$sum": "$coins"}, "count": {"$sum": 1}}}
+    ]
+    result = await db.coin_transactions.aggregate(pipeline).to_list(1)
+    coins_donated = result[0]["total_coins"] if result else 0
+    # 100 coins = ₹20, ~₹50 per meal
+    rupees_donated = (coins_donated / 100) * 20
+    meals_funded = int(rupees_donated / 50) if rupees_donated > 0 else 0
+    return {
+        "total_donations": rupees_donated,
+        "meals_funded": meals_funded,
+        "coins_donated": coins_donated,
+        "impact_message": f"{meals_funded} meals funded through Seva donations 🙏" if meals_funded > 0 else "Start donating to feed the hungry"
+    }
+
+# ============== STORE (ADD-ON SUBSCRIPTIONS) ROUTES ==============
+
+STORE_ADDONS = [
+    {"id": "crm_loyalty", "name": "CRM & Loyalty", "description": "Trident Coins, customer profiles, tier system, birthday/anniversary reminders", "icon": "Users", "monthly_price": 499, "annual_price": 4999, "category": "growth"},
+    {"id": "inventory", "name": "Inventory Management", "description": "Raw material tracking, recipe management, stock alerts, purchase orders", "icon": "Package", "monthly_price": 299, "annual_price": 2999, "category": "operations"},
+    {"id": "whatsapp", "name": "WhatsApp Marketing", "description": "Campaigns, templates, birthday offers, win-back messages, delivery tracking", "icon": "MessageCircle", "monthly_price": 799, "annual_price": 7999, "category": "marketing"},
+    {"id": "multi_branch", "name": "Multi-Branch Dashboard", "description": "Manage multiple locations, cross-branch analytics, centralized menu", "icon": "Building2", "monthly_price": 999, "annual_price": 9999, "category": "enterprise"},
+    {"id": "analytics_pro", "name": "Advanced Analytics", "description": "AI insights, predictive analytics, anomaly detection, custom reports", "icon": "BarChart3", "monthly_price": 599, "annual_price": 5999, "category": "insights"},
+    {"id": "api_access", "name": "API Access", "description": "REST API access, webhooks, third-party integrations, developer portal", "icon": "Code2", "monthly_price": 399, "annual_price": 3999, "category": "developer"},
+    {"id": "custom_branding", "name": "Custom Branding", "description": "White-label receipts, custom themes, branded customer app", "icon": "Palette", "monthly_price": 299, "annual_price": 2999, "category": "branding"},
+    {"id": "gift_cards", "name": "Gift Cards & Vouchers", "description": "Digital gift cards, QR codes, gifting, settlement dashboard", "icon": "Gift", "monthly_price": 399, "annual_price": 3999, "category": "growth"},
+]
+
+@api_router.get("/store/addons")
+async def get_store_addons():
+    return STORE_ADDONS
+
+@api_router.get("/store/subscription")
+async def get_store_subscription(user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return {"active_addons": [], "plan": "starter"}
+    sub = await db.restaurant_subscriptions.find_one(
+        {"restaurant_id": user["restaurant_id"]}, {"_id": 0}
+    )
+    return sub or {"restaurant_id": user["restaurant_id"], "active_addons": [], "plan": "starter"}
+
+@api_router.post("/store/subscribe")
+async def subscribe_addon(addon_id: str, billing: str = "monthly", user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    addon = next((a for a in STORE_ADDONS if a["id"] == addon_id), None)
+    if not addon:
+        raise HTTPException(status_code=404, detail="Add-on not found")
+    existing = await db.restaurant_subscriptions.find_one({"restaurant_id": user["restaurant_id"]})
+    active_addons = (existing or {}).get("active_addons", [])
+    if addon_id in active_addons:
+        raise HTTPException(status_code=400, detail="Already subscribed")
+    active_addons.append(addon_id)
+    await db.restaurant_subscriptions.update_one(
+        {"restaurant_id": user["restaurant_id"]},
+        {"$set": {"active_addons": active_addons, "plan": "pro", "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"message": f"Subscribed to {addon['name']}", "active_addons": active_addons}
+
+@api_router.post("/store/unsubscribe")
+async def unsubscribe_addon(addon_id: str, user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    existing = await db.restaurant_subscriptions.find_one({"restaurant_id": user["restaurant_id"]})
+    active_addons = (existing or {}).get("active_addons", [])
+    if addon_id not in active_addons:
+        raise HTTPException(status_code=400, detail="Not subscribed to this add-on")
+    active_addons.remove(addon_id)
+    await db.restaurant_subscriptions.update_one(
+        {"restaurant_id": user["restaurant_id"]},
+        {"$set": {"active_addons": active_addons, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Unsubscribed successfully", "active_addons": active_addons}
+
+# ============== FEEDBACK ROUTES ==============
+
+class FeedbackCreate(BaseModel):
+    order_id: Optional[str] = None
+    rating: int
+    comment: Optional[str] = None
+    category: str = "general"
+
+@api_router.post("/feedback")
+async def create_feedback(data: FeedbackCreate, user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    fb = {
+        "id": str(uuid.uuid4()),
+        "restaurant_id": user["restaurant_id"],
+        "order_id": data.order_id,
+        "rating": data.rating,
+        "comment": data.comment,
+        "category": data.category,
+        "status": "new",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.feedback.insert_one(fb)
+    return {"message": "Thank you for your feedback!", "id": fb["id"]}
+
+@api_router.get("/feedback")
+async def get_feedback(status: Optional[str] = None, user: dict = Depends(get_current_user)):
+    if not user.get("restaurant_id"):
+        return []
+    query = {"restaurant_id": user["restaurant_id"]}
+    if status:
+        query["status"] = status
+    feedbacks = await db.feedback.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return feedbacks
+
 # ============== UTILITY ROUTES ==============
 
 @api_router.get("/")
@@ -2204,50 +2758,26 @@ async def root():
 
 @api_router.get("/health")
 async def health():
-    return {"status": "healthy"}
+    checks = {"status": "healthy", "version": "3.0.0"}
+    try:
+        await db.command("ping")
+        checks["mongodb"] = "connected"
+    except Exception as e:
+        checks["status"] = "degraded"
+        checks["mongodb"] = f"error: {str(e)[:100]}"
+    return checks
 
 app.include_router(api_router)
 
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
+CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000')
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=CORS_ORIGINS.split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup():
-    try:
-        admin = await db.users.find_one({"email": "admin@foodflow.com"})
-        if not admin:
-            admin_user = {
-                "id": str(uuid.uuid4()),
-                "email": "admin@foodflow.com",
-                "password": hash_password("admin123"),
-                "name": "Platform Admin",
-                "role": "admin",
-                "restaurant_id": None,
-                "branch_id": None,
-                "is_verified": True,
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            await db.users.insert_one(admin_user)
-            logger.info("Admin user created: admin@foodflow.com / admin123")
 
-        await db.users.create_index("email", unique=True)
-        await db.restaurants.create_index("owner_id")
-        await db.orders.create_index([("restaurant_id", 1), ("created_at", -1)])
-        await db.menu_items.create_index([("restaurant_id", 1), ("category_id", 1)])
-        await db.wallet_transactions.create_index([("restaurant_id", 1), ("created_at", -1)])
-        await db.branches.create_index("restaurant_id")
-        await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
-        logger.info("Database indexes created")
-    except Exception as e:
-        logger.warning(f"Startup DB init skipped (will retry on first request): {e}")
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()

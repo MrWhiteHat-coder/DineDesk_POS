@@ -1,114 +1,120 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-    darkMode: ["class"],
-    content: [
+  darkMode: ["class"],
+  content: [
     "./src/**/*.{js,jsx,ts,tsx}",
     "./public/index.html"
   ],
   theme: {
-        extend: {
-                fontFamily: {
-                        'heading': ['Manrope', 'sans-serif'],
-                        'body': ['Inter', 'sans-serif'],
-                        'numbers': ['Barlow Condensed', 'sans-serif'],
-                },
-                borderRadius: {
-                        lg: 'var(--radius)',
-                        md: 'calc(var(--radius) - 2px)',
-                        sm: 'calc(var(--radius) - 4px)'
-                },
-                colors: {
-                        background: 'hsl(var(--background))',
-                        foreground: 'hsl(var(--foreground))',
-                        card: {
-                                DEFAULT: 'hsl(var(--card))',
-                                foreground: 'hsl(var(--card-foreground))'
-                        },
-                        popover: {
-                                DEFAULT: 'hsl(var(--popover))',
-                                foreground: 'hsl(var(--popover-foreground))'
-                        },
-                        primary: {
-                                DEFAULT: 'hsl(var(--primary))',
-                                foreground: 'hsl(var(--primary-foreground))'
-                        },
-                        secondary: {
-                                DEFAULT: 'hsl(var(--secondary))',
-                                foreground: 'hsl(var(--secondary-foreground))'
-                        },
-                        muted: {
-                                DEFAULT: 'hsl(var(--muted))',
-                                foreground: 'hsl(var(--muted-foreground))'
-                        },
-                        accent: {
-                                DEFAULT: 'hsl(var(--accent))',
-                                foreground: 'hsl(var(--accent-foreground))'
-                        },
-                        destructive: {
-                                DEFAULT: 'hsl(var(--destructive))',
-                                foreground: 'hsl(var(--destructive-foreground))'
-                        },
-                        border: 'hsl(var(--border))',
-                        input: 'hsl(var(--input))',
-                        ring: 'hsl(var(--ring))',
-                        chart: {
-                                '1': 'hsl(var(--chart-1))',
-                                '2': 'hsl(var(--chart-2))',
-                                '3': 'hsl(var(--chart-3))',
-                                '4': 'hsl(var(--chart-4))',
-                                '5': 'hsl(var(--chart-5))'
-                        },
-                        slate: {
-                                50: '#F8FAFC',
-                                100: '#F1F5F9',
-                                200: '#E2E8F0',
-                                300: '#CBD5E1',
-                                400: '#94A3B8',
-                                500: '#64748B',
-                                600: '#475569',
-                                700: '#334155',
-                                800: '#1E293B',
-                                900: '#0F172A',
-                        }
-                },
-                keyframes: {
-                        'accordion-down': {
-                                from: {
-                                        height: '0'
-                                },
-                                to: {
-                                        height: 'var(--radix-accordion-content-height)'
-                                }
-                        },
-                        'accordion-up': {
-                                from: {
-                                        height: 'var(--radix-accordion-content-height)'
-                                },
-                                to: {
-                                        height: '0'
-                                }
-                        },
-                        'slide-in': {
-                                from: { transform: 'translateX(-100%)' },
-                                to: { transform: 'translateX(0)' }
-                        },
-                        'fade-in': {
-                                from: { opacity: '0' },
-                                to: { opacity: '1' }
-                        },
-                        'scale-in': {
-                                from: { transform: 'scale(0.95)', opacity: '0' },
-                                to: { transform: 'scale(1)', opacity: '1' }
-                        }
-                },
-                animation: {
-                        'accordion-down': 'accordion-down 0.2s ease-out',
-                        'accordion-up': 'accordion-up 0.2s ease-out',
-                        'slide-in': 'slide-in 0.3s ease-out',
-                        'fade-in': 'fade-in 0.2s ease-out',
-                        'scale-in': 'scale-in 0.2s ease-out'
-                }
-        }
+    extend: {
+      fontFamily: {
+        'heading': ['Poppins', 'sans-serif'],
+        'heading-xl': ['Montserrat', 'sans-serif'],
+        'body': ['Inter', 'sans-serif'],
+        'numbers': ['Inter', 'sans-serif'],
+      },
+      colors: {
+        // DineDesk Brand Colors
+        'dd': {
+          'blue': '#1E3A8A',       // Neelakanta Blue (primary accent)
+          'blue-light': '#2563EB', // Lighter blue for hover
+          'blue-dark': '#1E40AF',  // Darker blue
+          'saffron': '#F59E0B',    // Saffron (secondary accent)
+          'saffron-light': '#FBBF24',
+          'saffron-dark': '#D97706',
+          'black': '#0A0A0A',      // Primary surface
+          'success': '#059669',
+          'warning': '#F59E0B',
+          'error': '#DC2626',
+        },
+        // Semantic aliases
+        primary: {
+          DEFAULT: '#1E3A8A',
+          foreground: '#FFFFFF',
+          light: '#2563EB',
+          dark: '#1E40AF',
+        },
+        accent: {
+          DEFAULT: '#F59E0B',
+          foreground: '#000000',
+          light: '#FBBF24',
+          dark: '#D97706',
+        },
+        surface: {
+          DEFAULT: '#FFFFFF',
+          card: '#FFFFFF',
+          dark: '#0A0A0A',
+          muted: '#F9FAFB',
+        },
+        border: '#E5E7EB',
+        // Card/system
+        card: {
+          DEFAULT: '#FFFFFF',
+          foreground: '#111111',
+        },
+        muted: {
+          DEFAULT: '#F3F4F6',
+          foreground: '#6B7280',
+        },
+        destructive: {
+          DEFAULT: '#DC2626',
+          foreground: '#FFFFFF',
+        },
+      },
+      borderRadius: {
+        'card': '12px',
+        'btn': '8px',
+        'input': '6px',
+        'modal': '16px',
+        'pill': '999px',
+      },
+      boxShadow: {
+        'card': '0 1px 3px rgba(0,0,0,0.08)',
+        'card-hover': '0 4px 12px rgba(0,0,0,0.12)',
+        'elevated': '0 4px 12px rgba(0,0,0,0.12)',
+        'blue': '0 4px 12px rgba(30,58,138,0.25)',
+        'saffron': '0 4px 12px rgba(245,158,11,0.25)',
+      },
+      keyframes: {
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' }
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' }
+        },
+        'slide-in': {
+          from: { transform: 'translateX(-100%)' },
+          to: { transform: 'translateX(0)' }
+        },
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' }
+        },
+        'scale-in': {
+          from: { transform: 'scale(0.95)', opacity: '0' },
+          to: { transform: 'scale(1)', opacity: '1' }
+        },
+        'calm-pulse': {
+          '0%, 100%': { opacity: '0.6' },
+          '50%': { opacity: '1' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-4px)' },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
+        'slide-in': 'slide-in 0.3s ease-out',
+        'fade-in': 'fade-in 0.2s ease-out',
+        'scale-in': 'scale-in 0.2s ease-out',
+        'calm-pulse': 'calm-pulse 3s ease-in-out infinite',
+        'float': 'float 3s ease-in-out infinite',
+      },
+    },
   },
   plugins: [require("tailwindcss-animate")],
 };

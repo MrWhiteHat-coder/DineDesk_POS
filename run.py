@@ -1,3 +1,15 @@
-# This file was added by GitHub Copilot earlier during an automated change.
-# Per user request, its contents have been removed and replaced with this note.
-# To fully remove the file from the repository history, please delete the file via the GitHub web UI or run `git revert ff91f98` locally (see instructions in the issue / conversation).
+#!/usr/bin/env python3
+"""
+FoodFlow POS — Local development server.
+For production, use: uvicorn backend.server:app --host 0.0.0.0 --port 8000
+"""
+import uvicorn
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "backend.server:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info",
+    )
