@@ -33,6 +33,7 @@ import CustomersPage from './pages/pos/CustomersPage';
 import GiftCardsPage from './pages/pos/GiftCardsPage';
 import TridentCoinsPage from './pages/pos/TridentCoinsPage';
 import StorePage from './pages/pos/StorePage';
+import MorePage from './pages/pos/MorePage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -117,7 +118,7 @@ function AppRoutes() {
       <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
 
       {/* POS Routes */}
-      <Route path="/pos" element={<ProtectedRoute requireSubscription><POSLayout /></ProtectedRoute>}>
+      <Route path="/pos" element={<ProtectedRoute><POSLayout /></ProtectedRoute>}>
         <Route index element={<POSDashboard />} />
         <Route path="orders" element={<POSMain />} />
         <Route path="menu" element={<MenuManagement />} />
@@ -138,6 +139,7 @@ function AppRoutes() {
         <Route path="gift-cards" element={<GiftCardsPage />} />
         <Route path="trident-coins" element={<TridentCoinsPage />} />
         <Route path="store" element={<StorePage />} />
+        <Route path="more" element={<MorePage />} />
       </Route>
 
       {/* Admin Routes */}
