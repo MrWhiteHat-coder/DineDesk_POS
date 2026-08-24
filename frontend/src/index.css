@@ -1,136 +1,302 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Inter:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #F8F9FA;
-  color: #1A1A1A;
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 @layer base {
-  :root {
-    --on-primary: #E53935;
-    --on-primary-dark: #C62828;
-    --on-primary-light: #FFEBEE;
-    --on-bg: #FFFFFF;
-    --on-surface: #F8F9FA;
-    --on-surface-card: #FFFFFF;
-    --on-border: #E8E8E8;
-    --on-text: #1A1A1A;
-    --on-text-secondary: #6B7280;
-    --on-text-muted: #9CA3AF;
-    --on-success: #22C55E;
-    --on-success-bg: #F0FDF4;
-    --on-warning: #F59E0B;
-    --on-warning-bg: #FFFBEB;
-    --on-error: #EF4444;
-    --on-error-bg: #FEF2F2;
-    --on-info: #3B82F6;
-    --on-info-bg: #EFF6FF;
-    --on-radius: 12px;
-    --on-radius-sm: 8px;
-    --on-radius-lg: 16px;
-    --on-radius-xl: 20px;
-    --on-radius-full: 9999px;
-    --on-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-    --on-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-    --on-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-    --on-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-  }
+    :root {
+        --dd-blue: #1E3A8A;
+        --dd-blue-light: #2563EB;
+        --dd-saffron: #F59E0B;
+        --dd-saffron-light: #FBBF24;
+        --dd-black: #0A0A0A;
+        --dd-success: #059669;
+        --dd-error: #DC2626;
+        --dd-bg: #FFFFFF;
+        --dd-surface: #F9FAFB;
+        --dd-border: #E5E7EB;
+        --dd-text: #111111;
+        --dd-text-secondary: #6B7280;
+        --dd-radius: 12px;
+        --dd-radius-btn: 8px;
+        --dd-radius-input: 6px;
+        --dd-radius-modal: 16px;
+        --dd-shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+        --dd-shadow-elevated: 0 4px 12px rgba(0,0,0,0.12);
+        --background: 0 0% 100%;
+        --foreground: 0 0% 7%;
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 7%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 7%;
+        --primary: 222 47% 33%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 43 96% 56%;
+        --secondary-foreground: 0 0% 0%;
+        --muted: 0 0% 96%;
+        --muted-foreground: 0 0% 45%;
+        --accent: 43 96% 56%;
+        --accent-foreground: 0 0% 0%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 0 0% 91%;
+        --input: 0 0% 91%;
+        --ring: 222 47% 33%;
+        --chart-1: 222 47% 33%;
+        --chart-2: 43 96% 56%;
+        --chart-3: 160 41% 40%;
+        --chart-4: 0 84% 60%;
+        --chart-5: 0 0% 60%;
+        --radius: 0.75rem;
+    }
+
+    .dark {
+        --background: 0 0% 4%;
+        --foreground: 0 0% 98%;
+        --card: 0 0% 6%;
+        --card-foreground: 0 0% 98%;
+        --primary: 222 47% 43%;
+        --primary-foreground: 0 0% 100%;
+        --border: 0 0% 15%;
+        --input: 0 0% 15%;
+        --ring: 222 47% 53%;
+    }
 }
 
 @layer base {
-  * {
-    @apply border-[#E8E8E8];
-  }
-  body {
-    @apply bg-[#F8F9FA] text-[#1A1A1A];
-  }
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-white text-[#111111];
+    }
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 700;
+    }
 }
 
 @layer utilities {
-  .on-card {
-    @apply bg-white rounded-2xl border border-[#E8E8E8] shadow-sm;
-  }
-  .on-card-hover {
-    @apply bg-white rounded-2xl border border-[#E8E8E8] shadow-sm hover:shadow-md transition-all duration-200;
-  }
-  .on-btn-primary {
-    @apply bg-[#E53935] text-white font-semibold rounded-xl px-5 py-2.5 
-           hover:bg-[#C62828] active:scale-[0.97] transition-all duration-150
-           shadow-sm hover:shadow-md;
-  }
-  .on-btn-secondary {
-    @apply bg-white text-[#1A1A1A] font-semibold rounded-xl px-5 py-2.5 
-           border border-[#E8E8E8] hover:bg-[#F8F9FA] active:scale-[0.97] transition-all duration-150;
-  }
-  .on-btn-ghost {
-    @apply bg-transparent text-[#6B7280] font-medium rounded-xl px-4 py-2 
-           hover:bg-[#F8F9FA] hover:text-[#1A1A1A] active:scale-[0.97] transition-all duration-150;
-  }
-  .on-input {
-    @apply h-11 px-4 bg-white border border-[#E8E8E8] rounded-xl text-sm
-           focus:ring-2 focus:ring-[#E53935]/20 focus:border-[#E53935] outline-none transition-all;
-  }
-  .on-badge {
-    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
-  }
-  .on-badge-success {
-    @apply on-badge bg-[#F0FDF4] text-[#16A34A];
-  }
-  .on-badge-warning {
-    @apply on-badge bg-[#FFFBEB] text-[#D97706];
-  }
-  .on-badge-error {
-    @apply on-badge bg-[#FEF2F2] text-[#DC2626];
-  }
-  .on-badge-info {
-    @apply on-badge bg-[#EFF6FF] text-[#2563EB];
-  }
+    .font-heading {
+        font-family: 'Poppins', sans-serif;
+    }
+    .font-heading-xl {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 800;
+    }
+    .font-body {
+        font-family: 'Inter', sans-serif;
+    }
+    .font-numbers {
+        font-family: 'Inter', sans-serif;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* DineDesk Brand Utilities */
+    .dd-gradient-blue {
+        background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+    }
+    .dd-gradient-saffron {
+        background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    }
+    .dd-gradient-hero {
+        background: linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 50%, #1E3A8A 100%);
+    }
+    .dd-card {
+        @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+    }
+    .dd-card-elevated {
+        @apply bg-white rounded-xl shadow-md;
+    }
+    .dd-btn-primary {
+        @apply bg-[#1E3A8A] text-white font-semibold rounded-lg px-5 py-2.5 
+               hover:bg-[#2563EB] active:scale-[0.97] transition-all duration-150
+               shadow-md hover:shadow-lg;
+    }
+    .dd-btn-accent {
+        @apply bg-[#F59E0B] text-black font-semibold rounded-lg px-5 py-2.5 
+               hover:bg-[#FBBF24] active:scale-[0.97] transition-all duration-150;
+    }
+    .dd-btn-outline {
+        @apply border-2 border-gray-200 text-gray-900 font-semibold rounded-lg px-5 py-2.5 
+               hover:border-[#1E3A8A] hover:text-[#1E3A8A] active:scale-[0.97] transition-all duration-150;
+    }
+    .dd-input {
+        @apply h-11 px-4 bg-white border border-gray-200 rounded-md text-sm
+               focus:ring-2 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] outline-none transition-all;
+    }
+    .dd-badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    }
+    .dd-badge-blue {
+        @apply dd-badge bg-blue-50 text-[#1E3A8A];
+    }
+    .dd-badge-saffron {
+        @apply dd-badge bg-amber-50 text-[#D97706];
+    }
+    .dd-badge-success {
+        @apply dd-badge bg-emerald-50 text-[#059669];
+    }
+    .dd-badge-error {
+        @apply dd-badge bg-red-50 text-[#DC2626];
+    }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #D1D5DB;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+    width: 6px;
+    height: 6px;
 }
 
-/* Animations */
+::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+/* DineDesk POS utilities */
+.pos-card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200;
+}
+
+.pos-btn {
+    @apply min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all duration-150 active:scale-[0.97];
+}
+
+.pos-btn-primary {
+    @apply pos-btn bg-[#1E3A8A] text-white hover:bg-[#2563EB] shadow-md;
+}
+
+.pos-btn-secondary {
+    @apply pos-btn bg-gray-50 text-gray-800 hover:bg-gray-100;
+}
+
+.pos-input {
+    @apply h-12 px-4 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] outline-none transition-all;
+}
+
+/* Hover animations */
+[data-testid*="menu-item-card"] {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+[data-testid*="menu-item-card"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--dd-shadow-elevated);
+}
+
+nav a, nav button {
+    transition: all 0.15s ease;
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.3s ease forwards;
+    animation: fadeInUp 0.3s ease forwards;
 }
 
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+[data-testid*="wallet-card"]:hover,
+[data-testid*="staff-card"]:hover,
+[data-testid*="branch-"]:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
 }
 
-.animate-pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
+main > * {
+    animation: fadeInUp 0.25s ease;
+}
+
+/* ═══════════════════════════════════════
+   CALM MODE — Signature DineDesk Feature
+   ═══════════════════════════════════════ */
+.calm-mode {
+    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.calm-mode * {
+    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.calm-mode body,
+.calm-mode .bg-gray-50,
+.calm-mode .bg-white {
+    background-color: #f8f9fc !important;
+}
+.calm-mode .bg-black,
+.calm-mode [class*="bg-black"] {
+    background-color: #1E3A8A !important;
+}
+.calm-mode .text-white {
+    color: white !important;
+}
+.calm-mode main {
+    background: linear-gradient(180deg, #f0f4ff 0%, #f8f9fc 50%, #fffbeb 100%) !important;
+}
+.calm-mode [class*="bg-red"] {
+    opacity: 0.7;
+}
+.calm-mode button {
+    animation: none !important;
+    transition: all 0.8s ease !important;
+}
+.calm-mode .shadow-card,
+.calm-mode .shadow-sm {
+    box-shadow: 0 1px 6px rgba(30, 58, 138, 0.06) !important;
+}
+
+/* Trident watermarks for empty states */
+.trident-watermark {
+    position: relative;
+}
+.trident-watermark::after {
+    content: '🔱';
+    position: absolute;
+    font-size: 48px;
+    opacity: 0.06;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+@media (max-width: 1023px) {
+    .font-heading { font-size: 1.25rem; }
+    main > * { animation: none; }
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+    height: 2px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 2px;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
