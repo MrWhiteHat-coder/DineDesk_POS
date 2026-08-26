@@ -1,73 +1,74 @@
 {
   "brand_identity": {
     "name": "DineDesk POS",
-    "tone": "Calm, Hospitable, Precise, Warm",
-    "archetype": "The Maître d’ — composed under pressure",
+    "tone": "Fast, Familiar, Food-first",
+    "archetype": "The neighbourhood food app — Zomato energy on the till",
     "audience": "Restaurant Owners, Floor Staff, Kitchen Managers",
-    "core_values": ["Speed", "Calm", "Accuracy", "Hospitality"]
+    "core_values": ["Speed", "Clarity", "Appetite", "Accuracy"]
   },
   "typography": {
     "headings": {
-      "family": "Fraunces",
-      "weights": ["500", "600", "700"],
+      "family": "Poppins",
+      "weights": ["600", "700", "800"],
       "usage": "Page titles, brand wordmark, hero lines."
     },
     "body": {
-      "family": "Plus Jakarta Sans",
-      "weights": ["400", "500", "600", "700"],
+      "family": "Nunito Sans",
+      "weights": ["400", "500", "600", "700", "800"],
       "usage": "UI, tables, navigation, forms."
     },
     "numbers": {
-      "family": "Plus Jakarta Sans",
-      "weights": ["700"],
+      "family": "Nunito Sans",
+      "weights": ["800"],
       "usage": "Prices, timers, order numbers — tabular nums."
     }
   },
   "colors": {
     "primary": {
-      "name": "Service Navy",
-      "hex": "#1B4F72",
-      "usage": "Primary accent, selected states, charts"
+      "name": "Zomato Red",
+      "hex": "#E23744",
+      "usage": "Primary buttons, selected nav, red containers, charts"
     },
     "ink": {
-      "name": "Floor Ink",
-      "hex": "#101820",
-      "usage": "Sidebar, primary buttons, headings"
+      "name": "Charcoal",
+      "hex": "#1C1C1C",
+      "usage": "Headings and body text"
     },
     "accent": {
-      "name": "Hospitality Gold",
-      "hex": "#D4A017",
-      "usage": "Highlights, live indicators, brand mark"
+      "name": "Zomato Red Dark",
+      "hex": "#CB202D",
+      "usage": "Hover, pressed, emphasis"
     },
     "background": {
-      "default": "#F3EEE6",
-      "paper": "#FFFCF8",
-      "sidebar": "#101820"
+      "default": "#F8F8F8",
+      "paper": "#FFFFFF",
+      "sidebar": "#FFFFFF",
+      "soft": "#FFF5F6"
     },
     "functional": {
-      "success": "#1A7A54",
-      "warning": "#D4A017",
-      "error": "#C23A2B",
-      "info": "#1B4F72"
+      "success": "#267E3E",
+      "warning": "#F5A623",
+      "error": "#E23744",
+      "info": "#1565C0"
     }
   },
   "layout_strategy": {
     "pos_mode": {
-      "structure": "Dark grouped sidebar on desktop; bottom nav + More on tablet/phone",
+      "structure": "White grouped sidebar on desktop with red active pill; bottom nav + More on tablet/phone",
       "grid": "Menu bento: 2 / 3 / 4 / 6 columns",
       "spacing": "Touch targets min 40–48px",
       "navigation": "Floor / People / Money / Insights grouping"
     },
     "admin_dashboard": {
-      "structure": "Ink sidebar + linen canvas",
+      "structure": "White sidebar + grey canvas, red selected states",
       "container": "Fluid, padded 24px"
     }
   },
   "universal_guidelines": [
-    "Do NOT use default blue or generic black-on-white SaaS chrome.",
-    "Do NOT use Inter for headings. Use Fraunces.",
-    "Primary actions are ink. Accents are saffron. Kitchen heat is terracotta.",
+    "White canvas. Red containers and CTAs (#E23744).",
+    "Do not invert dialogs. Payment sheets stay white with dark text.",
+    "Cash / Card / UPI use tinted tiles, never ghost outlines on a dark overlay.",
     "Use sonner for toasts.",
-    "Night Shift remaps surfaces for low-light service."
+    "Keep existing routes and data-testid attributes."
   ]
 }

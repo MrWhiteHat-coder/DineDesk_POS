@@ -1,283 +1,146 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700;0,6..12,800;1,6..12,400&family=Poppins:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-    --ink: #101820;
-    --ink-soft: #1A2633;
-    --navy: #1B4F72;
-    --navy-bright: #246A96;
-    --saffron: #D4A017;
-    --saffron-deep: #B8860B;
-    --terracotta: #C45C26;
-    --linen: #F3EEE6;
-    --plate: #FFFCF8;
-    --forest: #1A7A54;
-    --rose: #C23A2B;
-    --line: #E6DDD0;
-    --muted: #6B6258;
-    --dd-radius: 14px;
-    --dd-radius-btn: 10px;
-    --background: 36 33% 93%;
-    --foreground: 206 23% 9%;
-    --card: 36 100% 99%;
-    --card-foreground: 206 23% 9%;
-    --popover: 36 100% 99%;
-    --popover-foreground: 206 23% 9%;
-    --primary: 204 62% 28%;
-    --primary-foreground: 36 40% 97%;
-    --secondary: 43 81% 46%;
-    --secondary-foreground: 206 23% 9%;
-    --muted: 36 20% 92%;
-    --muted-foreground: 24 10% 38%;
-    --accent: 43 81% 46%;
-    --accent-foreground: 206 23% 9%;
-    --destructive: 6 64% 46%;
+    --zomato: #E23744;
+    --zomato-dark: #CB202D;
+    --zomato-soft: #FFF5F6;
+    --ink: #1C1C1C;
+    --ink-soft: #CB202D;
+    --navy: #E23744;
+    --navy-bright: #CB202D;
+    --saffron: #E23744;
+    --linen: #F8F8F8;
+    --plate: #FFFFFF;
+    --forest: #267E3E;
+    --rose: #E23744;
+    --line: #E8E8E8;
+    --muted: #696969;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 11%;
+    --primary: 356 75% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 356 100% 97%;
+    --secondary-foreground: 356 75% 40%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 41%;
+    --accent: 356 100% 97%;
+    --accent-foreground: 356 75% 40%;
+    --destructive: 356 75% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 34 24% 86%;
-    --input: 34 24% 86%;
-    --ring: 204 62% 28%;
+    --border: 0 0% 91%;
+    --input: 0 0% 91%;
+    --ring: 356 75% 55%;
     --radius: 0.85rem;
 }
 
-html.night {
-    --ink: #F4EFE6;
-    --ink-soft: #2A3542;
-    --navy: #5BA3C9;
-    --navy-bright: #7BB8D6;
-    --linen: #0E141B;
-    --plate: #151D27;
-    --line: #243140;
-    --muted: #A89F93;
-    --background: 210 28% 8%;
-    --foreground: 36 33% 93%;
-    --card: 210 26% 12%;
-    --card-foreground: 36 33% 93%;
-    --popover: 210 26% 12%;
-    --popover-foreground: 36 33% 93%;
-    --border: 210 20% 20%;
-    --input: 210 20% 20%;
-}
+html, body, #root { min-height: 100%; }
 
-html, body, #root {
-    min-height: 100%;
+html.night {
+    /* Zomato POS stays light — never invert dialogs or payment sheets */
 }
 
 body {
     margin: 0;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'tnum' on, 'lnum' on;
-    background: var(--linen);
-    color: #101820;
+    background: #F8F8F8;
+    color: #1C1C1C;
 }
 
 @layer base {
-    * {
-        @apply border-border;
-    }
-    body {
-        background-color: var(--linen);
-        color: #101820;
-    }
+    * { @apply border-border; }
+    body { background-color: #F8F8F8; color: #1C1C1C; }
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Fraunces', Georgia, serif;
+        font-family: 'Poppins', 'Nunito Sans', sans-serif;
         font-weight: 600;
         letter-spacing: -0.02em;
+        color: #1C1C1C;
     }
 }
 
 @layer utilities {
-    .font-display {
-        font-family: 'Fraunces', Georgia, serif;
+    .font-display, .font-heading, .font-heading-xl {
+        font-family: 'Poppins', 'Nunito Sans', sans-serif;
     }
-    .font-heading {
-        font-family: 'Fraunces', Georgia, serif;
-    }
-    .font-heading-xl {
-        font-family: 'Fraunces', Georgia, serif;
-        font-weight: 700;
-    }
-    .font-body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-    }
+    .font-body { font-family: 'Nunito Sans', sans-serif; }
     .font-numbers {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-family: 'Nunito Sans', sans-serif;
         font-variant-numeric: tabular-nums;
-        font-weight: 700;
+        font-weight: 800;
     }
-    .bg-linen { background-color: var(--linen); }
-    .bg-plate { background-color: var(--plate); }
-    .bg-ink { background-color: #101820; }
-    .bg-ink-soft { background-color: #1A2633; }
-    .bg-navy { background-color: #1B4F72; }
-    .bg-navy-bright { background-color: #246A96; }
-    .bg-saffron { background-color: #D4A017; }
-    .text-ink { color: #101820; }
-    .text-navy { color: #1B4F72; }
-    .text-saffron { color: #D4A017; }
-    .text-terracotta { color: #C45C26; }
-    .border-line { border-color: var(--line); }
+    .bg-linen { background-color: #F8F8F8; }
+    .bg-plate { background-color: #FFFFFF; }
+    .bg-ink { background-color: #E23744 !important; }
+    .bg-ink-soft { background-color: #CB202D !important; }
+    .bg-navy { background-color: #E23744; }
+    .bg-navy-bright { background-color: #CB202D; }
+    .bg-saffron { background-color: #E23744; }
+    .bg-zomato { background-color: #E23744; }
+    .bg-zomato-soft { background-color: #FFF5F6; }
+    .text-ink { color: #1C1C1C; }
+    .text-navy { color: #E23744; }
+    .text-saffron { color: #E23744; }
+    .text-zomato { color: #E23744; }
+    .text-terracotta { color: #E23744; }
+    .border-line { border-color: #E8E8E8; }
+    .border-zomato { border-color: #E23744; }
 
-    .dd-card {
-        @apply bg-plate rounded-2xl border border-[#E6DDD0] shadow-card;
-    }
+    .dd-card { @apply bg-white rounded-2xl border border-[#E8E8E8] shadow-card; }
     .dd-btn-primary {
-        @apply bg-ink text-white font-semibold rounded-[10px] px-5 py-2.5
-               hover:bg-ink-soft active:scale-[0.97] transition-all duration-150
-               shadow-sm;
+        @apply bg-[#E23744] text-white font-semibold rounded-xl px-5 py-2.5
+               hover:bg-[#CB202D] active:scale-[0.97] transition-all duration-150;
     }
-    .dd-btn-accent {
-        @apply bg-saffron text-ink font-semibold rounded-[10px] px-5 py-2.5
-               hover:bg-[#c49212] active:scale-[0.97] transition-all duration-150;
-    }
-    .dd-chip {
-        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold;
-    }
+    .dd-chip { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold; }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: #d8cfc2;
-    border-radius: 8px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #c4b8a6;
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E0E0E0; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #C8C8C8; }
 
 .pos-card {
-    @apply bg-plate rounded-2xl border border-[#E6DDD0] shadow-card hover:shadow-card-hover transition-all duration-200;
+    @apply bg-white rounded-2xl border border-[#E8E8E8] shadow-card hover:shadow-card-hover transition-all duration-200;
 }
-
 .pos-btn {
-    @apply min-h-[48px] px-4 py-3 rounded-[10px] font-medium transition-all duration-150 active:scale-[0.97];
+    @apply min-h-[48px] px-4 py-3 rounded-xl font-medium transition-all duration-150 active:scale-[0.97];
 }
+.pos-btn-primary { @apply pos-btn bg-[#E23744] text-white hover:bg-[#CB202D] shadow-sm; }
 
-.pos-btn-primary {
-    @apply pos-btn bg-ink text-white hover:bg-ink-soft shadow-sm;
-}
-
-.pos-input {
-    @apply h-12 px-4 bg-plate border border-[#E6DDD0] rounded-xl focus:ring-2 focus:ring-navy/30 focus:border-navy outline-none transition-all;
-}
-
-[data-testid*="menu-item-card"],
-[data-testid^="menu-item-"],
-[data-testid^="quick-item-"] {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-[data-testid*="menu-item-card"]:hover,
-[data-testid^="menu-item-"]:hover,
-[data-testid^="quick-item-"]:hover {
-    transform: translateY(-2px);
-}
-
-button:active:not(:disabled) {
-    transform: scale(0.98);
-}
+button:active:not(:disabled) { transform: scale(0.98); }
 
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
+.animate-fade-in-up { animation: fadeInUp 0.3s ease forwards; }
 
-.animate-fade-in-up {
-    animation: fadeInUp 0.3s ease forwards;
-}
-
-@keyframes shimmer {
-    0% { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
-}
-
-.dd-shimmer {
-    background: linear-gradient(90deg, #efe8dc 0%, #f8f3ea 50%, #efe8dc 100%);
-    background-size: 800px 100%;
-    animation: shimmer 1.4s infinite linear;
-}
-
-/* Atmosphere used on auth / onboarding */
 .dd-atmosphere {
     background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(212, 160, 23, 0.16), transparent 50%),
-        radial-gradient(900px 500px at 110% 20%, rgba(27, 79, 114, 0.45), transparent 55%),
-        linear-gradient(160deg, #0B1218 0%, #132433 48%, #101820 100%);
+        radial-gradient(900px 480px at 0% 0%, rgba(255,255,255,0.16), transparent 50%),
+        linear-gradient(160deg, #E23744 0%, #CB202D 55%, #B71C1C 100%);
 }
 
-.dd-grain::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.08;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Night Shift — remap common light surfaces for service floors */
-html.night body {
-    background: #0E141B !important;
-    color: #EDE6D9 !important;
-}
-html.night .bg-white,
-html.night .bg-gray-50,
-html.night .bg-slate-50,
-html.night .bg-gray-50\/50,
-html.night .bg-slate-50\/50 {
-    background-color: #151D27 !important;
-}
-html.night .text-slate-900,
-html.night .text-gray-900,
-html.night .text-slate-800,
-html.night .text-gray-800,
-html.night .text-ink {
-    color: #F4EFE6 !important;
-}
-html.night .text-slate-600,
-html.night .text-gray-600,
-html.night .text-slate-500,
-html.night .text-gray-500 {
-    color: #B7AFA4 !important;
-}
-html.night .border-gray-100,
-html.night .border-gray-200,
-html.night .border-slate-100,
-html.night .border-slate-200,
-html.night .border-\[\#E6DDD0\] {
-    border-color: #243140 !important;
-}
-html.night aside {
-    background-color: #0B1117 !important;
-    color: #F4EFE6 !important;
-}
-html.night button.bg-ink,
-html.night a.bg-ink,
-html.night .bg-black:not(aside) {
-    background-color: #D4A017 !important;
-    color: #101820 !important;
-}
-html.night button.hover\:bg-ink-soft:hover,
-html.night button.hover\:bg-gray-800:hover {
-    background-color: #c49212 !important;
+/* Force payment / dialog sheets to stay white even if a leftover night class exists */
+[data-radix-dialog-content],
+[role="dialog"] {
+    background-color: #FFFFFF !important;
+    color: #1C1C1C !important;
+    border-color: #E8E8E8 !important;
 }
 
 @media (max-width: 1023px) {
     main > * { animation: none; }
 }
-
-.overflow-x-auto::-webkit-scrollbar {
-    height: 2px;
-}
-
 @supports (padding: env(safe-area-inset-bottom)) {
     .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }

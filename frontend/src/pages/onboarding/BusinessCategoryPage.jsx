@@ -44,7 +44,7 @@ export default function BusinessCategoryPage() {
       <div className="w-full max-w-4xl">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-ink rounded-2xl mb-4 shadow-ink">
-            <UtensilsCrossed className="w-8 h-8 text-saffron" />
+            <UtensilsCrossed className="w-8 h-8 text-white" />
           </div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-navy font-semibold mb-2">Onboarding</p>
           <h1 className="font-display text-3xl font-semibold text-ink mb-2">

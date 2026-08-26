@@ -4,14 +4,14 @@ Restaurant POS for the floor, kitchen, and back office.
 
 ## What’s new
 
-Hospitality-led UI refresh across the whole product:
+Zomato-inspired UI refresh across the whole product:
 
-- Ink + navy + saffron design system
-- Grouped desktop sidebar
+- White canvas, red containers and CTAs (`#E23744`)
+- White grouped desktop sidebar with red active state
 - Tablet / phone bottom navigation
+- Readable payment sheets (Cash / Card / UPI on a white card)
 - Kitchen display as a kanban board
-- Night Shift for low-light service
-- Consistent DineDesk branding (no leftover OrderNest chrome)
+- Consistent DineDesk branding
 
 ## Demo
 

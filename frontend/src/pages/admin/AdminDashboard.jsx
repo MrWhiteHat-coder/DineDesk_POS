@@ -162,7 +162,7 @@ export default function AdminDashboard() {
                     <Area
                       type="monotone"
                       dataKey="orders"
-                      stroke="#1B4F72"
+                      stroke="#E23744"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#colorOrdersAdmin)"

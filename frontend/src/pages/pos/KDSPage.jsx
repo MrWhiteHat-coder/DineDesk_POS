@@ -7,19 +7,19 @@ import PageHeader from '../../components/common/PageHeader';
 
 const STATUS_CONFIG = {
   received: {
-    headerBg: 'bg-navy',
-    borderColor: 'border-navy/15',
-    badge: { bg: 'bg-navy/10 text-navy', label: 'New Order' },
-    action: { next: 'preparing', label: 'Start Preparing', bg: 'bg-navy hover:bg-navy-bright' },
-    progressColor: 'bg-navy',
+    headerBg: 'bg-[#E23744]',
+    borderColor: 'border-[#F8D7DA]',
+    badge: { bg: 'bg-[#FFF5F6] text-[#E23744]', label: 'New Order' },
+    action: { next: 'preparing', label: 'Start Preparing', bg: 'bg-[#E23744] hover:bg-[#CB202D]' },
+    progressColor: 'bg-[#E23744]',
     column: 'incoming',
   },
   preparing: {
-    headerBg: 'bg-terracotta',
-    borderColor: 'border-terracotta/20',
-    badge: { bg: 'bg-orange-50 text-terracotta', label: 'In Kitchen' },
-    action: { next: 'ready', label: 'Mark Ready', bg: 'bg-terracotta hover:bg-[#a84d1f]' },
-    progressColor: 'bg-terracotta',
+    headerBg: 'bg-amber-500',
+    borderColor: 'border-amber-200',
+    badge: { bg: 'bg-amber-50 text-amber-700', label: 'In Kitchen' },
+    action: { next: 'ready', label: 'Mark Ready', bg: 'bg-amber-500 hover:bg-amber-600' },
+    progressColor: 'bg-amber-500',
     column: 'cooking',
   },
 };

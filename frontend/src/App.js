@@ -56,7 +56,7 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireSubscription = 
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-ink/50 font-medium">Setting the table...</p>
+          <p className="text-[#696969] font-medium">Loading DineDesk...</p>
         </div>
       </div>
     );
@@ -168,7 +168,7 @@ function App() {
           position="top-right" 
           richColors 
           toastOptions={{
-            style: { fontFamily: 'Plus Jakarta Sans, sans-serif' }
+            style: { fontFamily: 'Nunito Sans, sans-serif' }
           }}
         />
       </AuthProvider>

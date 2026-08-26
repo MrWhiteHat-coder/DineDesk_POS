@@ -251,13 +251,13 @@ export default function QuickPOSPage() {
               <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-email" />
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-              <button onClick={() => quickPay('cash')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-ink text-white text-[10px] font-bold hover:bg-ink-soft transition-colors disabled:opacity-50" data-testid="quick-pay-cash">
+              <button onClick={() => quickPay('cash')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-xl bg-[#E8F5E9] text-[#267E3E] text-[10px] font-bold hover:bg-[#C8E6C9] transition-colors disabled:opacity-50" data-testid="quick-pay-cash">
                 <Banknote className="w-4 h-4" />Cash
               </button>
-              <button onClick={() => quickPay('card')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-navy text-white text-[10px] font-bold hover:bg-navy-bright transition-colors disabled:opacity-50" data-testid="quick-pay-card">
+              <button onClick={() => quickPay('card')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-xl bg-[#E3F2FD] text-[#1565C0] text-[10px] font-bold hover:bg-[#BBDEFB] transition-colors disabled:opacity-50" data-testid="quick-pay-card">
                 <CreditCard className="w-4 h-4" />Card
               </button>
-              <button onClick={() => quickPay('upi')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-forest text-white text-[10px] font-bold hover:bg-[#166547] transition-colors disabled:opacity-50" data-testid="quick-pay-upi">
+              <button onClick={() => quickPay('upi')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-xl bg-[#E23744] text-white text-[10px] font-bold hover:bg-[#CB202D] transition-colors disabled:opacity-50" data-testid="quick-pay-upi">
                 <Smartphone className="w-4 h-4" />UPI
               </button>
             </div>

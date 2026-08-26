@@ -5,20 +5,20 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E23744]/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-ink text-white shadow-sm hover:bg-ink-soft",
+          "bg-[#E23744] text-white shadow-sm hover:bg-[#CB202D]",
         destructive:
-          "bg-rose text-white shadow-sm hover:bg-rose/90",
+          "bg-[#E23744] text-white shadow-sm hover:bg-[#CB202D]",
         outline:
-          "border border-line bg-plate text-ink shadow-sm hover:bg-linen hover:border-navy/30",
+          "border border-[#E8E8E8] bg-white text-[#1C1C1C] shadow-sm hover:bg-[#FFF5F6] hover:border-[#E23744]/40",
         secondary:
-          "bg-saffron text-ink shadow-sm hover:bg-saffron-deep",
-        ghost: "hover:bg-linen text-ink",
-        link: "text-navy underline-offset-4 hover:underline",
+          "bg-[#FFF5F6] text-[#E23744] shadow-sm hover:bg-[#FDECEE]",
+        ghost: "hover:bg-[#FFF5F6] text-[#1C1C1C]",
+        link: "text-[#E23744] underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

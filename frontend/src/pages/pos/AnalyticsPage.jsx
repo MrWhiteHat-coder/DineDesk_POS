@@ -13,7 +13,7 @@ import { DollarSign, ShoppingCart, TrendingUp, Clock, Sparkles, RefreshCw, Calen
 import { Button } from '../../components/ui/button';
 import ReactMarkdown from 'react-markdown';
 
-const COLORS = ['#1B4F72', '#D4A017', '#C45C26', '#1A7A54', '#C23A2B'];
+const COLORS = ['#E23744', '#F5A623', '#267E3E', '#1565C0', '#CB202D'];
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -222,7 +222,7 @@ export default function AnalyticsPage() {
                         <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94A3B8" />
                         <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
                         <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
-                        <Bar dataKey="value" fill="#1B4F72" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="value" fill="#E23744" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (<div className="flex items-center justify-center h-full text-slate-400">No payment data for this date</div>)}
@@ -239,12 +239,12 @@ export default function AnalyticsPage() {
                 {hourlyData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={hourlyData}>
-                      <defs><linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3B82F6" stopOpacity={0} /></linearGradient></defs>
+                      <defs><linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#E23744" stopOpacity={0.3} /><stop offset="95%" stopColor="#E23744" stopOpacity={0} /></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                       <XAxis dataKey="hour" tick={{ fontSize: 12 }} stroke="#94A3B8" tickFormatter={(hour) => `${hour}:00`} />
                       <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
                       <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} labelFormatter={(hour) => `${hour}:00`} />
-                      <Area type="monotone" dataKey="orders" stroke="#1B4F72" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" />
+                      <Area type="monotone" dataKey="orders" stroke="#E23744" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (<div className="flex items-center justify-center h-full text-slate-400">No hourly data for this date</div>)}
@@ -266,7 +266,7 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="w-32 bg-slate-200 rounded-full h-2">
-                          <div className="bg-black h-2 rounded-full" style={{ width: `${(item.count / analytics.top_items[0].count) * 100}%` }} />
+                          <div className="bg-[#E23744] h-2 rounded-full" style={{ width: `${(item.count / analytics.top_items[0].count) * 100}%` }} />
                         </div>
                         <span className="font-numbers font-semibold text-slate-600 w-16 text-right">{item.count} sold</span>
                       </div>
@@ -279,7 +279,7 @@ export default function AnalyticsPage() {
 
           {/* AI Insights Section */}
           <Card className="border-slate-200 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white py-4">
+            <CardHeader className="bg-gradient-to-r from-[#E23744] to-[#CB202D] text-white py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5" />

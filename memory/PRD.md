@@ -13,7 +13,7 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
 - **Architecture:** Multi-tenant SaaS, Monolithic Backend
 
 ## Theme
-- **Current:** DineDesk hospitality system — ink navy sidebar, linen page surfaces, saffron accents, Fraunces display type, Plus Jakarta Sans UI. Night Shift available for service floors.
+- **Current:** DineDesk Zomato-inspired system — white canvas, red `#E23744` containers/CTAs, Poppins + Nunito Sans, white sidebar with red active state. Payment dialogs stay white and readable.
 
 ## What's Been Implemented
 - Full authentication system (JWT) with admin, owner, manager, cashier, captain, chef roles

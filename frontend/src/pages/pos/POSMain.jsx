@@ -16,8 +16,9 @@ import {
 } from '../../components/ui/dialog';
 import {
   Plus, Minus, Trash2, ShoppingCart, Search, AlertCircle, X, RefreshCw, Tag,
-  Banknote, CreditCard, Smartphone, Utensils, Printer, Check, User,
+  Utensils, Printer, Check, User,
 } from 'lucide-react';
+import PaymentMethodPicker from '../../components/pos/PaymentMethodPicker';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const getImageUrl = (url) => { if (!url) return null; if (url.startsWith('http')) return url; return `${API_URL}${url}`; };
@@ -336,27 +337,28 @@ export default function POSMain() {
 
           {selectedRunningOrder && (
             <div className="space-y-2">
-              <p className="text-[11px] font-medium text-slate-500 text-center">Release Table & Collect Payment</p>
+              <p className="text-[11px] font-bold text-[#E23744] text-center uppercase tracking-wider">Release table & collect</p>
               <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'cash')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-cash"><Banknote className="w-5 h-5" /><span className="text-[10px] font-semibold">Cash</span></button>
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'card')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-card"><CreditCard className="w-5 h-5" /><span className="text-[10px] font-semibold">Card</span></button>
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'upi')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-upi"><Smartphone className="w-5 h-5" /><span className="text-[10px] font-semibold">UPI</span></button>
+                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'cash')} className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-[#E8F5E9] text-[#267E3E] hover:bg-[#C8E6C9] transition-all" data-testid="pay-cash"><span className="text-[11px] font-bold">Cash</span></button>
+                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'card')} className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-[#E3F2FD] text-[#1565C0] hover:bg-[#BBDEFB] transition-all" data-testid="pay-card"><span className="text-[11px] font-bold">Card</span></button>
+                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'upi')} className="flex flex-col items-center gap-1 p-2.5 rounded-xl bg-[#FFF5F6] text-[#E23744] hover:bg-[#FDECEE] transition-all" data-testid="pay-upi"><span className="text-[11px] font-bold">UPI</span></button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Payment Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="rounded-2xl max-w-sm">
-          <DialogHeader><DialogTitle className="text-center">Select Payment Method</DialogTitle></DialogHeader>
-          <div className="py-4 space-y-3">
-            <div className="text-center mb-4"><p className="text-2xl font-bold text-slate-900">₹{total.toFixed(2)}</p><p className="text-xs text-slate-500">Total Amount</p></div>
-            {[{ method: 'cash', icon: Banknote, label: 'Cash', color: 'hover:bg-gray-100 hover:border-gray-400' }, { method: 'card', icon: CreditCard, label: 'Card', color: 'hover:bg-gray-100 hover:border-gray-400' }, { method: 'upi', icon: Smartphone, label: 'UPI', color: 'hover:bg-gray-100 hover:border-gray-400' }].map(({ method, icon: Icon, label, color }) => (
-              <button key={method} onClick={() => handleCheckoutWithPayment(method)} disabled={checkoutLoading} className={`w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 transition-all ${color}`} data-testid={`checkout-${method}`}><Icon className="w-6 h-6" /><span className="text-sm font-semibold">{label}</span></button>
-            ))}
-          </div>
+        <DialogContent className="rounded-2xl max-w-sm bg-white text-[#1C1C1C] border-[#E8E8E8]">
+          <DialogHeader>
+            <DialogTitle className="text-center font-display text-[#1C1C1C]">Select Payment Method</DialogTitle>
+          </DialogHeader>
+          <PaymentMethodPicker
+            amount={total}
+            onSelect={handleCheckoutWithPayment}
+            loading={checkoutLoading}
+            testIdPrefix="checkout"
+          />
         </DialogContent>
       </Dialog>
 

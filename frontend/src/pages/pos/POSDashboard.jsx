@@ -29,7 +29,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 
-const COLORS = ['#1B4F72', '#D4A017', '#C45C26', '#1A7A54'];
+const COLORS = ['#E23744', '#F5A623', '#267E3E', '#1565C0'];
 
 const STATUS_STYLES = {
   ready: { bg: 'bg-emerald-100', text: 'text-forest', label: 'Ready' },
@@ -39,7 +39,7 @@ const STATUS_STYLES = {
   cancelled: { bg: 'bg-rose/10', text: 'text-rose', label: 'Cancelled' },
 };
 
-const TABLE_COLORS = ['bg-navy', 'bg-ink', 'bg-terracotta', 'bg-navy-bright', 'bg-saffron', 'bg-forest'];
+const TABLE_COLORS = ['bg-[#E23744]', 'bg-[#CB202D]', 'bg-[#1565C0]', 'bg-[#267E3E]', 'bg-amber-500', 'bg-[#1C1C1C]'];
 
 function getTableColor(tableNum) {
   if (!tableNum) return 'bg-slate-500';
@@ -180,11 +180,11 @@ export default function POSDashboard() {
     <div className="space-y-5" data-testid="pos-dashboard">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-navy/70 font-semibold mb-1">Live operations</p>
-          <h1 className="font-display text-[26px] font-semibold text-ink tracking-tight">
-            {restaurant?.name || 'Service floor'}
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#E23744] font-bold mb-1">Today</p>
+          <h1 className="font-display text-[26px] font-bold text-[#1C1C1C] tracking-tight">
+            {restaurant?.name || 'Your restaurant'}
           </h1>
-          <p className="text-sm text-ink/45 mt-0.5">
+          <p className="text-sm text-[#696969] mt-0.5">
             {isDayOpen ? 'Service is open — tickets land here as they come.' : 'Open the day to start taking orders.'}
           </p>
         </div>
@@ -280,7 +280,7 @@ export default function POSDashboard() {
                   key={tab.key}
                   onClick={() => setOrderFilter(tab.key)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    orderFilter === tab.key ? 'bg-ink text-white' : 'bg-linen text-ink/60 hover:bg-[#ebe4d8]'
+                    orderFilter === tab.key ? 'bg-ink text-white' : 'bg-linen text-ink/60 hover:bg-[#FFF5F6]'
                   }`}
                   data-testid={`order-filter-${tab.key}`}
                 >
@@ -441,15 +441,15 @@ export default function POSDashboard() {
                 <AreaChart data={salesChartData}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1B4F72" stopOpacity={0.18} />
-                      <stop offset="95%" stopColor="#1B4F72" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#E23744" stopOpacity={0.18} />
+                      <stop offset="95%" stopColor="#E23744" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94A3B8" />
                   <YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" />
                   <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="sales" stroke="#1B4F72" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+                  <Area type="monotone" dataKey="sales" stroke="#E23744" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

@@ -97,16 +97,16 @@ export default function MorePage() {
                   <button
                     key={item.to}
                     onClick={() => navigate(item.to)}
-                    className="flex items-center gap-3 p-3.5 rounded-2xl bg-plate border border-line text-left hover:border-navy/30 hover:shadow-card transition-all group"
+                    className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-[#E8E8E8] text-left hover:border-[#E23744] hover:shadow-card transition-all group"
                   >
-                    <span className="w-10 h-10 rounded-xl bg-navy/8 text-navy flex items-center justify-center flex-shrink-0 group-hover:bg-navy group-hover:text-white transition-colors">
+                    <span className="w-10 h-10 rounded-xl bg-[#FFF5F6] text-[#E23744] flex items-center justify-center flex-shrink-0 group-hover:bg-[#E23744] group-hover:text-white transition-colors">
                       <item.icon className="w-5 h-5" />
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-semibold text-ink">{item.label}</span>
-                      <span className="block text-xs text-ink/45 truncate">{item.desc}</span>
+                      <span className="block text-sm font-semibold text-[#1C1C1C]">{item.label}</span>
+                      <span className="block text-xs text-[#696969] truncate">{item.desc}</span>
                     </span>
-                    <ChevronRight className="w-4 h-4 text-ink/25 group-hover:text-navy" />
+                    <ChevronRight className="w-4 h-4 text-[#C8C8C8] group-hover:text-[#E23744]" />
                   </button>
                 ))}
               </div>
