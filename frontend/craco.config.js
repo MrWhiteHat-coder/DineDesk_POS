@@ -61,12 +61,15 @@ let webpackConfig = {
 };
 
 webpackConfig.devServer = (devServerConfig) => {
-  // Proxy /api requests to the deployed backend to avoid CORS issues in development
+  devServerConfig.host = '0.0.0.0';
+  devServerConfig.allowedHosts = 'all';
+  devServerConfig.historyApiFallback = true;
+  // Proxy /api requests to the local backend
   devServerConfig.proxy = {
     '/api': {
-      target: 'http://localhost:8000',
+      target: 'http://127.0.0.1:8000',
       changeOrigin: true,
-      secure: true,
+      secure: false,
     },
   };
 

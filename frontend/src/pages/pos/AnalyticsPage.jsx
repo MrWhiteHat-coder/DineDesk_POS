@@ -13,7 +13,7 @@ import { DollarSign, ShoppingCart, TrendingUp, Clock, Sparkles, RefreshCw, Calen
 import { Button } from '../../components/ui/button';
 import ReactMarkdown from 'react-markdown';
 
-const COLORS = ['#3B82F6', '#22C55E', '#EAB308', '#8B5CF6', '#EF4444'];
+const COLORS = ['#1B4F72', '#D4A017', '#C45C26', '#1A7A54', '#C23A2B'];
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6" data-testid="analytics-page">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="font-heading text-xl sm:text-2xl font-bold text-slate-900">Analytics</h1>
+        <h1 className="font-display text-xl sm:text-2xl font-semibold text-ink">Analytics</h1>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Branch Selector */}
           {isOwnerOrManager && branches.length > 0 && (
@@ -131,7 +131,7 @@ export default function AnalyticsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <>
@@ -222,7 +222,7 @@ export default function AnalyticsPage() {
                         <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94A3B8" />
                         <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
                         <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
-                        <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="value" fill="#1B4F72" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (<div className="flex items-center justify-center h-full text-slate-400">No payment data for this date</div>)}
@@ -244,7 +244,7 @@ export default function AnalyticsPage() {
                       <XAxis dataKey="hour" tick={{ fontSize: 12 }} stroke="#94A3B8" tickFormatter={(hour) => `${hour}:00`} />
                       <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
                       <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} labelFormatter={(hour) => `${hour}:00`} />
-                      <Area type="monotone" dataKey="orders" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" />
+                      <Area type="monotone" dataKey="orders" stroke="#1B4F72" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (<div className="flex items-center justify-center h-full text-slate-400">No hourly data for this date</div>)}

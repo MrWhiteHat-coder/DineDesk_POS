@@ -48,14 +48,14 @@ export default function AdminUsers() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6" data-testid="admin-users">
-      <h1 className="font-heading text-2xl font-bold text-slate-900">User Monitoring</h1>
+      <h1 className="font-display text-2xl font-semibold text-ink">User Monitoring</h1>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">

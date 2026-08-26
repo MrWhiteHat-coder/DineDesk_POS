@@ -91,7 +91,7 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-4 border-navy border-t-transparent rounded-full animate-spin" /></div>
         ) : report ? (
           <div ref={printRef} className="space-y-5">
             {/* Header */}

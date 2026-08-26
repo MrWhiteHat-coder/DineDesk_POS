@@ -8,72 +8,90 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'heading': ['Poppins', 'sans-serif'],
-        'heading-xl': ['Montserrat', 'sans-serif'],
-        'body': ['Inter', 'sans-serif'],
-        'numbers': ['Inter', 'sans-serif'],
+        'display': ['Fraunces', 'Georgia', 'serif'],
+        'heading': ['Fraunces', 'Georgia', 'serif'],
+        'heading-xl': ['Fraunces', 'Georgia', 'serif'],
+        'body': ['Plus Jakarta Sans', 'sans-serif'],
+        'sans': ['Plus Jakarta Sans', 'sans-serif'],
+        'numbers': ['Plus Jakarta Sans', 'sans-serif'],
       },
       colors: {
-        // DineDesk Brand Colors
-        'dd': {
-          'blue': '#1E3A8A',       // Neelakanta Blue (primary accent)
-          'blue-light': '#2563EB', // Lighter blue for hover
-          'blue-dark': '#1E40AF',  // Darker blue
-          'saffron': '#F59E0B',    // Saffron (secondary accent)
-          'saffron-light': '#FBBF24',
-          'saffron-dark': '#D97706',
-          'black': '#0A0A0A',      // Primary surface
-          'success': '#059669',
-          'warning': '#F59E0B',
-          'error': '#DC2626',
+        ink: {
+          DEFAULT: '#101820',
+          soft: '#1A2633',
         },
-        // Semantic aliases
+        navy: {
+          DEFAULT: '#1B4F72',
+          bright: '#246A96',
+        },
+        saffron: {
+          DEFAULT: '#D4A017',
+          deep: '#B8860B',
+        },
+        terracotta: '#C45C26',
+        linen: '#F3EEE6',
+        plate: '#FFFCF8',
+        forest: '#1A7A54',
+        rose: '#C23A2B',
+        line: '#E6DDD0',
+        dd: {
+          blue: '#1B4F72',
+          'blue-light': '#246A96',
+          'blue-dark': '#163A5F',
+          saffron: '#D4A017',
+          'saffron-light': '#E8BC4A',
+          'saffron-dark': '#B8860B',
+          black: '#101820',
+          success: '#1A7A54',
+          warning: '#D4A017',
+          error: '#C23A2B',
+        },
         primary: {
-          DEFAULT: '#1E3A8A',
-          foreground: '#FFFFFF',
-          light: '#2563EB',
-          dark: '#1E40AF',
+          DEFAULT: '#1B4F72',
+          foreground: '#FFFCF8',
+          light: '#246A96',
+          dark: '#163A5F',
         },
         accent: {
-          DEFAULT: '#F59E0B',
-          foreground: '#000000',
-          light: '#FBBF24',
-          dark: '#D97706',
+          DEFAULT: '#D4A017',
+          foreground: '#101820',
+          light: '#E8BC4A',
+          dark: '#B8860B',
         },
         surface: {
-          DEFAULT: '#FFFFFF',
-          card: '#FFFFFF',
-          dark: '#0A0A0A',
-          muted: '#F9FAFB',
+          DEFAULT: '#FFFCF8',
+          card: '#FFFCF8',
+          dark: '#101820',
+          muted: '#F3EEE6',
         },
-        border: '#E5E7EB',
-        // Card/system
+        border: '#E6DDD0',
         card: {
-          DEFAULT: '#FFFFFF',
-          foreground: '#111111',
+          DEFAULT: '#FFFCF8',
+          foreground: '#101820',
         },
         muted: {
-          DEFAULT: '#F3F4F6',
-          foreground: '#6B7280',
+          DEFAULT: '#F3EEE6',
+          foreground: '#6B6258',
         },
         destructive: {
-          DEFAULT: '#DC2626',
+          DEFAULT: '#C23A2B',
           foreground: '#FFFFFF',
         },
       },
       borderRadius: {
-        'card': '12px',
-        'btn': '8px',
-        'input': '6px',
-        'modal': '16px',
+        'card': '14px',
+        'btn': '10px',
+        'input': '10px',
+        'modal': '18px',
         'pill': '999px',
       },
       boxShadow: {
-        'card': '0 1px 3px rgba(0,0,0,0.08)',
-        'card-hover': '0 4px 12px rgba(0,0,0,0.12)',
-        'elevated': '0 4px 12px rgba(0,0,0,0.12)',
-        'blue': '0 4px 12px rgba(30,58,138,0.25)',
-        'saffron': '0 4px 12px rgba(245,158,11,0.25)',
+        'card': '0 1px 2px rgba(16,24,32,0.04), 0 8px 24px rgba(16,24,32,0.04)',
+        'card-hover': '0 8px 28px rgba(16,24,32,0.10)',
+        'elevated': '0 12px 32px rgba(16,24,32,0.12)',
+        'blue': '0 8px 20px rgba(27,79,114,0.22)',
+        'saffron': '0 8px 20px rgba(212,160,23,0.25)',
+        'ink': '0 10px 24px rgba(16,24,32,0.18)',
       },
       keyframes: {
         'accordion-down': {
@@ -96,10 +114,6 @@ module.exports = {
           from: { transform: 'scale(0.95)', opacity: '0' },
           to: { transform: 'scale(1)', opacity: '1' }
         },
-        'calm-pulse': {
-          '0%, 100%': { opacity: '0.6' },
-          '50%': { opacity: '1' },
-        },
         'float': {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-4px)' },
@@ -111,7 +125,6 @@ module.exports = {
         'slide-in': 'slide-in 0.3s ease-out',
         'fade-in': 'fade-in 0.2s ease-out',
         'scale-in': 'scale-in 0.2s ease-out',
-        'calm-pulse': 'calm-pulse 3s ease-in-out infinite',
         'float': 'float 3s ease-in-out infinite',
       },
     },

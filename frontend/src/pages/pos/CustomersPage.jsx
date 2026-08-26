@@ -93,7 +93,7 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-xl font-bold text-gray-900">Customer CRM</h1>
+          <h1 className="font-display text-xl font-semibold text-ink">Customer CRM</h1>
           <p className="text-sm text-gray-500">Manage customers, loyalty tiers, and engagement</p>
         </div>
         <Button onClick={() => setShowAdd(true)} className="dd-btn-primary gap-2" data-testid="add-customer-btn">

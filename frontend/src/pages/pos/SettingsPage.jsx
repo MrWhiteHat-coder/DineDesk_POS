@@ -40,7 +40,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-3xl" data-testid="settings-page">
-      <h1 className="font-heading text-2xl font-bold text-slate-900">Settings</h1>
+      <h1 className="font-display text-2xl font-semibold text-ink">Settings</h1>
 
       {/* Restaurant Info */}
       <Card>
@@ -95,7 +95,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-black hover:bg-gray-800"
+            className="bg-ink hover:bg-ink-soft"
             data-testid="save-settings-btn"
           >
             <Save className="w-4 h-4 mr-2" />
@@ -159,7 +159,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="flex gap-2">
               {restaurant.delivery_platforms?.includes('swiggy') && (
-                <Badge className="bg-black">Swiggy</Badge>
+                <Badge className="bg-ink">Swiggy</Badge>
               )}
               {restaurant.delivery_platforms?.includes('zomato') && (
                 <Badge className="bg-red-500">Zomato</Badge>

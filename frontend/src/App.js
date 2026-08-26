@@ -33,6 +33,7 @@ import CustomersPage from './pages/pos/CustomersPage';
 import GiftCardsPage from './pages/pos/GiftCardsPage';
 import TridentCoinsPage from './pages/pos/TridentCoinsPage';
 import StorePage from './pages/pos/StorePage';
+import MorePage from './pages/pos/MorePage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -54,8 +55,8 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireSubscription = 
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-slate-800 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
+          <div className="w-12 h-12 border-4 border-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-ink/50 font-medium">Setting the table...</p>
         </div>
       </div>
     );
@@ -82,8 +83,8 @@ const PublicRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-12 h-12 border-4 border-slate-800 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-linen">
+        <div className="w-12 h-12 border-4 border-navy border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -138,6 +139,7 @@ function AppRoutes() {
         <Route path="gift-cards" element={<GiftCardsPage />} />
         <Route path="trident-coins" element={<TridentCoinsPage />} />
         <Route path="store" element={<StorePage />} />
+        <Route path="more" element={<MorePage />} />
       </Route>
 
       {/* Admin Routes */}
@@ -166,7 +168,7 @@ function App() {
           position="top-right" 
           richColors 
           toastOptions={{
-            style: { fontFamily: 'Inter, sans-serif' }
+            style: { fontFamily: 'Plus Jakarta Sans, sans-serif' }
           }}
         />
       </AuthProvider>

@@ -95,26 +95,24 @@ export default function RestaurantSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linen flex items-center justify-center p-4">
       <div className="w-full max-w-xl">
-        {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-black rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
-            <UtensilsCrossed className="w-7 h-7 text-white" />
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-ink rounded-2xl mb-4 shadow-ink">
+            <UtensilsCrossed className="w-7 h-7 text-saffron" />
           </div>
-          <h1 className="font-heading text-2xl font-bold text-slate-900 mb-2">
+          <h1 className="font-display text-2xl font-semibold text-ink mb-2">
             Setup Your Restaurant
           </h1>
-          <p className="text-slate-500">Step {step} of 3</p>
+          <p className="text-ink/50">Step {step} of 3</p>
         </div>
 
-        {/* Progress Bar */}
         <div className="flex gap-2 mb-8">
           {[1, 2, 3].map((s) => (
             <div
               key={s}
               className={`h-2 flex-1 rounded-full transition-all ${
-                s <= step ? 'bg-black' : 'bg-slate-200'
+                s <= step ? 'bg-navy' : 'bg-line'
               }`}
             />
           ))}
@@ -359,7 +357,7 @@ export default function RestaurantSetupPage() {
               {step < 3 ? (
                 <Button
                   onClick={handleNext}
-                  className="h-12 bg-black hover:bg-gray-800"
+                  className="h-12 bg-ink hover:bg-ink-soft"
                   data-testid="next-btn"
                 >
                   Next
@@ -369,7 +367,7 @@ export default function RestaurantSetupPage() {
                 <Button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="h-12 bg-black hover:bg-gray-800"
+                  className="h-12 bg-ink hover:bg-ink-soft"
                   data-testid="submit-setup-btn"
                 >
                   {loading ? (

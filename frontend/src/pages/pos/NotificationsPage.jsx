@@ -66,7 +66,7 @@ export default function NotificationsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -74,7 +74,7 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6" data-testid="notifications-page">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl font-bold text-slate-900">SMS & WhatsApp Notifications</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">SMS & WhatsApp Notifications</h1>
         <div className="flex items-center gap-2">
           <Button onClick={sendTestNotification} disabled={sending} variant="outline" className="h-9 rounded-lg text-sm gap-2" data-testid="send-test-btn">
             {sending ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Send className="w-4 h-4" />}

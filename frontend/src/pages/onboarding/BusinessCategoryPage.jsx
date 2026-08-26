@@ -40,17 +40,17 @@ export default function BusinessCategoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linen flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
-        {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-black rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
-            <UtensilsCrossed className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-ink rounded-2xl mb-4 shadow-ink">
+            <UtensilsCrossed className="w-8 h-8 text-saffron" />
           </div>
-          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
-            Welcome to OrderNest POS
+          <p className="text-[11px] uppercase tracking-[0.2em] text-navy font-semibold mb-2">Onboarding</p>
+          <h1 className="font-display text-3xl font-semibold text-ink mb-2">
+            Welcome to DineDesk
           </h1>
-          <p className="text-slate-500 text-lg">Select your business category to get started</p>
+          <p className="text-ink/50 text-lg">Select your business category to get started</p>
         </div>
 
         {/* Business Category Cards */}
@@ -61,7 +61,7 @@ export default function BusinessCategoryPage() {
               onClick={() => handleSelect(category)}
               className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
                 category.enabled
-                  ? 'hover:shadow-xl hover:-translate-y-1 border-2 border-transparent hover:border-slate-200'
+                  ? 'hover:shadow-card-hover hover:-translate-y-1 border-2 border-transparent hover:border-navy/30'
                   : 'opacity-60 cursor-not-allowed'
               }`}
               data-testid={`category-${category.id}`}
@@ -77,8 +77,8 @@ export default function BusinessCategoryPage() {
                 <div
                   className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
                     category.enabled
-                      ? 'bg-slate-100 text-slate-800'
-                      : 'bg-slate-100 text-slate-400'
+                      ? 'bg-navy/10 text-navy'
+                      : 'bg-linen text-ink/30'
                   }`}
                 >
                   <category.icon className="w-7 h-7" />
@@ -90,7 +90,7 @@ export default function BusinessCategoryPage() {
                 <p className="text-slate-500 text-sm mb-4">{category.description}</p>
 
                 {category.enabled && (
-                  <div className="flex items-center text-slate-800 font-medium text-sm group">
+                  <div className="flex items-center text-navy font-medium text-sm group">
                     Get Started
                     <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>

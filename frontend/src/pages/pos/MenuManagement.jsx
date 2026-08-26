@@ -257,7 +257,7 @@ export default function MenuManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -266,7 +266,7 @@ export default function MenuManagement() {
     <div className="space-y-6" data-testid="menu-management">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl font-bold text-slate-900">Menu Management</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">Menu Management</h1>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -279,7 +279,7 @@ export default function MenuManagement() {
           </Button>
           <Button
             onClick={() => openItemModal()}
-            className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm"
+            className="h-9 px-3 rounded-lg bg-ink hover:bg-ink-soft text-sm"
             data-testid="add-item-btn"
           >
             <Plus className="w-4 h-4 mr-1.5" />
@@ -293,7 +293,7 @@ export default function MenuManagement() {
         <button
           onClick={() => setSelectedCategory(null)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-            !selectedCategory ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            !selectedCategory ? 'bg-ink text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
           All Items
@@ -308,7 +308,7 @@ export default function MenuManagement() {
             <button
               onClick={() => setSelectedCategory(cat.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                selectedCategory === cat.id ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                selectedCategory === cat.id ? 'bg-ink text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
               {cat.name}
@@ -401,7 +401,7 @@ export default function MenuManagement() {
         <Card className="p-12 text-center rounded-2xl">
           <Image className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No menu items yet</p>
-          <Button onClick={() => openItemModal()} className="bg-black hover:bg-gray-800 rounded-xl">
+          <Button onClick={() => openItemModal()} className="bg-ink hover:bg-ink-soft rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>
@@ -443,7 +443,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleCreateCategory}
               disabled={categoryLoading}
-              className="bg-black hover:bg-gray-800 rounded-xl"
+              className="bg-ink hover:bg-ink-soft rounded-xl"
               data-testid="save-category-btn"
             >
               {categoryLoading ? 'Creating...' : 'Create Category'}
@@ -494,7 +494,7 @@ export default function MenuManagement() {
                     />
                     <div className="flex flex-col items-center gap-3 py-6">
                       {uploadingImage ? (
-                        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <Upload className="w-10 h-10 text-slate-400" />
                       )}
@@ -690,7 +690,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleSaveItem}
               disabled={itemLoading}
-              className="bg-black hover:bg-gray-800 rounded-xl"
+              className="bg-ink hover:bg-ink-soft rounded-xl"
               data-testid="save-item-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}

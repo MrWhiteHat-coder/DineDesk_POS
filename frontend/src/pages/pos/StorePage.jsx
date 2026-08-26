@@ -87,7 +87,7 @@ export default function StorePage() {
 
       {/* Billing Toggle */}
       <div className="flex items-center justify-between">
-        <h2 className="font-heading text-xl font-bold text-gray-900">Available Add-ons</h2>
+        <h2 className="font-display text-xl font-semibold text-ink">Available Add-ons</h2>
         <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-pill">
           <button
             onClick={() => setBilling('monthly')}

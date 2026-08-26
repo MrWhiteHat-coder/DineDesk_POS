@@ -136,7 +136,7 @@ export default function InventoryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -146,7 +146,7 @@ export default function InventoryPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-slate-900">Inventory</h1>
+          <h1 className="font-display text-2xl font-semibold text-ink">Inventory</h1>
           {lowStockCount > 0 && (
             <p className="text-sm text-amber-600 flex items-center gap-1 mt-1">
               <AlertTriangle className="w-4 h-4" />
@@ -165,7 +165,7 @@ export default function InventoryPage() {
           </Button>
           <Button
             onClick={() => openModal()}
-            className="bg-black hover:bg-gray-800"
+            className="bg-ink hover:bg-ink-soft"
             data-testid="add-inventory-btn"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -243,7 +243,7 @@ export default function InventoryPage() {
         <Card className="p-12 text-center">
           <Package className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No inventory items yet</p>
-          <Button onClick={() => openModal()} className="bg-black hover:bg-gray-800">
+          <Button onClick={() => openModal()} className="bg-ink hover:bg-ink-soft">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>
@@ -334,7 +334,7 @@ export default function InventoryPage() {
             <Button
               onClick={handleSave}
               disabled={itemLoading}
-              className="bg-black hover:bg-gray-800"
+              className="bg-ink hover:bg-ink-soft"
               data-testid="save-inventory-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Add Item'}

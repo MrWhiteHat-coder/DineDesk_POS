@@ -1,79 +1,78 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --ink: #101820;
+    --ink-soft: #1A2633;
+    --navy: #1B4F72;
+    --navy-bright: #246A96;
+    --saffron: #D4A017;
+    --saffron-deep: #B8860B;
+    --terracotta: #C45C26;
+    --linen: #F3EEE6;
+    --plate: #FFFCF8;
+    --forest: #1A7A54;
+    --rose: #C23A2B;
+    --line: #E6DDD0;
+    --muted: #6B6258;
+    --dd-radius: 14px;
+    --dd-radius-btn: 10px;
+    --background: 36 33% 93%;
+    --foreground: 206 23% 9%;
+    --card: 36 100% 99%;
+    --card-foreground: 206 23% 9%;
+    --popover: 36 100% 99%;
+    --popover-foreground: 206 23% 9%;
+    --primary: 204 62% 28%;
+    --primary-foreground: 36 40% 97%;
+    --secondary: 43 81% 46%;
+    --secondary-foreground: 206 23% 9%;
+    --muted: 36 20% 92%;
+    --muted-foreground: 24 10% 38%;
+    --accent: 43 81% 46%;
+    --accent-foreground: 206 23% 9%;
+    --destructive: 6 64% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 34 24% 86%;
+    --input: 34 24% 86%;
+    --ring: 204 62% 28%;
+    --radius: 0.85rem;
+}
+
+html.night {
+    --ink: #F4EFE6;
+    --ink-soft: #2A3542;
+    --navy: #5BA3C9;
+    --navy-bright: #7BB8D6;
+    --linen: #0E141B;
+    --plate: #151D27;
+    --line: #243140;
+    --muted: #A89F93;
+    --background: 210 28% 8%;
+    --foreground: 36 33% 93%;
+    --card: 210 26% 12%;
+    --card-foreground: 36 33% 93%;
+    --popover: 210 26% 12%;
+    --popover-foreground: 36 33% 93%;
+    --border: 210 20% 20%;
+    --input: 210 20% 20%;
+}
+
+html, body, #root {
+    min-height: 100%;
+}
+
 body {
     margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'tnum' on, 'lnum' on;
-}
-
-code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-
-@layer base {
-    :root {
-        --dd-blue: #1E3A8A;
-        --dd-blue-light: #2563EB;
-        --dd-saffron: #F59E0B;
-        --dd-saffron-light: #FBBF24;
-        --dd-black: #0A0A0A;
-        --dd-success: #059669;
-        --dd-error: #DC2626;
-        --dd-bg: #FFFFFF;
-        --dd-surface: #F9FAFB;
-        --dd-border: #E5E7EB;
-        --dd-text: #111111;
-        --dd-text-secondary: #6B7280;
-        --dd-radius: 12px;
-        --dd-radius-btn: 8px;
-        --dd-radius-input: 6px;
-        --dd-radius-modal: 16px;
-        --dd-shadow-card: 0 1px 3px rgba(0,0,0,0.08);
-        --dd-shadow-elevated: 0 4px 12px rgba(0,0,0,0.12);
-        --background: 0 0% 100%;
-        --foreground: 0 0% 7%;
-        --card: 0 0% 100%;
-        --card-foreground: 0 0% 7%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 7%;
-        --primary: 222 47% 33%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 43 96% 56%;
-        --secondary-foreground: 0 0% 0%;
-        --muted: 0 0% 96%;
-        --muted-foreground: 0 0% 45%;
-        --accent: 43 96% 56%;
-        --accent-foreground: 0 0% 0%;
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 100%;
-        --border: 0 0% 91%;
-        --input: 0 0% 91%;
-        --ring: 222 47% 33%;
-        --chart-1: 222 47% 33%;
-        --chart-2: 43 96% 56%;
-        --chart-3: 160 41% 40%;
-        --chart-4: 0 84% 60%;
-        --chart-5: 0 0% 60%;
-        --radius: 0.75rem;
-    }
-
-    .dark {
-        --background: 0 0% 4%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 6%;
-        --card-foreground: 0 0% 98%;
-        --primary: 222 47% 43%;
-        --primary-foreground: 0 0% 100%;
-        --border: 0 0% 15%;
-        --input: 0 0% 15%;
-        --ring: 222 47% 53%;
-    }
+    background: var(--linen);
+    color: #101820;
 }
 
 @layer base {
@@ -81,136 +80,110 @@ code {
         @apply border-border;
     }
     body {
-        @apply bg-white text-[#111111];
+        background-color: var(--linen);
+        color: #101820;
     }
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Poppins', sans-serif;
-        font-weight: 700;
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+        letter-spacing: -0.02em;
     }
 }
 
 @layer utilities {
+    .font-display {
+        font-family: 'Fraunces', Georgia, serif;
+    }
     .font-heading {
-        font-family: 'Poppins', sans-serif;
+        font-family: 'Fraunces', Georgia, serif;
     }
     .font-heading-xl {
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 800;
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 700;
     }
     .font-body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .font-numbers {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
         font-variant-numeric: tabular-nums;
+        font-weight: 700;
     }
+    .bg-linen { background-color: var(--linen); }
+    .bg-plate { background-color: var(--plate); }
+    .bg-ink { background-color: #101820; }
+    .bg-ink-soft { background-color: #1A2633; }
+    .bg-navy { background-color: #1B4F72; }
+    .bg-navy-bright { background-color: #246A96; }
+    .bg-saffron { background-color: #D4A017; }
+    .text-ink { color: #101820; }
+    .text-navy { color: #1B4F72; }
+    .text-saffron { color: #D4A017; }
+    .text-terracotta { color: #C45C26; }
+    .border-line { border-color: var(--line); }
 
-    /* DineDesk Brand Utilities */
-    .dd-gradient-blue {
-        background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
-    }
-    .dd-gradient-saffron {
-        background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
-    }
-    .dd-gradient-hero {
-        background: linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 50%, #1E3A8A 100%);
-    }
     .dd-card {
-        @apply bg-white rounded-xl border border-gray-200 shadow-sm;
-    }
-    .dd-card-elevated {
-        @apply bg-white rounded-xl shadow-md;
+        @apply bg-plate rounded-2xl border border-[#E6DDD0] shadow-card;
     }
     .dd-btn-primary {
-        @apply bg-[#1E3A8A] text-white font-semibold rounded-lg px-5 py-2.5 
-               hover:bg-[#2563EB] active:scale-[0.97] transition-all duration-150
-               shadow-md hover:shadow-lg;
+        @apply bg-ink text-white font-semibold rounded-[10px] px-5 py-2.5
+               hover:bg-ink-soft active:scale-[0.97] transition-all duration-150
+               shadow-sm;
     }
     .dd-btn-accent {
-        @apply bg-[#F59E0B] text-black font-semibold rounded-lg px-5 py-2.5 
-               hover:bg-[#FBBF24] active:scale-[0.97] transition-all duration-150;
+        @apply bg-saffron text-ink font-semibold rounded-[10px] px-5 py-2.5
+               hover:bg-[#c49212] active:scale-[0.97] transition-all duration-150;
     }
-    .dd-btn-outline {
-        @apply border-2 border-gray-200 text-gray-900 font-semibold rounded-lg px-5 py-2.5 
-               hover:border-[#1E3A8A] hover:text-[#1E3A8A] active:scale-[0.97] transition-all duration-150;
-    }
-    .dd-input {
-        @apply h-11 px-4 bg-white border border-gray-200 rounded-md text-sm
-               focus:ring-2 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] outline-none transition-all;
-    }
-    .dd-badge {
-        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
-    }
-    .dd-badge-blue {
-        @apply dd-badge bg-blue-50 text-[#1E3A8A];
-    }
-    .dd-badge-saffron {
-        @apply dd-badge bg-amber-50 text-[#D97706];
-    }
-    .dd-badge-success {
-        @apply dd-badge bg-emerald-50 text-[#059669];
-    }
-    .dd-badge-error {
-        @apply dd-badge bg-red-50 text-[#DC2626];
+    .dd-chip {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold;
     }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-    background: #f5f5f5;
-    border-radius: 3px;
+    background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
-    border-radius: 3px;
+    background: #d8cfc2;
+    border-radius: 8px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-    background: #a3a3a3;
+    background: #c4b8a6;
 }
 
-/* DineDesk POS utilities */
 .pos-card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200;
+    @apply bg-plate rounded-2xl border border-[#E6DDD0] shadow-card hover:shadow-card-hover transition-all duration-200;
 }
 
 .pos-btn {
-    @apply min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all duration-150 active:scale-[0.97];
+    @apply min-h-[48px] px-4 py-3 rounded-[10px] font-medium transition-all duration-150 active:scale-[0.97];
 }
 
 .pos-btn-primary {
-    @apply pos-btn bg-[#1E3A8A] text-white hover:bg-[#2563EB] shadow-md;
-}
-
-.pos-btn-secondary {
-    @apply pos-btn bg-gray-50 text-gray-800 hover:bg-gray-100;
+    @apply pos-btn bg-ink text-white hover:bg-ink-soft shadow-sm;
 }
 
 .pos-input {
-    @apply h-12 px-4 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] outline-none transition-all;
+    @apply h-12 px-4 bg-plate border border-[#E6DDD0] rounded-xl focus:ring-2 focus:ring-navy/30 focus:border-navy outline-none transition-all;
 }
 
-/* Hover animations */
-[data-testid*="menu-item-card"] {
+[data-testid*="menu-item-card"],
+[data-testid^="menu-item-"],
+[data-testid^="quick-item-"] {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-[data-testid*="menu-item-card"]:hover {
+[data-testid*="menu-item-card"]:hover,
+[data-testid^="menu-item-"]:hover,
+[data-testid^="quick-item-"]:hover {
     transform: translateY(-2px);
-    box-shadow: var(--dd-shadow-elevated);
-}
-
-nav a, nav button {
-    transition: all 0.15s ease;
 }
 
 button:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: scale(0.98);
 }
 
 @keyframes fadeInUp {
@@ -222,79 +195,87 @@ button:active:not(:disabled) {
     animation: fadeInUp 0.3s ease forwards;
 }
 
-[data-testid*="wallet-card"]:hover,
-[data-testid*="staff-card"]:hover,
-[data-testid*="branch-"]:hover {
-    transform: translateY(-2px);
-    transition: transform 0.2s ease;
+@keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
 }
 
-main > * {
-    animation: fadeInUp 0.25s ease;
+.dd-shimmer {
+    background: linear-gradient(90deg, #efe8dc 0%, #f8f3ea 50%, #efe8dc 100%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite linear;
 }
 
-/* ═══════════════════════════════════════
-   CALM MODE — Signature DineDesk Feature
-   ═══════════════════════════════════════ */
-.calm-mode {
-    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.calm-mode * {
-    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-.calm-mode body,
-.calm-mode .bg-gray-50,
-.calm-mode .bg-white {
-    background-color: #f8f9fc !important;
-}
-.calm-mode .bg-black,
-.calm-mode [class*="bg-black"] {
-    background-color: #1E3A8A !important;
-}
-.calm-mode .text-white {
-    color: white !important;
-}
-.calm-mode main {
-    background: linear-gradient(180deg, #f0f4ff 0%, #f8f9fc 50%, #fffbeb 100%) !important;
-}
-.calm-mode [class*="bg-red"] {
-    opacity: 0.7;
-}
-.calm-mode button {
-    animation: none !important;
-    transition: all 0.8s ease !important;
-}
-.calm-mode .shadow-card,
-.calm-mode .shadow-sm {
-    box-shadow: 0 1px 6px rgba(30, 58, 138, 0.06) !important;
+/* Atmosphere used on auth / onboarding */
+.dd-atmosphere {
+    background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(212, 160, 23, 0.16), transparent 50%),
+        radial-gradient(900px 500px at 110% 20%, rgba(27, 79, 114, 0.45), transparent 55%),
+        linear-gradient(160deg, #0B1218 0%, #132433 48%, #101820 100%);
 }
 
-/* Trident watermarks for empty states */
-.trident-watermark {
-    position: relative;
-}
-.trident-watermark::after {
-    content: '🔱';
+.dd-grain::before {
+    content: '';
     position: absolute;
-    font-size: 48px;
-    opacity: 0.06;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    inset: 0;
     pointer-events: none;
+    opacity: 0.08;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Night Shift — remap common light surfaces for service floors */
+html.night body {
+    background: #0E141B !important;
+    color: #EDE6D9 !important;
+}
+html.night .bg-white,
+html.night .bg-gray-50,
+html.night .bg-slate-50,
+html.night .bg-gray-50\/50,
+html.night .bg-slate-50\/50 {
+    background-color: #151D27 !important;
+}
+html.night .text-slate-900,
+html.night .text-gray-900,
+html.night .text-slate-800,
+html.night .text-gray-800,
+html.night .text-ink {
+    color: #F4EFE6 !important;
+}
+html.night .text-slate-600,
+html.night .text-gray-600,
+html.night .text-slate-500,
+html.night .text-gray-500 {
+    color: #B7AFA4 !important;
+}
+html.night .border-gray-100,
+html.night .border-gray-200,
+html.night .border-slate-100,
+html.night .border-slate-200,
+html.night .border-\[\#E6DDD0\] {
+    border-color: #243140 !important;
+}
+html.night aside {
+    background-color: #0B1117 !important;
+    color: #F4EFE6 !important;
+}
+html.night button.bg-ink,
+html.night a.bg-ink,
+html.night .bg-black:not(aside) {
+    background-color: #D4A017 !important;
+    color: #101820 !important;
+}
+html.night button.hover\:bg-ink-soft:hover,
+html.night button.hover\:bg-gray-800:hover {
+    background-color: #c49212 !important;
 }
 
 @media (max-width: 1023px) {
-    .font-heading { font-size: 1.25rem; }
     main > * { animation: none; }
 }
 
 .overflow-x-auto::-webkit-scrollbar {
     height: 2px;
-}
-.overflow-x-auto::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
-    border-radius: 2px;
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {

@@ -51,7 +51,7 @@ export default function AdminLogs() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -59,7 +59,7 @@ export default function AdminLogs() {
   return (
     <div className="space-y-6" data-testid="admin-logs">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold text-slate-900">System Logs</h1>
+        <h1 className="font-display text-2xl font-semibold text-ink">System Logs</h1>
         <Select value={logTypeFilter} onValueChange={setLogTypeFilter}>
           <SelectTrigger className="w-48" data-testid="log-type-filter">
             <SelectValue placeholder="Filter by type" />

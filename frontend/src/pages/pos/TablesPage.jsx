@@ -86,7 +86,7 @@ export default function TablesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -95,10 +95,10 @@ export default function TablesPage() {
     <div className="space-y-6" data-testid="tables-page">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold text-slate-900">Tables</h1>
+        <h1 className="font-display text-2xl font-semibold text-ink">Tables</h1>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-black hover:bg-gray-800"
+          className="bg-ink hover:bg-ink-soft"
           data-testid="add-table-btn"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -196,7 +196,7 @@ export default function TablesPage() {
       ) : (
         <Card className="p-12 text-center">
           <p className="text-slate-400 mb-4">No tables configured yet</p>
-          <Button onClick={() => setShowAddModal(true)} className="bg-black hover:bg-gray-800">
+          <Button onClick={() => setShowAddModal(true)} className="bg-ink hover:bg-ink-soft">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Table
           </Button>
@@ -238,7 +238,7 @@ export default function TablesPage() {
             <Button
               onClick={handleAddTable}
               disabled={addLoading}
-              className="bg-black hover:bg-gray-800"
+              className="bg-ink hover:bg-ink-soft"
               data-testid="save-table-btn"
             >
               {addLoading ? 'Adding...' : 'Add Table'}

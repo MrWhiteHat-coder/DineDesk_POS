@@ -56,7 +56,7 @@ export default function SubscriptionPage() {
       const restaurantRes = await restaurantAPI.getMy();
       updateRestaurant(restaurantRes.data);
 
-      toast.success('Subscription activated! Welcome to OrderNest POS!');
+      toast.success('Subscription activated! Welcome to DineDesk POS!');
       navigate('/pos');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Payment failed');
@@ -66,22 +66,20 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linen flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
-        {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-black rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
-            <UtensilsCrossed className="w-7 h-7 text-white" />
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-ink rounded-2xl mb-4 shadow-ink">
+            <UtensilsCrossed className="w-7 h-7 text-saffron" />
           </div>
-          <h1 className="font-heading text-2xl font-bold text-slate-900 mb-2">
+          <h1 className="font-display text-2xl font-semibold text-ink mb-2">
             Activate Your POS
           </h1>
-          <p className="text-slate-500">One simple plan for all your needs</p>
+          <p className="text-ink/50">One simple plan for all your needs</p>
         </div>
 
-        {/* Subscription Card */}
-        <Card className="border-2 border-slate-200 shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-slate-500 to-slate-900 p-6 text-white">
+        <Card className="border border-line shadow-elevated overflow-hidden">
+          <div className="dd-atmosphere p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-300 text-sm font-medium">Restaurant POS Plan</p>
@@ -113,7 +111,7 @@ export default function SubscriptionPage() {
             <Button
               onClick={handleSubscribe}
               disabled={loading}
-              className="w-full h-14 bg-black hover:bg-gray-800 text-white font-semibold text-lg"
+              className="w-full h-14 bg-ink hover:bg-ink-soft text-white font-semibold text-lg"
               data-testid="subscribe-btn"
             >
               {loading ? (

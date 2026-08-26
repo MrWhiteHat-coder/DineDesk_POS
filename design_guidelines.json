@@ -1,133 +1,73 @@
 {
   "brand_identity": {
-    "name": "FoodFlow POS",
-    "tone": "Efficient, Appetizing, Reliable, Clean",
-    "archetype": "The Performance Pro (with a flavor twist)",
-    "audience": "Restaurant Owners, Staff, Kitchen Managers",
-    "core_values": ["Speed", "Accuracy", "Cleanliness", "Taste"]
+    "name": "DineDesk POS",
+    "tone": "Calm, Hospitable, Precise, Warm",
+    "archetype": "The Maître d’ — composed under pressure",
+    "audience": "Restaurant Owners, Floor Staff, Kitchen Managers",
+    "core_values": ["Speed", "Calm", "Accuracy", "Hospitality"]
   },
   "typography": {
     "headings": {
-      "family": "Manrope",
-      "weights": ["600", "700", "800"],
-      "usage": "Use for all page titles, modal headers, and major stats. Tight tracking."
+      "family": "Fraunces",
+      "weights": ["500", "600", "700"],
+      "usage": "Page titles, brand wordmark, hero lines."
     },
     "body": {
-      "family": "Inter",
-      "weights": ["400", "500"],
-      "usage": "Use for all standard text, menus, and tables. Optimized for readability."
+      "family": "Plus Jakarta Sans",
+      "weights": ["400", "500", "600", "700"],
+      "usage": "UI, tables, navigation, forms."
     },
     "numbers": {
-      "family": "Barlow Condensed",
-      "weights": ["600", "700"],
-      "usage": "Use for PRICES, TIMERS, and ORDER NUMBERS to maximize visibility."
+      "family": "Plus Jakarta Sans",
+      "weights": ["700"],
+      "usage": "Prices, timers, order numbers — tabular nums."
     }
   },
   "colors": {
     "primary": {
-      "name": "Zest Orange",
-      "hex": "#F97316",
-      "tailwind": "orange-500",
-      "usage": "Primary buttons, active states, key highlights"
+      "name": "Service Navy",
+      "hex": "#1B4F72",
+      "usage": "Primary accent, selected states, charts"
     },
-    "secondary": {
-      "name": "Cream Soda",
-      "hex": "#FFF7ED",
-      "tailwind": "orange-50",
-      "usage": "Backgrounds for active items, subtle highlights"
+    "ink": {
+      "name": "Floor Ink",
+      "hex": "#101820",
+      "usage": "Sidebar, primary buttons, headings"
     },
     "accent": {
-      "name": "Burnt Ember",
-      "hex": "#C2410C",
-      "tailwind": "orange-700",
-      "usage": "Hover states, critical alerts"
+      "name": "Hospitality Gold",
+      "hex": "#D4A017",
+      "usage": "Highlights, live indicators, brand mark"
     },
     "background": {
-      "default": "#F8FAFC",
-      "paper": "#FFFFFF",
-      "sidebar": "#FFFFFF"
-    },
-    "text": {
-      "primary": "#0F172A",
-      "secondary": "#64748B",
-      "muted": "#94A3B8"
+      "default": "#F3EEE6",
+      "paper": "#FFFCF8",
+      "sidebar": "#101820"
     },
     "functional": {
-      "success": "#22C55E",
-      "warning": "#EAB308",
-      "error": "#EF4444",
-      "info": "#3B82F6"
+      "success": "#1A7A54",
+      "warning": "#D4A017",
+      "error": "#C23A2B",
+      "info": "#1B4F72"
     }
   },
   "layout_strategy": {
     "pos_mode": {
-      "structure": "Split Screen (70% Menu / 30% Cart)",
-      "grid": "Bento Grid for Menu Items (Responsive: 2 cols mobile, 4 cols tablet, 6 cols desktop)",
-      "spacing": "Generous touch targets (min 48px)",
-      "navigation": "Sidebar or Bottom Bar (Tablet optimized)"
+      "structure": "Dark grouped sidebar on desktop; bottom nav + More on tablet/phone",
+      "grid": "Menu bento: 2 / 3 / 4 / 6 columns",
+      "spacing": "Touch targets min 40–48px",
+      "navigation": "Floor / People / Money / Insights grouping"
     },
     "admin_dashboard": {
-      "structure": "Sidebar Layout",
-      "container": "Max width 1400px centered content",
-      "spacing": "Relaxed (p-6 to p-8)"
+      "structure": "Ink sidebar + linen canvas",
+      "container": "Fluid, padded 24px"
     }
   },
-  "component_rules": {
-    "buttons": {
-      "style": "Rounded-md or Pill",
-      "shadow": "shadow-sm hover:shadow-md",
-      "transition": "transform active:scale-95"
-    },
-    "cards": {
-      "style": "Flat with 1px border (slate-200) or soft shadow-sm",
-      "hover": "translate-y-[-2px] transition-transform duration-200"
-    },
-    "inputs": {
-      "style": "h-12 (Touch Optimized) bg-white border-slate-200 focus:ring-orange-500"
-    },
-    "modals": {
-      "style": "Rounded-xl, Backdrop blur-sm"
-    }
-  },
-  "visual_enhancers": {
-    "shadows": "Soft, diffuse shadows (shadow-orange-500/10)",
-    "borders": "1px solid slate-200",
-    "glassmorphism": "Use sparingly on sticky headers (bg-white/80 backdrop-blur-md)",
-    "textures": "Subtle noise on auth pages or empty states"
-  },
-  "image_assets": {
-    "logo_placeholder": "https://via.placeholder.com/150?text=FoodFlow",
-    "categories": {
-      "burgers": "https://images.unsplash.com/photo-1760533535707-3450990d41ff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwyfHxkZWxpY2lvdXMlMjBnb3VybWV0JTIwYnVyZ2VyJTIwb24lMjB3b29kZW4lMjBwbGF0ZXxlbnwwfHx8fDE3NzMwMzEzNzZ8MA&ixlib=rb-4.1.0&q=85",
-      "pizza": "https://images.unsplash.com/photo-1761515397046-44035db91504?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxkZWxpY2lvdXMlMjBnb3VybWV0JTIwYnVyZ2VyJTIwb24lMjB3b29kZW4lMjBwbGF0ZXxlbnwwfHx8fDE3NzMwMzEzNzZ8MA&ixlib=rb-4.1.0&q=85",
-      "salads": "https://images.pexels.com/photos/35290619/pexels-photo-35290619.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-      "coffee": "https://images.unsplash.com/photo-1705672763732-538d9a515ec1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHw0fHxsYXR0ZSUyMGFydCUyMGNvZmZlZSUyMGN1cHxlbnwwfHx8fDE3NzMwMzEzNzh8MA&ixlib=rb-4.1.0&q=85",
-      "sushi": "https://images.unsplash.com/photo-1770164520620-a5612325635b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxzdXNoaSUyMHBsYXR0ZXIlMjBwcmVzZW50YXRpb258ZW58MHx8fHwxNzczMDMxMzc5fDA&ixlib=rb-4.1.0&q=85",
-      "pasta": "https://images.unsplash.com/photo-1765100778802-f684a4b7fd20?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHw0fHxnb3VybWV0JTIwcGFzdGElMjBkaXNofGVufDB8fHx8MTc3MzAzMTM4MHww&ixlib=rb-4.1.0&q=85"
-    },
-    "people": {
-      "chef": "https://images.unsplash.com/photo-1767785990437-dfe1fe516fe8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHwzfHxjaGVmJTIwcGxhdGluZyUyMGZvb2QlMjBpbiUyMGNvbW1lcmNpYWwlMjBraXRjaGVufGVufDB8fHx8MTc3MzAzMTM4MXww&ixlib=rb-4.1.0&q=85",
-      "manager": "https://images.unsplash.com/photo-1649151139875-ae8ea07082e2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxmcmllbmRseSUyMHdhaXRlciUyMGhvbGRpbmclMjB0YWJsZXR8ZW58MHx8fHwxNzczMDMxMzgyfDA&ixlib=rb-4.1.0&q=85"
-    },
-    "environment": {
-      "restaurant": "https://images.unsplash.com/photo-1744168222850-85b5e5e9aa24?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjByZXN0YXVyYW50JTIwaW50ZXJpb3IlMjBidXN5fGVufDB8fHx8MTc3MzAzMTM4M3ww&ixlib=rb-4.1.0&q=85"
-    }
-  },
-  "instructions_to_main_agent": [
-    "INSTALL_DEPENDENCIES: yarn add lucide-react @radix-ui/react-icons recharts framer-motion clsx tailwind-merge date-fns react-day-picker",
-    "SETUP_THEME: Update tailwind.config.js to use the Orange primary color palette defined in colors section.",
-    "LAYOUT: Create two distinct layouts - 'AdminLayout' (Sidebar) and 'POSLayout' (Full screen, hidden nav).",
-    "POS_UI: Ensure all clickable elements in POS view have min-h-[48px] for touch accessibility.",
-    "NAVIGATION: POS navigation should be category based tabs or a side rail.",
-    "MOCK_DATA: Populate the Menu Grid with the provided food images and prices.",
-    "CHARTS: Use Recharts for the Admin Dashboard (Revenue, Orders per day).",
-    "DARK_MODE: Implement a 'Night Shift' toggle for low-light restaurant environments (Dark grey background, Orange accents)."
-  ],
   "universal_guidelines": [
-    "Do NOT use default 'blue' for primary actions. Use Orange-500.",
-    "Do NOT use 'Inter' for Headings. Use 'Manrope'.",
-    "Always add hover effects: brightness-95 or translate-y-[-2px].",
-    "Use 'sonner' for all toast notifications.",
-    "Ensure high contrast for text on orange backgrounds (use white text on orange-500)."
+    "Do NOT use default blue or generic black-on-white SaaS chrome.",
+    "Do NOT use Inter for headings. Use Fraunces.",
+    "Primary actions are ink. Accents are saffron. Kitchen heat is terracotta.",
+    "Use sonner for toasts.",
+    "Night Shift remaps surfaces for low-light service."
   ]
 }

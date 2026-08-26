@@ -39,14 +39,14 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6" data-testid="admin-dashboard">
-      <h1 className="font-heading text-2xl font-bold text-slate-900">Platform Dashboard</h1>
+      <h1 className="font-display text-2xl font-semibold text-ink">Platform Dashboard</h1>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -59,8 +59,8 @@ export default function AdminDashboard() {
                   {stats?.total_restaurants || 0}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Store className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-navy/10 rounded-xl flex items-center justify-center">
+                <Store className="w-6 h-6 text-navy" />
               </div>
             </div>
           </CardContent>
@@ -145,8 +145,8 @@ export default function AdminDashboard() {
                   <AreaChart data={analytics.orders_by_day}>
                     <defs>
                       <linearGradient id="colorOrdersAdmin" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#1B4F72" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#1B4F72" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
                     <Area
                       type="monotone"
                       dataKey="orders"
-                      stroke="#3B82F6"
+                      stroke="#1B4F72"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#colorOrdersAdmin)"

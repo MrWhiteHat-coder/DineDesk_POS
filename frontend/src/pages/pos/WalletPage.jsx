@@ -63,21 +63,21 @@ export default function WalletPage() {
   return (
     <div data-testid="wallet-page">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <h1 className="font-heading text-xl font-bold text-slate-900">Wallet & Reconciliation</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">Wallet & Reconciliation</h1>
         <div className="flex items-center gap-2 flex-wrap">
           {PERIODS.map((p) => (
             <button
               key={p.value}
               onClick={() => handlePeriodChange(p.value)}
               className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
-                period === p.value && !selectedDate ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                period === p.value && !selectedDate ? 'bg-ink text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
               data-testid={`period-${p.value}`}
             >
               {p.label}
             </button>
           ))}
-          <div className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 ${selectedDate ? 'bg-black border-black' : 'bg-white border-slate-200'}`}>
+          <div className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 ${selectedDate ? 'bg-ink border-ink' : 'bg-white border-slate-200'}`}>
             <CalendarDays className={`w-4 h-4 ${selectedDate ? 'text-white' : 'text-slate-500'}`} />
             <Input
               type="date"

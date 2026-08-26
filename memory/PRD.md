@@ -1,4 +1,4 @@
-# OrderNest - Restaurant POS SaaS Platform
+# DineDesk - Restaurant POS SaaS Platform
 
 ## Original Problem Statement
 Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
@@ -13,7 +13,7 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
 - **Architecture:** Multi-tenant SaaS, Monolithic Backend
 
 ## Theme
-- **Current:** Clean White + Black theme (white backgrounds, black buttons, grayscale accents)
+- **Current:** DineDesk hospitality system — ink navy sidebar, linen page surfaces, saffron accents, Fraunces display type, Plus Jakarta Sans UI. Night Shift available for service floors.
 
 ## What's Been Implemented
 - Full authentication system (JWT) with admin, owner, manager, cashier, captain, chef roles

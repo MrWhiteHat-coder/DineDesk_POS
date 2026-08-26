@@ -87,21 +87,21 @@ export default function PurchaseOrdersPage() {
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
     <div data-testid="purchase-orders-page">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-heading text-xl font-bold text-slate-900">Purchase Orders</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">Purchase Orders</h1>
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
             {['', 'ordered', 'received', 'cancelled'].map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+              <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? 'bg-ink text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
                 {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
               </button>
             ))}
           </div>
-          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm" data-testid="create-po-btn">
+          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-ink hover:bg-ink-soft text-sm" data-testid="create-po-btn">
             <Plus className="w-4 h-4 mr-1.5" /> New Order
           </Button>
         </div>
@@ -202,7 +202,7 @@ export default function PurchaseOrdersPage() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowModal(false)} className="rounded-lg">Cancel</Button>
-            <Button onClick={handleCreate} className="rounded-lg bg-black hover:bg-gray-800" data-testid="confirm-po-btn">Create Order</Button>
+            <Button onClick={handleCreate} className="rounded-lg bg-ink hover:bg-ink-soft" data-testid="confirm-po-btn">Create Order</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
