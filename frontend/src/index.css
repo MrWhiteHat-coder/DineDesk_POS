@@ -17,58 +17,36 @@ code {
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 0 0% 9%;
+        /* DineDesk theme — Yellow primary, Green accent */
+        --background: 48 100% 96%;            /* warm off-white */
+        --foreground: 30 14% 12%;             /* deep brown for text */
         --card: 0 0% 100%;
-        --card-foreground: 0 0% 9%;
+        --card-foreground: 30 14% 12%;
         --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 9%;
-        --primary: 0 0% 0%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 0 0% 96%;
-        --secondary-foreground: 0 0% 9%;
-        --muted: 0 0% 96%;
-        --muted-foreground: 0 0% 45%;
-        --accent: 0 0% 96%;
-        --accent-foreground: 0 0% 9%;
+        --popover-foreground: 30 14% 12%;
+        --primary: 50 100% 50%;               /* #FFD600 yellow */
+        --primary-foreground: 30 14% 12%;
+        --secondary: 142 71% 45%;             /* #22C55E green */
+        --secondary-foreground: 0 0% 100%;
+        --muted: 48 30% 92%;
+        --muted-foreground: 30 8% 40%;
+        --accent: 142 71% 45%;                /* green accent */
+        --accent-foreground: 0 0% 100%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
-        --border: 0 0% 90%;
-        --input: 0 0% 90%;
-        --ring: 0 0% 0%;
-        --chart-1: 0 0% 15%;
-        --chart-2: 0 0% 35%;
-        --chart-3: 0 0% 55%;
-        --chart-4: 0 0% 75%;
-        --chart-5: 0 0% 85%;
-        --radius: 0.5rem;
-    }
-
-    .dark {
-        --background: 0 0% 4%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 6%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 6%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 100%;
-        --primary-foreground: 0 0% 0%;
-        --secondary: 0 0% 15%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 15%;
-        --muted-foreground: 0 0% 64%;
-        --accent: 0 0% 15%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62% 30%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 15%;
-        --input: 0 0% 15%;
-        --ring: 0 0% 83%;
-        --chart-1: 0 0% 85%;
-        --chart-2: 0 0% 65%;
-        --chart-3: 0 0% 45%;
-        --chart-4: 0 0% 35%;
-        --chart-5: 0 0% 25%;
+        --success: 142 71% 45%;
+        --success-foreground: 0 0% 100%;
+        --warning: 38 92% 50%;
+        --warning-foreground: 30 14% 12%;
+        --border: 48 20% 85%;
+        --input: 48 20% 88%;
+        --ring: 50 100% 50%;
+        --chart-1: 50 100% 50%;
+        --chart-2: 142 71% 45%;
+        --chart-3: 30 14% 25%;
+        --chart-4: 38 92% 55%;
+        --chart-5: 142 50% 65%;
+        --radius: 0.65rem;
     }
 }
 
@@ -140,25 +118,25 @@ code {
     background: #a3a3a3;
 }
 
-/* POS specific utilities */
+/* POS specific utilities — yellow/green theme */
 .pos-card {
-    @apply bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200;
+    @apply bg-white rounded-xl border border-yellow-200/60 shadow-sm hover:shadow-lg transition-all duration-200;
 }
 
 .pos-btn {
-    @apply min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all duration-200 active:scale-95;
+    @apply min-h-[48px] px-4 py-3 rounded-xl font-semibold transition-all duration-200 active:scale-95;
 }
 
 .pos-btn-primary {
-    @apply pos-btn bg-black text-white hover:bg-gray-800;
+    @apply pos-btn bg-yellow-400 text-neutral-900 hover:bg-yellow-300 shadow-md hover:shadow-lg;
 }
 
 .pos-btn-secondary {
-    @apply pos-btn bg-gray-50 text-gray-800 hover:bg-gray-100;
+    @apply pos-btn bg-green-50 text-green-700 hover:bg-green-100 border border-green-200;
 }
 
 .pos-input {
-    @apply h-12 px-4 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-black outline-none transition-all;
+    @apply h-12 px-4 bg-white border border-yellow-200/70 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition-all;
 }
 
 /* Hover animations */
@@ -170,12 +148,12 @@ code {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 [data-testid*="menu-item-card"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px -5px rgba(0,0,0,0.08);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px -8px rgba(255, 214, 0, 0.5);
 }
 
 nav a, nav button {
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 button:active:not(:disabled) {
