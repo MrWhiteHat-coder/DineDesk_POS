@@ -266,7 +266,7 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="w-32 bg-slate-200 rounded-full h-2">
-                          <div className="bg-yellow-400 h-2 rounded-full" style={{ width: `${(item.count / analytics.top_items[0].count) * 100}%` }} />
+                          <div className="bg-black h-2 rounded-full" style={{ width: `${(item.count / analytics.top_items[0].count) * 100}%` }} />
                         </div>
                         <span className="font-numbers font-semibold text-slate-600 w-16 text-right">{item.count} sold</span>
                       </div>

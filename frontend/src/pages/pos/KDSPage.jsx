@@ -73,7 +73,7 @@ export default function KDSPage() {
             { key: 'kitchen', label: 'In Kitchen' },
             { key: 'delayed', label: 'Delayed' },
           ].map(f => (
-            <button key={f.key} onClick={() => setFilter(f.key)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f.key ? 'bg-yellow-400 text-neutral-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`} data-testid={`kds-filter-${f.key}`}>
+            <button key={f.key} onClick={() => setFilter(f.key)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f.key ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`} data-testid={`kds-filter-${f.key}`}>
               {f.label}
             </button>
           ))}

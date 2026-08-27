@@ -146,9 +146,9 @@ export default function QuickPOSPage() {
             <h1 className="font-bold text-lg">Quick POS</h1>
           </div>
           <div className="flex gap-1.5 overflow-x-auto flex-1 pb-1 sm:pb-0">
-            <button onClick={() => setSelectedCat(null)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${!selectedCat ? 'bg-yellow-400 text-neutral-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>All</button>
+            <button onClick={() => setSelectedCat(null)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${!selectedCat ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>All</button>
             {categories.map(c => (
-              <button key={c.id} onClick={() => setSelectedCat(c.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${selectedCat === c.id ? 'bg-yellow-400 text-neutral-900' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>{c.name}</button>
+              <button key={c.id} onClick={() => setSelectedCat(c.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${selectedCat === c.id ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>{c.name}</button>
             ))}
           </div>
           <div className="relative flex-shrink-0">
@@ -168,7 +168,7 @@ export default function QuickPOSPage() {
                 <p className="text-[11px] font-semibold text-gray-900 leading-tight truncate">{item.name}</p>
                 <p className="text-[11px] font-bold text-gray-700">{'\u20B9'}{item.price.toFixed(0)}</p>
                 {inCart && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-yellow-400 text-neutral-900 rounded-full text-[10px] font-bold flex items-center justify-center">{inCart.qty}</span>
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black text-white rounded-full text-[10px] font-bold flex items-center justify-center">{inCart.qty}</span>
                 )}
               </button>
             );
@@ -181,7 +181,7 @@ export default function QuickPOSPage() {
         {/* Order Type Toggle */}
         <div className="p-2.5 border-b border-gray-100 flex gap-1.5">
           {['takeaway', 'dine_in'].map(t => (
-            <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${orderType === t ? 'bg-yellow-400 text-neutral-900' : 'bg-gray-50 text-gray-600'}`}>
+            <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${orderType === t ? 'bg-black text-white' : 'bg-gray-50 text-gray-600'}`}>
               {t === 'takeaway' ? 'Takeaway' : 'Dine-in'}
             </button>
           ))}
@@ -251,13 +251,13 @@ export default function QuickPOSPage() {
               <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-email" />
             </div>
             <div className="grid grid-cols-3 gap-1.5">
-              <button onClick={() => quickPay('cash')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-yellow-400 text-neutral-900 hover:bg-yellow-300 transition-colors disabled:opacity-50" data-testid="quick-pay-cash">
+              <button onClick={() => quickPay('cash')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-cash">
                 <Banknote className="w-4 h-4" />Cash
               </button>
-              <button onClick={() => quickPay('card')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-yellow-400 text-neutral-900 hover:bg-yellow-300 transition-colors disabled:opacity-50" data-testid="quick-pay-card">
+              <button onClick={() => quickPay('card')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-card">
                 <CreditCard className="w-4 h-4" />Card
               </button>
-              <button onClick={() => quickPay('upi')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-yellow-400 text-neutral-900 hover:bg-yellow-300 transition-colors disabled:opacity-50" data-testid="quick-pay-upi">
+              <button onClick={() => quickPay('upi')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-upi">
                 <Smartphone className="w-4 h-4" />UPI
               </button>
             </div>
@@ -303,7 +303,7 @@ export default function QuickPOSPage() {
               <p className="text-center text-[9px] text-gray-400 mt-3">Thank you for dining with us!</p>
             </div>
           )}
-          <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-yellow-400 text-neutral-900 hover:bg-yellow-300 transition-colors mt-2" data-testid="print-receipt-btn">
+          <button onClick={handlePrint} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors mt-2" data-testid="print-receipt-btn">
             <Printer className="w-4 h-4" /> Print Receipt
           </button>
         </DialogContent>

@@ -57,7 +57,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row" data-testid="register-page">
       {/* LEFT */}
-      <div className="relative lg:w-[60%] bg-yellow-400 text-neutral-900 p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
+      <div className="relative lg:w-[60%] bg-black text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/[0.03] rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/[0.03] rounded-full translate-y-1/3 -translate-x-1/4" />
         <div className="relative z-10 max-w-xl mx-auto lg:mx-0">
@@ -94,7 +94,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-sm">
           {step === 'check-email' ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8 text-center">
-              <div className="w-14 h-14 rounded-full bg-yellow-400 flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-white" />
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">Check your email</h2>
@@ -112,7 +112,7 @@ export default function RegisterPage() {
 
               <Link
                 to="/login"
-                className="w-full h-11 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 Go to Sign In <ArrowRight className="w-4 h-4" />
               </Link>
@@ -164,7 +164,7 @@ export default function RegisterPage() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full h-11 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-1"
+                  className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-1"
                   disabled={loading}
                 >
                   {loading ? (

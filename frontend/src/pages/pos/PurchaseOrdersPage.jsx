@@ -96,12 +96,12 @@ export default function PurchaseOrdersPage() {
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
             {['', 'ordered', 'received', 'cancelled'].map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? 'bg-yellow-400 text-neutral-900' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+              <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
                 {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
               </button>
             ))}
           </div>
-          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-sm" data-testid="create-po-btn">
+          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm" data-testid="create-po-btn">
             <Plus className="w-4 h-4 mr-1.5" /> New Order
           </Button>
         </div>
@@ -202,7 +202,7 @@ export default function PurchaseOrdersPage() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowModal(false)} className="rounded-lg">Cancel</Button>
-            <Button onClick={handleCreate} className="rounded-lg bg-yellow-400 hover:bg-yellow-300" data-testid="confirm-po-btn">Create Order</Button>
+            <Button onClick={handleCreate} className="rounded-lg bg-black hover:bg-gray-800" data-testid="confirm-po-btn">Create Order</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

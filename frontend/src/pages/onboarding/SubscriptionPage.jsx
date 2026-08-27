@@ -70,7 +70,7 @@ export default function SubscriptionPage() {
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-yellow-400 rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-black rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
             <UtensilsCrossed className="w-7 h-7 text-white" />
           </div>
           <h1 className="font-heading text-2xl font-bold text-slate-900 mb-2">
@@ -113,7 +113,7 @@ export default function SubscriptionPage() {
             <Button
               onClick={handleSubscribe}
               disabled={loading}
-              className="w-full h-14 bg-yellow-400 hover:bg-yellow-300 text-white font-semibold text-lg"
+              className="w-full h-14 bg-black hover:bg-gray-800 text-white font-semibold text-lg"
               data-testid="subscribe-btn"
             >
               {loading ? (

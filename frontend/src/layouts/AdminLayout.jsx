@@ -38,7 +38,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
       <aside
-        className={`bg-neutral-900 flex flex-col transition-all duration-300 ${
+        className={`bg-slate-900 flex flex-col transition-all duration-300 ${
           collapsed ? 'w-20' : 'w-64'
         }`}
       >
@@ -46,7 +46,7 @@ export default function AdminLayout() {
         <div className="h-16 flex items-center justify-between px-4 border-b border-black">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <span className="font-heading font-bold text-white">Admin Panel</span>
@@ -56,7 +56,7 @@ export default function AdminLayout() {
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-slate-400 hover:text-white hover:bg-yellow-400"
+            className="text-slate-400 hover:text-white hover:bg-black"
             data-testid="admin-sidebar-toggle"
           >
             {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -73,8 +73,8 @@ export default function AdminLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-3 mb-1 rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-yellow-400 text-neutral-900'
-                    : 'text-slate-400 hover:bg-yellow-400 hover:text-white'
+                    ? 'bg-black text-white'
+                    : 'text-slate-400 hover:bg-black hover:text-white'
                 }`
               }
               data-testid={`admin-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}

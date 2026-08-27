@@ -103,7 +103,7 @@ export default function BranchesPage() {
     <div data-testid="branches-page">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-heading text-xl font-bold text-slate-900">Multi-Branch Management</h1>
-        <Button onClick={() => openModal()} className="h-9 px-3 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-sm" data-testid="add-branch-btn">
+        <Button onClick={() => openModal()} className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm" data-testid="add-branch-btn">
           <Plus className="w-4 h-4 mr-1.5" /> Add Branch
         </Button>
       </div>
@@ -195,7 +195,7 @@ export default function BranchesPage() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowModal(false)} className="rounded-lg">Cancel</Button>
-            <Button onClick={handleSave} className="rounded-lg bg-yellow-400 hover:bg-yellow-300" data-testid="save-branch-btn">
+            <Button onClick={handleSave} className="rounded-lg bg-black hover:bg-gray-800" data-testid="save-branch-btn">
               {editBranch ? 'Update' : 'Create'} Branch
             </Button>
           </DialogFooter>
@@ -234,7 +234,7 @@ export default function BranchesPage() {
               <p className="text-[11px] text-amber-600 bg-amber-50 p-2 rounded-lg">Save these credentials securely. The password cannot be recovered later.</p>
             </div>
           )}
-          <Button onClick={() => setShowCredentials(false)} className="w-full rounded-lg bg-yellow-400 hover:bg-yellow-300" data-testid="close-credentials-btn">
+          <Button onClick={() => setShowCredentials(false)} className="w-full rounded-lg bg-black hover:bg-gray-800" data-testid="close-credentials-btn">
             Done
           </Button>
         </DialogContent>
