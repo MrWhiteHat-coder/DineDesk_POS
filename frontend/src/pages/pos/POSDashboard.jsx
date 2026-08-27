@@ -549,7 +549,7 @@ export default function POSDashboard() {
 
       {/* Receipt Print Modal */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent className="rounded-2xl max-w-xs" data-testid="dashboard-receipt-modal">
+        <DialogContent className="rounded-2xl max-w-xs bg-white" data-testid="dashboard-receipt-modal">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Printer className="w-5 h-5" /> Bill / Receipt
@@ -596,7 +596,7 @@ export default function POSDashboard() {
           )}
           <button
             onClick={handlePrintReceipt}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors mt-2"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-800 text-sm font-semibold hover:bg-gray-50 transition-colors mt-2"
             data-testid="dashboard-print-receipt-btn"
           >
             <Printer className="w-4 h-4" /> Print Receipt

@@ -362,7 +362,7 @@ export default function POSMain() {
 
       {/* Receipt Modal */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent className="rounded-2xl max-w-xs" data-testid="receipt-modal">
+        <DialogContent className="rounded-2xl max-w-xs bg-white" data-testid="receipt-modal">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><Check className="w-5 h-5 text-green-500" /> Order Complete</DialogTitle></DialogHeader>
           {receiptData && (
             <div ref={receiptRef}>
@@ -393,7 +393,7 @@ export default function POSMain() {
               <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>
             </div>
           )}
-          <button onClick={handlePrintReceipt} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors mt-2" data-testid="print-receipt-btn"><Printer className="w-4 h-4" /> Print Receipt</button>
+          <button onClick={handlePrintReceipt} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-800 text-sm font-semibold hover:bg-gray-50 transition-colors mt-2" data-testid="print-receipt-btn"><Printer className="w-4 h-4" /> Print Receipt</button>
         </DialogContent>
       </Dialog>
     </div>
