@@ -230,7 +230,7 @@ export default function POSLayout() {
             to="/pos/staff"
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-[13px] font-medium ${
-                isActive ? 'bg-black text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                isActive ? 'bg-yellow-400 text-neutral-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               }`
             }
             data-testid="nav-staff"
@@ -248,7 +248,7 @@ export default function POSLayout() {
           to="/pos/settings"
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-[13px] font-medium ${
-              isActive ? 'bg-black text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              isActive ? 'bg-yellow-400 text-neutral-900 shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
             }`
           }
           data-testid="nav-settings"
@@ -290,7 +290,7 @@ export default function POSLayout() {
         <SheetContent side="left" className="w-[260px] p-0 flex flex-col" data-testid="mobile-sidebar">
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <div className="h-[68px] flex items-center gap-3 px-5 border-b border-gray-100">
-            <div className="w-9 h-9 bg-black rounded-xl flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0">
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -336,7 +336,7 @@ export default function POSLayout() {
             <div className="w-px h-6 bg-gray-200 hidden md:block"></div>
             {user && (
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-xs">{user.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <span className="hidden md:block text-sm font-medium text-gray-700">{user.name}</span>
@@ -360,7 +360,7 @@ export default function POSLayout() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowDayOpenModal(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleOpenDay} disabled={loading} className="bg-black hover:bg-gray-800 rounded-xl text-white" data-testid="confirm-open-day-btn">
+            <Button onClick={handleOpenDay} disabled={loading} className="bg-yellow-400 hover:bg-yellow-300 rounded-xl text-white" data-testid="confirm-open-day-btn">
               {loading ? 'Opening...' : 'Open Day'}
             </Button>
           </DialogFooter>

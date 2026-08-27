@@ -279,7 +279,7 @@ export default function MenuManagement() {
           </Button>
           <Button
             onClick={() => openItemModal()}
-            className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm"
+            className="h-9 px-3 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-sm"
             data-testid="add-item-btn"
           >
             <Plus className="w-4 h-4 mr-1.5" />
@@ -293,7 +293,7 @@ export default function MenuManagement() {
         <button
           onClick={() => setSelectedCategory(null)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-            !selectedCategory ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            !selectedCategory ? 'bg-yellow-400 text-neutral-900' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
           }`}
         >
           All Items
@@ -308,7 +308,7 @@ export default function MenuManagement() {
             <button
               onClick={() => setSelectedCategory(cat.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                selectedCategory === cat.id ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                selectedCategory === cat.id ? 'bg-yellow-400 text-neutral-900' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
               {cat.name}
@@ -401,7 +401,7 @@ export default function MenuManagement() {
         <Card className="p-12 text-center rounded-2xl">
           <Image className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-400 mb-4">No menu items yet</p>
-          <Button onClick={() => openItemModal()} className="bg-black hover:bg-gray-800 rounded-xl">
+          <Button onClick={() => openItemModal()} className="bg-yellow-400 hover:bg-yellow-300 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>
@@ -443,7 +443,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleCreateCategory}
               disabled={categoryLoading}
-              className="bg-black hover:bg-gray-800 rounded-xl"
+              className="bg-yellow-400 hover:bg-yellow-300 rounded-xl"
               data-testid="save-category-btn"
             >
               {categoryLoading ? 'Creating...' : 'Create Category'}
@@ -690,7 +690,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleSaveItem}
               disabled={itemLoading}
-              className="bg-black hover:bg-gray-800 rounded-xl"
+              className="bg-yellow-400 hover:bg-yellow-300 rounded-xl"
               data-testid="save-item-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}

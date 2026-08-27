@@ -39,7 +39,7 @@ const STATUS_STYLES = {
   cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled' },
 };
 
-const TABLE_COLORS = ['bg-black', 'bg-gray-700', 'bg-gray-600', 'bg-gray-800', 'bg-gray-500', 'bg-gray-900'];
+const TABLE_COLORS = ['bg-yellow-400', 'bg-yellow-300', 'bg-yellow-200', 'bg-green-100', 'bg-blue-100', 'bg-purple-100'];
 
 function getTableColor(tableNum) {
   if (!tableNum) return 'bg-slate-500';
@@ -191,7 +191,7 @@ export default function POSDashboard() {
 
       {/* === ROW 1: Stats Cards === */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-black border-black text-white shadow-lg shadow-black/10" data-testid="new-orders-card">
+        <Card className="bg-yellow-400 border-yellow-300 text-white shadow-lg shadow-black/10" data-testid="new-orders-card">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-gray-300">New Orders</p>
@@ -232,7 +232,7 @@ export default function POSDashboard() {
 
         <button
           onClick={() => navigate('/pos/orders')}
-          className="bg-black hover:bg-gray-800 rounded-xl border-0 shadow-lg shadow-black/10 text-white font-bold flex items-center justify-center gap-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="bg-yellow-400 hover:bg-yellow-300 rounded-xl border-0 shadow-lg shadow-black/10 text-white font-bold flex items-center justify-center gap-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
           data-testid="create-new-order-btn"
         >
           <Plus className="w-5 h-5" />
@@ -270,7 +270,7 @@ export default function POSDashboard() {
                   key={tab.key}
                   onClick={() => setOrderFilter(tab.key)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    orderFilter === tab.key ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    orderFilter === tab.key ? 'bg-yellow-400 text-neutral-900' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                   data-testid={`order-filter-${tab.key}`}
                 >
@@ -346,7 +346,7 @@ export default function POSDashboard() {
                       </div>
                       <button
                         onClick={() => handleViewReceipt(order)}
-                        className="flex items-center gap-1 bg-black hover:bg-gray-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                        className="flex items-center gap-1 bg-yellow-400 hover:bg-yellow-300 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
                         data-testid={`pay-now-${order.id}`}
                       >
                         Pay Now <ArrowRight className="w-3 h-3" />
@@ -534,7 +534,7 @@ export default function POSDashboard() {
                     </div>
                     <button
                       onClick={() => handleViewReceipt(order)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-semibold hover:bg-gray-800 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-400 text-neutral-900 hover:bg-yellow-300 transition-colors"
                       data-testid={`view-receipt-${order.id}`}
                     >
                       <Printer className="w-3.5 h-3.5" /> Print Bill
@@ -596,7 +596,7 @@ export default function POSDashboard() {
           )}
           <button
             onClick={handlePrintReceipt}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors mt-2"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-yellow-400 text-neutral-900 hover:bg-yellow-300 transition-colors mt-2"
             data-testid="dashboard-print-receipt-btn"
           >
             <Printer className="w-4 h-4" /> Print Receipt

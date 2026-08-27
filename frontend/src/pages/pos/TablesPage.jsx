@@ -98,7 +98,7 @@ export default function TablesPage() {
         <h1 className="font-heading text-2xl font-bold text-slate-900">Tables</h1>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-black hover:bg-gray-800"
+          className="bg-yellow-400 hover:bg-yellow-300"
           data-testid="add-table-btn"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -196,7 +196,7 @@ export default function TablesPage() {
       ) : (
         <Card className="p-12 text-center">
           <p className="text-slate-400 mb-4">No tables configured yet</p>
-          <Button onClick={() => setShowAddModal(true)} className="bg-black hover:bg-gray-800">
+          <Button onClick={() => setShowAddModal(true)} className="bg-yellow-400 hover:bg-yellow-300">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Table
           </Button>
@@ -238,7 +238,7 @@ export default function TablesPage() {
             <Button
               onClick={handleAddTable}
               disabled={addLoading}
-              className="bg-black hover:bg-gray-800"
+              className="bg-yellow-400 hover:bg-yellow-300"
               data-testid="save-table-btn"
             >
               {addLoading ? 'Adding...' : 'Add Table'}
