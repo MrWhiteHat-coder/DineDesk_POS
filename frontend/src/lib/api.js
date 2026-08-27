@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_URL ? `${API_URL}/api` : '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -35,6 +35,8 @@ export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   getMe: () => api.get('/auth/me'),
   getPermissions: () => api.get('/auth/permissions'),
+  verifyEmail: (token) => api.post('/auth/verify-email', { token }),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email }),
 };
 
 // Restaurant APIs
@@ -166,6 +168,51 @@ export const dayReportAPI = {
   getPdf: (sessionId) => api.get(`/day-session/${sessionId}/report-pdf`, { responseType: 'blob' }),
   getPdfUrl: (sessionId) => `${API_URL}/api/day-session/${sessionId}/report-pdf`,
   getAiInsights: (sessionId) => api.get(`/day-session/${sessionId}/ai-insights`),
+};
+
+// Customer CRM APIs
+export const customerCRM_API = {
+  getAll: (params) => api.get('/customers', { params }),
+  get: (id) => api.get(`/customers/${id}`),
+  create: (data) => api.post('/customers', data),
+  update: (id, data) => api.put(`/customers/${id}`, data),
+  getOrders: (id) => api.get(`/customers/${id}/orders`),
+};
+
+// Trident Coins APIs
+export const coinsAPI = {
+  earn: (data) => api.post('/coins/earn', data),
+  redeem: (data) => api.post('/coins/redeem', data),
+  topup: (data) => api.post('/coins/topup', data),
+  donate: (data) => api.post('/coins/donate', data),
+  getTransactions: (params) => api.get('/coins/transactions', { params }),
+};
+
+// Gift Card APIs
+export const giftCardAPI = {
+  purchase: (data) => api.post('/giftcards/purchase', data),
+  redeem: (data) => api.post('/giftcards/redeem', data),
+  get: (code) => api.get(`/giftcards/${code}`),
+  getAll: () => api.get('/giftcards'),
+};
+
+// Store APIs
+export const storeAPI = {
+  getAddons: () => api.get('/store/addons'),
+  getSubscription: () => api.get('/store/subscription'),
+  subscribe: (addonId, billing) => api.post(`/store/subscribe?addon_id=${addonId}&billing=${billing}`),
+  unsubscribe: (addonId) => api.post(`/store/unsubscribe?addon_id=${addonId}`),
+};
+
+// Seva APIs
+export const sevaAPI = {
+  getStats: () => api.get('/seva/stats'),
+};
+
+// Feedback APIs
+export const feedbackAPI = {
+  create: (data) => api.post('/feedback', data),
+  getAll: (params) => api.get('/feedback', { params }),
 };
 
 // Customer Lookup

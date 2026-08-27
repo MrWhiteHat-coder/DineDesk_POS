@@ -27,6 +27,10 @@ import {
   Truck,
   Menu,
   X,
+  Gift,
+  Coins,
+  Heart,
+  Store,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -55,6 +59,10 @@ const navItems = [
   { to: '/pos/branches', icon: Building2, label: 'Branches', feature: 'branches' },
   { to: '/pos/purchase-orders', icon: Truck, label: 'Purchase Orders', feature: 'purchase_orders' },
   { to: '/pos/notifications', icon: Bell, label: 'Notifications', feature: 'notifications' },
+  { to: '/pos/customers', icon: Users, label: 'Customers', feature: 'staff' },
+  { to: '/pos/trident-coins', icon: Coins, label: 'Trident Coins', feature: 'wallet' },
+  { to: '/pos/gift-cards', icon: Gift, label: 'Gift Cards', feature: 'wallet' },
+  { to: '/pos/store', icon: Store, label: 'DineDesk Store', feature: 'settings' },
 ];
 
 const manageTableItems = [
@@ -156,7 +164,7 @@ export default function POSLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-[13px] font-medium ${
                   isActive
-                    ? 'bg-black text-white shadow-sm'
+                    ? 'bg-dd-blue text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`
               }
@@ -266,12 +274,12 @@ export default function POSLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-[240px] bg-white flex-col border-r border-gray-200 flex-shrink-0">
         <div className="h-[68px] flex items-center gap-3 px-5 border-b border-gray-100">
-          <div className="w-9 h-9 bg-black rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 bg-dd-blue rounded-xl flex items-center justify-center flex-shrink-0">
             <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
           <div>
            <h1 className="font-heading font-bold text-gray-900 text-base leading-tight">DineDesk</h1>
-              <p className="text-[10px] text-gray-400 leading-tight">Restaurant POS</p>
+              <p className="text-[10px] text-gray-400 leading-tight">by Trident Ventures</p>
             </div>
           </div>
           <SidebarNav />
