@@ -164,7 +164,7 @@ export default function POSLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 text-[13px] font-medium ${
                   isActive
-                    ? 'bg-dd-blue text-white shadow-sm'
+                    ? 'bg-black text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`
               }
@@ -274,7 +274,7 @@ export default function POSLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-[240px] bg-white flex-col border-r border-gray-200 flex-shrink-0">
         <div className="h-[68px] flex items-center gap-3 px-5 border-b border-gray-100">
-          <div className="w-9 h-9 bg-dd-blue rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 bg-black rounded-xl flex items-center justify-center flex-shrink-0">
             <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
           <div>
