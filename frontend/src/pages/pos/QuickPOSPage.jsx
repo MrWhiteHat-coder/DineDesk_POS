@@ -283,7 +283,7 @@ export default function QuickPOSPage() {
 
       {/* Payment Modal - Split Payment */}
       <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
-        <DialogContent className="rounded-2xl max-w-sm">
+        <DialogContent className="rounded-2xl max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-center font-heading">Payment</DialogTitle></DialogHeader>
           <div className="py-4 space-y-4">
             <div className="text-center">
@@ -378,9 +378,12 @@ export default function QuickPOSPage() {
                 </>
               )}
               {receiptData.order.change_amount > 0 && (
-                <div className="mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-center">
-                  <span className="font-semibold text-amber-700">💰 Change: ₹{receiptData.order.change_amount?.toFixed(2)}</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-[11px] mt-1"><span className="font-semibold text-gray-700">Amount Paid</span><span className="font-semibold text-gray-900">₹{(receiptData.order.total_amount + receiptData.order.change_amount).toFixed(2)}</span></div>
+                  <div className="mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-center">
+                    <span className="font-semibold text-amber-700">💰 Change: ₹{receiptData.order.change_amount?.toFixed(2)}</span>
+                  </div>
+                </>
               )}
               <p className="text-center text-[9px] text-gray-400 mt-3">Thank you for dining with us!</p>
             </div>

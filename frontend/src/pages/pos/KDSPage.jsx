@@ -3,6 +3,8 @@ import { kdsAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Clock, ChefHat, CheckCircle2, Utensils, RefreshCw, Play, Pause, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
+import { ChefRunning, ChefRelaxing } from '../../components/illustrations/ChefBot';
 
 const STATUS_CONFIG = {
   received: {
@@ -56,10 +58,17 @@ export default function KDSPage() {
     : filter === 'delayed' ? orders.filter(o => isDelayed(o.created_at))
     : orders;
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-gray-800 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="animate-fade-in" data-testid="kds-skeleton">
+      <div className="flex items-center justify-between mb-5"><Skeleton className="h-8 w-48" /><div className="flex gap-2"><Skeleton className="h-8 w-20 rounded-lg" /><Skeleton className="h-8 w-20 rounded-lg" /></div></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)}
+      </div>
+    </div>
+  );
 
   return (
-    <div data-testid="kds-page">
+    <div data-testid="kds-page" className="animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
@@ -85,10 +94,10 @@ export default function KDSPage() {
 
       {/* Orders Grid */}
       {filteredOrders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-          <CheckCircle2 className="w-16 h-16 mb-4" />
-          <p className="text-lg font-medium">All caught up!</p>
-          <p className="text-sm">No pending orders in the kitchen</p>
+        <div className="flex flex-col items-center justify-center h-64 text-slate-400 animate-fade-in">
+          <ChefRelaxing className="w-32 h-32 mb-3" />
+          <p className="text-lg font-heading font-bold text-slate-600">All caught up!</p>
+          <p className="text-sm text-slate-400 mt-1">No pending orders — time for chai! ☕</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

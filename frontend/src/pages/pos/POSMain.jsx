@@ -6,7 +6,9 @@ import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Skeleton } from '../../components/ui/skeleton';
 import { ScrollArea } from '../../components/ui/scroll-area';
+import { ChefShrugging, ChefWinking } from '../../components/illustrations/ChefBot';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
@@ -201,10 +203,20 @@ export default function POSMain() {
 
   const getCategoryCount = (catId) => menuItems.filter(i => i.category_id === catId).length;
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-gray-800 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return (
+    <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:h-[calc(100vh-7rem)] animate-fade-in">
+      <div className="flex-1">
+        <div className="flex gap-2 mb-4"><Skeleton className="h-9 w-16 rounded-lg" /><Skeleton className="h-9 w-20 rounded-lg" /><Skeleton className="h-9 w-24 rounded-lg" /></div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="aspect-[4/3] rounded-xl" />)}
+        </div>
+      </div>
+      <Skeleton className="w-full lg:w-[320px] h-96 rounded-xl flex-shrink-0" />
+    </div>
+  );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:h-[calc(100vh-7rem)]" data-testid="pos-main">
+    <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:h-[calc(100vh-7rem)] animate-fade-in" data-testid="pos-main">
       {/* Left: Menu Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:min-h-0">
         {/* Running Orders */}
@@ -249,7 +261,7 @@ export default function POSMain() {
                 const qty = getCartQuantity(item.id);
                 const imgSrc = getImageUrl(item.image_url) || FALLBACK_IMG;
                 return (
-                  <div key={item.id} className="bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5" data-testid={`menu-item-${item.id}`}>
+                  <div key={item.id} className="bg-white rounded-2xl overflow-hidden border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer" data-testid={`menu-item-${item.id}`}>
                     <div className="relative aspect-[4/3] bg-slate-100">
                       <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" onError={e => { e.target.src = FALLBACK_IMG; }} />
                       <span className={`absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${item.is_available ? 'bg-white text-green-700' : 'bg-white text-red-600'}`}>
@@ -276,7 +288,7 @@ export default function POSMain() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-400"><AlertCircle className="w-12 h-12 mb-4" /><p className="text-lg font-medium">No menu items found</p></div>
+            <div className="flex flex-col items-center justify-center h-64 text-slate-400 animate-fade-in"><ChefShrugging className="w-28 h-28 mb-3" /><p className="text-base font-heading font-bold text-slate-600">No menu items found</p><p className="text-sm text-slate-400 mt-1">Add dishes to the menu first</p></div>
           )}
         </div>
       </div>
@@ -398,7 +410,7 @@ export default function POSMain() {
 
       {/* Payment Modal - Split Payment */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="rounded-2xl max-w-sm">
+        <DialogContent className="rounded-2xl max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-center font-heading">Payment</DialogTitle></DialogHeader>
           <div className="py-4 space-y-4">
             {/* Bill Total */}
@@ -516,6 +528,7 @@ export default function POSMain() {
               </div>
 
               {/* Payment Breakup */}
+              {/* Payment Breakup */}
               {receiptData.order.payment_splits && receiptData.order.payment_splits.length > 0 && (
                 <>
                   <hr className="border-dashed border-slate-300 my-1" />
@@ -531,9 +544,12 @@ export default function POSMain() {
                 </>
               )}
               {receiptData.order.change_amount > 0 && (
-                <div className="mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-center">
-                  <span className="font-semibold text-amber-700">💰 Change: ₹{receiptData.order.change_amount?.toFixed(2)}</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-[11px] mt-1"><span className="font-semibold text-slate-700">Amount Paid</span><span className="font-semibold text-slate-900">₹{(receiptData.order.total_amount + receiptData.order.change_amount).toFixed(2)}</span></div>
+                  <div className="mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-center">
+                    <span className="font-semibold text-amber-700">💰 Change: ₹{receiptData.order.change_amount?.toFixed(2)}</span>
+                  </div>
+                </>
               )}
 
               <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>

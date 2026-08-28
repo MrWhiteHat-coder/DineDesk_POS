@@ -3,6 +3,8 @@ import { tableAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
+import { ChefPresenting } from '../../components/illustrations/ChefBot';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import {
@@ -85,8 +87,12 @@ export default function TablesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex justify-between"><Skeleton className="h-8 w-32" /><Skeleton className="h-9 w-28 rounded-lg" /></div>
+        <div className="grid grid-cols-3 gap-4"><Skeleton className="h-20 rounded-xl" /><Skeleton className="h-20 rounded-xl" /><Skeleton className="h-20 rounded-xl" /></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
+        </div>
       </div>
     );
   }
@@ -151,7 +157,7 @@ export default function TablesPage() {
           {tables.map((table) => (
             <Card
               key={table.id}
-              className={`cursor-pointer transition-all hover:shadow-md border-2 ${statusColors[table.status]}`}
+              className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 ${statusColors[table.status]}`}
               data-testid={`table-${table.table_number}`}
             >
               <CardContent className="p-4 text-center">
@@ -194,9 +200,11 @@ export default function TablesPage() {
           ))}
         </div>
       ) : (
-        <Card className="p-12 text-center">
-          <p className="text-slate-400 mb-4">No tables configured yet</p>
-          <Button onClick={() => setShowAddModal(true)} className="bg-black hover:bg-gray-800">
+        <Card className="p-12 text-center animate-fade-in">
+          <ChefPresenting className="w-28 h-28 mx-auto mb-4" />
+          <p className="text-lg font-heading font-bold text-slate-600 mb-1">No tables yet</p>
+          <p className="text-sm text-slate-400 mb-4">Set up your tables to start taking dine-in orders</p>
+          <Button onClick={() => setShowAddModal(true)} className="bg-black hover:bg-gray-800 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Table
           </Button>

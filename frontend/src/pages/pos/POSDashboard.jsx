@@ -4,7 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
+import { Skeleton } from '../../components/ui/skeleton';
+import { ChefSleeping, ChefCelebrating } from '../../components/illustrations/ChefBot';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '../../components/ui/dialog';
@@ -170,32 +171,46 @@ export default function POSDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-gray-800 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-5 animate-fade-in" data-testid="pos-dashboard-skeleton">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-4"><Skeleton className="h-80 rounded-xl" /></div>
+          <div className="lg:col-span-4"><Skeleton className="h-80 rounded-xl" /></div>
+          <div className="lg:col-span-4 space-y-4"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5" data-testid="pos-dashboard">
+    <div className="space-y-5 animate-fade-in" data-testid="pos-dashboard">
       {/* Day Status Alert */}
       {!isDayOpen && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600" />
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 flex items-center gap-4 animate-fade-in">
+          <ChefSleeping className="w-20 h-20 flex-shrink-0" />
           <div>
-            <p className="font-medium text-amber-800">Day Not Open</p>
-            <p className="text-sm text-amber-600">Open the day to start taking orders</p>
+            <p className="font-heading font-bold text-amber-900 text-lg">Day Not Open</p>
+            <p className="text-sm text-amber-700 mt-0.5">Open the day to start taking orders. Chef is sleeping! 😴</p>
           </div>
         </div>
       )}
 
       {/* === ROW 1: Stats Cards === */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-black border-black text-white shadow-lg shadow-black/10" data-testid="new-orders-card">
+        <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-0 text-white shadow-lg hover-lift cursor-default" data-testid="new-orders-card">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-gray-300">New Orders</p>
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
                 <ClipboardList className="w-5 h-5 text-white" />
               </div>
             </div>
@@ -204,12 +219,12 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-gray-200" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
+        <Card className="bg-white border-gray-100 hover-lift cursor-pointer shadow-sm" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-gray-500">Total Orders</p>
-              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-gray-700" />
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-blue-600" />
               </div>
             </div>
             <p className="font-numbers text-3xl font-bold text-slate-900">{totalOrders}</p>
@@ -217,12 +232,12 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-gray-200" data-testid="waiting-list-card">
+        <Card className="bg-white border-gray-100 hover-lift cursor-default shadow-sm" data-testid="waiting-list-card">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-gray-500">Waiting List</p>
-              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
-                <Clock className="w-5 h-5 text-gray-600" />
+              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                <Clock className="w-5 h-5 text-amber-600" />
               </div>
             </div>
             <p className="font-numbers text-3xl font-bold text-slate-900">{waitingList}</p>
@@ -232,7 +247,7 @@ export default function POSDashboard() {
 
         <button
           onClick={() => navigate('/pos/orders')}
-          className="bg-black hover:bg-gray-800 rounded-xl border-0 shadow-lg shadow-black/10 text-white font-bold flex items-center justify-center gap-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="bg-gradient-to-br from-black to-gray-800 hover:from-gray-800 hover:to-gray-700 rounded-2xl border-0 shadow-lg text-white font-bold flex items-center justify-center gap-2.5 text-sm transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.97]"
           data-testid="create-new-order-btn"
         >
           <Plus className="w-5 h-5" />

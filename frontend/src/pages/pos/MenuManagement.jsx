@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { Skeleton } from '../../components/ui/skeleton';
+import { ChefPresenting } from '../../components/illustrations/ChefBot';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
@@ -256,14 +258,18 @@ export default function MenuManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex justify-between"><Skeleton className="h-8 w-40" /><div className="flex gap-2"><Skeleton className="h-9 w-32 rounded-lg" /><Skeleton className="h-9 w-24 rounded-lg" /></div></div>
+        <div className="flex gap-2"><Skeleton className="h-9 w-20 rounded-lg" /><Skeleton className="h-9 w-24 rounded-lg" /><Skeleton className="h-9 w-28 rounded-lg" /></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-56 rounded-xl" />)}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6" data-testid="menu-management">
+    <div className="space-y-6 animate-fade-in" data-testid="menu-management">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl font-bold text-slate-900">Menu Management</h1>
@@ -334,7 +340,7 @@ export default function MenuManagement() {
       {filteredItems.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {filteredItems.map((item) => (
-            <Card key={item.id} className="overflow-hidden rounded-xl border-slate-200 hover:shadow-md transition-shadow" data-testid={`menu-item-card-${item.id}`}>
+            <Card key={item.id} className="overflow-hidden rounded-2xl border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-200" data-testid={`menu-item-card-${item.id}`}>
               <div className="relative aspect-[4/3] bg-slate-100">
                 <img
                   src={getImageUrl(item.image_url) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'}
@@ -398,12 +404,13 @@ export default function MenuManagement() {
           ))}
         </div>
       ) : (
-        <Card className="p-12 text-center rounded-2xl">
-          <Image className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-400 mb-4">No menu items yet</p>
+        <Card className="p-12 text-center rounded-2xl animate-fade-in">
+          <ChefPresenting className="w-28 h-28 mx-auto mb-4" />
+          <p className="text-lg font-heading font-bold text-slate-600 mb-1">Your menu is empty</p>
+          <p className="text-sm text-slate-400 mb-4">Add dishes to start taking orders!</p>
           <Button onClick={() => openItemModal()} className="bg-black hover:bg-gray-800 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
-            Add Your First Item
+            Add Your First Dish
           </Button>
         </Card>
       )}
