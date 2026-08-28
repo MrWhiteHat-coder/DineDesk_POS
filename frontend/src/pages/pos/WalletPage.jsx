@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { walletAPI } from '../../lib/api';
 import { Input } from '../../components/ui/input';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   Banknote, CreditCard, Smartphone, TrendingUp, TrendingDown, ArrowUpDown, RefreshCw, CalendarDays, Wallet, CircleDollarSign,
 } from 'lucide-react';
@@ -49,8 +50,16 @@ export default function WalletPage() {
 
   if (loading || !summary) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <Skeleton className="h-8 w-56" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
+        </div>
+        <Skeleton className="h-64 rounded-xl" />
       </div>
     );
   }

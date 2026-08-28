@@ -3,6 +3,8 @@ import { inventoryAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Skeleton } from '../../components/ui/skeleton';
+import { ChefWorried } from '../../components/illustrations/ChefBot';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -135,8 +137,9 @@ export default function InventoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex justify-between"><Skeleton className="h-8 w-32" /><div className="flex gap-2"><Skeleton className="h-9 w-28 rounded-lg" /><Skeleton className="h-9 w-24 rounded-lg" /></div></div>
+        <Skeleton className="h-64 rounded-xl" />
       </div>
     );
   }
@@ -240,10 +243,11 @@ export default function InventoryPage() {
           </Table>
         </Card>
       ) : (
-        <Card className="p-12 text-center">
-          <Package className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-400 mb-4">No inventory items yet</p>
-          <Button onClick={() => openModal()} className="bg-black hover:bg-gray-800">
+        <Card className="p-12 text-center animate-fade-in">
+          <ChefWorried className="w-28 h-28 mx-auto mb-4" />
+          <p className="text-lg font-heading font-bold text-slate-600 mb-1">No inventory items</p>
+          <p className="text-sm text-slate-400 mb-4">Track raw materials and stock levels</p>
+          <Button onClick={() => openModal()} className="bg-black hover:bg-gray-800 rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>

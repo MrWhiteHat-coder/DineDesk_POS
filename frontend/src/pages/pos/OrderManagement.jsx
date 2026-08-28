@@ -3,6 +3,8 @@ import { orderAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Skeleton } from '../../components/ui/skeleton';
+import { ChefThumbsUp } from '../../components/illustrations/ChefBot';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -76,8 +78,11 @@ export default function OrderManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex justify-between"><Skeleton className="h-8 w-48" /><Skeleton className="h-9 w-24 rounded-lg" /></div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-56 rounded-xl" />)}
+        </div>
       </div>
     );
   }
@@ -125,8 +130,10 @@ export default function OrderManagement() {
               ))}
             </div>
           ) : (
-            <Card className="p-12 text-center">
-              <p className="text-slate-400">No orders in this category</p>
+            <Card className="p-12 text-center animate-fade-in">
+              <ChefThumbsUp className="w-28 h-28 mx-auto mb-3" />
+              <p className="text-lg font-heading font-bold text-slate-600 mb-1">No orders here</p>
+              <p className="text-sm text-slate-400">Orders will appear here when customers place them</p>
             </Card>
           )}
         </TabsContent>
