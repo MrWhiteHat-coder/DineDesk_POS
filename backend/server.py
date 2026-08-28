@@ -317,6 +317,8 @@ class OrderCreate(BaseModel):
     customer_phone: Optional[str] = None
     customer_email: Optional[str] = None
     payment_method: str = "pending"
+    payment_splits: Optional[List[PaymentSplit]] = None
+    change_amount: Optional[float] = 0
     discount_amount: float = 0
     platform: Optional[str] = None
 
@@ -326,8 +328,14 @@ class OrderAddItems(BaseModel):
 class OrderUpdate(BaseModel):
     status: str
 
+class PaymentSplit(BaseModel):
+    method: str  # cash, card, upi
+    amount: float
+
 class OrderPayment(BaseModel):
-    payment_method: str
+    payment_method: Optional[str] = None  # legacy single method
+    payment_splits: Optional[List[PaymentSplit]] = None  # split payments
+    change_amount: Optional[float] = 0  # change returned to customer
 
 class OrderResponse(BaseModel):
     id: str
@@ -349,6 +357,8 @@ class OrderResponse(BaseModel):
     platform: Optional[str] = None
     day_session_id: str
     created_at: str
+    payment_splits: Optional[List[Dict[str, Any]]] = None
+    change_amount: Optional[float] = 0
 
 # Day Session Models
 class DaySessionResponse(BaseModel):
@@ -1189,7 +1199,24 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
     await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
 
     if not is_pending_payment:
-        await record_wallet_transaction(user["restaurant_id"], "sale", total_amount, data.payment_method, order_id, session["id"])
+        # Handle split payments or single payment
+        payment_splits_data = []
+        change_amt = data.change_amount or 0
+        if data.payment_splits:
+            for split in data.payment_splits:
+                payment_splits_data.append({"method": split.method, "amount": split.amount})
+                await record_wallet_transaction(user["restaurant_id"], "sale", split.amount, split.method, order_id, session["id"])
+            # Update order with splits info
+            actual_method = "split" if len(data.payment_splits) > 1 else data.payment_splits[0].method
+            await db.orders.update_one(
+                {"id": order_id},
+                {"$set": {"payment_method": actual_method, "payment_splits": payment_splits_data, "change_amount": change_amt}}
+            )
+            order["payment_method"] = actual_method
+            order["payment_splits"] = payment_splits_data
+            order["change_amount"] = change_amt
+        else:
+            await record_wallet_transaction(user["restaurant_id"], "sale", total_amount, data.payment_method, order_id, session["id"])
         try:
             settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]})
             if not settings or settings.get("sms_enabled", True):
@@ -1306,9 +1333,37 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
     if order["payment_status"] == "paid":
         raise HTTPException(status_code=400, detail="Order already paid")
 
+    # Determine payment method and splits
+    payment_method = data.payment_method or "cash"
+    payment_splits = []
+    change_amount = data.change_amount or 0
+
+    if data.payment_splits:
+        # Split payment: record each split separately
+        for split in data.payment_splits:
+            payment_splits.append({"method": split.method, "amount": split.amount})
+            await record_wallet_transaction(
+                user["restaurant_id"], "sale", split.amount,
+                split.method, order_id, order.get("day_session_id")
+            )
+        # Use first split method as primary (or 'split')
+        payment_method = "split" if len(data.payment_splits) > 1 else data.payment_splits[0].method
+    else:
+        # Legacy single payment
+        await record_wallet_transaction(
+            user["restaurant_id"], "sale", order["total_amount"],
+            payment_method, order_id, order.get("day_session_id")
+        )
+
     await db.orders.update_one(
         {"id": order_id},
-        {"$set": {"payment_method": data.payment_method, "payment_status": "paid", "status": "completed"}}
+        {"$set": {
+            "payment_method": payment_method,
+            "payment_status": "paid",
+            "status": "completed",
+            "payment_splits": payment_splits if payment_splits else None,
+            "change_amount": change_amount,
+        }}
     )
 
     if order["order_type"] == "dine_in" and order.get("table_number"):
@@ -1316,11 +1371,6 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
             {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"]},
             {"$set": {"status": "available", "current_order_id": None}}
         )
-
-    await record_wallet_transaction(
-        user["restaurant_id"], "sale", order["total_amount"],
-        data.payment_method, order_id, order.get("day_session_id")
-    )
 
     try:
         settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]})
