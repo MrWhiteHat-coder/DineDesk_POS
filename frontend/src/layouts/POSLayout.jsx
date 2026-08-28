@@ -194,9 +194,16 @@ export default function POSLayout() {
           <h1 className="font-heading font-bold text-gray-900 text-sm leading-tight hidden sm:block">DineDesk</h1>
         </div>
 
-        {/* CENTER: Desktop horizontal nav (hidden on mobile) */}
+        {/* CENTER: Desktop horizontal nav — 5 core items + More dropdown */}
         <nav className="hidden md:flex items-center gap-1">
-          {allNavItems.filter(item => hasAccess(item.feature)).map((item) => (
+          {/* 5 core items always visible */}
+          {[
+            { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+            { to: '/pos/orders', icon: ShoppingCart, label: 'Create Order' },
+            { to: '/pos/quick-pos', icon: Zap, label: 'Quick POS' },
+            { to: '/pos/kds', icon: ChefHat, label: 'KDS' },
+            { to: '/pos/wallet', icon: Wallet, label: 'Wallet' },
+          ].map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -214,69 +221,101 @@ export default function POSLayout() {
             </NavLink>
           ))}
 
-          {/* Manage Table dropdown */}
-          {hasAccess('tables') && (
-            <div className="relative group">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">
-                <SquareStack className="w-4 h-4" />
-                <span className="hidden lg:inline">Tables</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                {manageTableItems.map(sub => (
-                  <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}>
-                    {sub.label}
+          {/* More dropdown — everything else */}
+          <div className="relative group">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">
+              <MoreHorizontal className="w-4 h-4" />
+              <span className="hidden lg:inline">More</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[70vh] overflow-y-auto">
+              {/* Regular nav items (excluding the 5 core ones) */}
+              {allNavItems
+                .filter(item => hasAccess(item.feature))
+                .filter(item => !['/pos', '/pos/orders', '/pos/quick-pos', '/pos/kds', '/pos/wallet'].includes(item.to))
+                .map(sub => (
+                  <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <sub.icon className="w-4 h-4" />
+                    <span>{sub.label}</span>
                   </NavLink>
                 ))}
-              </div>
+
+              {/* Divider before sections */}
+              <div className="border-t border-gray-100 my-1"></div>
+
+              {/* Manage Table */}
+              {hasAccess('tables') && (
+                <div>
+                  <button
+                    onClick={() => toggleSection('tables')}
+                    className="flex items-center justify-between w-full px-4 py-2 text-[13px] text-gray-600 hover:bg-gray-50 transition-all"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <SquareStack className="w-4 h-4" />
+                      <span>Manage Table</span>
+                    </div>
+                    {expandedSections.tables ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+                  </button>
+                  {expandedSections.tables && (
+                    <div className="ml-9 space-y-0.5 mb-1">
+                      {manageTableItems.map(sub => (
+                        <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-1.5 rounded-lg text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-500 hover:text-gray-900'}`}>
+                          {sub.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Manage Dish */}
+              {hasAccess('menu') && (
+                <div>
+                  <button
+                    onClick={() => toggleSection('dishes')}
+                    className="flex items-center justify-between w-full px-4 py-2 text-[13px] text-gray-600 hover:bg-gray-50 transition-all"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <UtensilsCrossed className="w-4 h-4" />
+                      <span>Manage Dish</span>
+                    </div>
+                    {expandedSections.dishes ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+                  </button>
+                  {expandedSections.dishes && (
+                    <div className="ml-9 space-y-0.5 mb-1">
+                      {manageDishItems.map(sub => (
+                        <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-1.5 rounded-lg text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-500 hover:text-gray-900'}`}>
+                          {sub.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Staff */}
+              {hasAccess('staff') && (
+                <NavLink
+                  to="/pos/staff"
+                  className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Staff</span>
+                </NavLink>
+              )}
+
+              {/* Settings */}
+              {hasAccess('settings') && (
+                <NavLink
+                  to="/pos/settings"
+                  className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </NavLink>
+              )}
             </div>
-          )}
-
-          {/* Manage Dish dropdown */}
-          {hasAccess('menu') && (
-            <div className="relative group">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">
-                <UtensilsCrossed className="w-4 h-4" />
-                <span className="hidden lg:inline">Menu</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                {manageDishItems.map(sub => (
-                  <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}>
-                    {sub.label}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {hasAccess('staff') && (
-            <NavLink
-              to="/pos/staff"
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                  isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`
-              }
-            >
-              <Users className="w-4 h-4" />
-              <span className="hidden lg:inline">Staff</span>
-            </NavLink>
-          )}
-
-          {hasAccess('settings') && (
-            <NavLink
-              to="/pos/settings"
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                  isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`
-              }
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden lg:inline">Settings</span>
-            </NavLink>
-          )}
+          </div>
         </nav>
 
         {/* RIGHT: Branch + Day status + Profile */}
@@ -367,7 +406,7 @@ export default function POSLayout() {
 
       {/* ──────────── MORE SHEET (mobile) ──────────── */}
       <Sheet open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto" data-testid="more-sheet">
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto bg-white" data-testid="more-sheet">
           <SheetTitle className="text-base font-heading font-bold text-gray-900 mb-3">Navigation</SheetTitle>
 
           <div className="space-y-0.5">
