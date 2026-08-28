@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
 import { toast } from 'sonner';
-import { Zap, Search, X, Banknote, CreditCard, Smartphone, Printer, Check, User } from 'lucide-react';
+import { Zap, Search, X, Banknote, CreditCard, Smartphone, Printer, Check, User, Plus, Wallet } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -27,6 +27,8 @@ export default function QuickPOSPage() {
   const [receiptData, setReceiptData] = useState(null);
   const [processing, setProcessing] = useState(false);
   const receiptRef = useRef(null);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [paymentSplits, setPaymentSplits] = useState([{ method: 'cash', amount: 0 }]);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -85,22 +87,43 @@ export default function QuickPOSPage() {
   const tax = subtotal * 0.05;
   const total = subtotal + tax;
 
-  const quickPay = async (method) => {
+  const totalPaid = paymentSplits.reduce((s, sp) => s + (sp.amount || 0), 0);
+  const remaining = Math.max(0, total - totalPaid);
+  const change = Math.max(0, totalPaid - total);
+
+  const openPayModal = () => {
+    setPaymentSplits([{ method: 'cash', amount: total }]);
+    setShowPayModal(true);
+  };
+  const updateSplitAmount = (i, v) => setPaymentSplits(prev => prev.map((s, idx) => idx === i ? { ...s, amount: parseFloat(v) || 0 } : s));
+  const updateSplitMethod = (i, m) => setPaymentSplits(prev => prev.map((s, idx) => idx === i ? { ...s, method: m } : s));
+  const addSplit = () => { if (paymentSplits.length < 3 && remaining > 0) setPaymentSplits(prev => [...prev, { method: 'upi', amount: remaining }]); };
+  const removeSplit = (i) => { if (paymentSplits.length > 1) setPaymentSplits(prev => prev.filter((_, idx) => idx !== i)); };
+
+  const quickPay = async () => {
     if (cart.length === 0) return;
     if (!customerName.trim()) { toast.error('Customer name is required'); return; }
     if (!customerPhone.trim()) { toast.error('Customer phone is required'); return; }
+    if (totalPaid < total) { toast.error('Payment is less than total'); return; }
     setProcessing(true);
     try {
-      const res = await orderAPI.create({
+      const payload = {
         order_type: orderType,
         table_number: orderType === 'dine_in' && tableNum ? parseInt(tableNum) : null,
         items: cart.map(c => ({ menu_item_id: c.id, quantity: c.qty, notes: null })),
-        payment_method: method,
         discount_amount: 0,
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
         customer_email: customerEmail.trim() || null,
-      });
+        change_amount: change,
+      };
+      if (paymentSplits.length === 1) {
+        payload.payment_method = paymentSplits[0].method;
+      } else {
+        payload.payment_method = 'split';
+        payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
+      }
+      const res = await orderAPI.create(payload);
       toast.success(`Order #${res.data.order_number} done!`);
       try {
         const rcpt = await receiptAPI.get(res.data.id);
@@ -111,6 +134,7 @@ export default function QuickPOSPage() {
       setCustomerName('');
       setCustomerPhone('');
       setCustomerEmail('');
+      setShowPayModal(false);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed');
     } finally {
@@ -250,20 +274,59 @@ export default function QuickPOSPage() {
               <Input placeholder="Name *" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-name" />
               <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-email" />
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              <button onClick={() => quickPay('cash')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-cash">
-                <Banknote className="w-4 h-4" />Cash
-              </button>
-              <button onClick={() => quickPay('card')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-card">
-                <CreditCard className="w-4 h-4" />Card
-              </button>
-              <button onClick={() => quickPay('upi')} disabled={processing} className="flex flex-col items-center gap-0.5 py-2.5 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-upi">
-                <Smartphone className="w-4 h-4" />UPI
-              </button>
-            </div>
+            <button onClick={openPayModal} disabled={processing} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-xs font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-btn">
+              <Wallet className="w-4 h-4" /> Pay ₹{total.toFixed(2)}
+            </button>
           </div>
         )}
       </div>
+
+      {/* Payment Modal - Split Payment */}
+      <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
+        <DialogContent className="rounded-2xl max-w-sm">
+          <DialogHeader><DialogTitle className="text-center font-heading">Payment</DialogTitle></DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-gray-900">₹{total.toFixed(2)}</p>
+              <p className="text-xs text-gray-500">Bill Amount</p>
+            </div>
+            <div className="space-y-2">
+              {paymentSplits.map((split, idx) => (
+                <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl border border-gray-200 bg-gray-50">
+                  <select value={split.method} onChange={(e) => updateSplitMethod(idx, e.target.value)} className="text-xs font-semibold bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 outline-none">
+                    <option value="cash">💵 Cash</option>
+                    <option value="card">💳 Card</option>
+                    <option value="upi">📱 UPI</option>
+                  </select>
+                  <input type="number" value={split.amount || ''} onChange={(e) => updateSplitAmount(idx, e.target.value)} placeholder="0.00" className="flex-1 text-sm font-bold text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-right outline-none focus:border-black" />
+                  {paymentSplits.length > 1 && (
+                    <button onClick={() => removeSplit(idx)} className="text-red-400 hover:text-red-600 p-1"><X className="w-4 h-4" /></button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {paymentSplits.length < 3 && remaining > 0 && (
+              <button onClick={addSplit} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-gray-300 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-all">
+                <Plus className="w-3.5 h-3.5" /> Add Payment Method
+              </button>
+            )}
+            <div className="space-y-1.5 pt-2 border-t border-gray-100">
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Total Paid</span><span className="font-semibold text-gray-900">₹{totalPaid.toFixed(2)}</span></div>
+              {remaining > 0 && <div className="flex justify-between text-xs"><span className="text-gray-500">Remaining</span><span className="font-semibold text-orange-600">₹{remaining.toFixed(2)}</span></div>}
+              {change > 0 && (
+                <div className="flex justify-between text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <span className="text-amber-700 font-medium">💰 Change to return</span>
+                  <span className="font-bold text-amber-800">₹{change.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+            <button onClick={quickPay} disabled={processing || totalPaid < total}
+              className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${totalPaid >= total ? 'bg-black hover:bg-gray-800 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+              {processing ? 'Processing...' : `Pay ₹${total.toFixed(2)}`}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Receipt Modal */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
@@ -300,6 +363,25 @@ export default function QuickPOSPage() {
                 {receiptData.order.discount_amount > 0 && <div className="flex justify-between"><span>Discount</span><span>-{'\u20B9'}{receiptData.order.discount_amount?.toFixed(2)}</span></div>}
                 <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-gray-300"><span>Total</span><span>{'\u20B9'}{receiptData.order.total_amount?.toFixed(2)}</span></div>
               </div>
+              {receiptData.order.payment_splits && receiptData.order.payment_splits.length > 0 && (
+                <>
+                  <hr className="border-dashed border-gray-300 my-1" />
+                  <div className="text-[11px] space-y-0.5">
+                    <p className="font-semibold text-gray-600 mb-1">Payment Breakup:</p>
+                    {receiptData.order.payment_splits.map((s, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span className="capitalize">{s.method === 'cash' ? '💵 Cash' : s.method === 'card' ? '💳 Card' : '📱 UPI'}</span>
+                        <span>{'\u20B9'}{s.amount?.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {receiptData.order.change_amount > 0 && (
+                <div className="mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-center">
+                  <span className="font-semibold text-amber-700">💰 Change: ₹{receiptData.order.change_amount?.toFixed(2)}</span>
+                </div>
+              )}
               <p className="text-center text-[9px] text-gray-400 mt-3">Thank you for dining with us!</p>
             </div>
           )}

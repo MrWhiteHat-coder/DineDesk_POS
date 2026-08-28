@@ -16,7 +16,7 @@ import {
 } from '../../components/ui/dialog';
 import {
   Plus, Minus, Trash2, ShoppingCart, Search, AlertCircle, X, RefreshCw, Tag,
-  Banknote, CreditCard, Smartphone, Utensils, Printer, Check, User,
+  Banknote, CreditCard, Smartphone, Utensils, Printer, Check, User, Wallet,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -43,6 +43,7 @@ export default function POSMain() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
   const receiptRef = useRef(null);
+  const [paymentSplits, setPaymentSplits] = useState([{ method: 'cash', amount: 0 }]);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -125,19 +126,69 @@ export default function POSMain() {
         const res = await orderAPI.create({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: customerName.trim(), customer_phone: customerPhone.trim(), customer_email: customerEmail.trim() || null });
         toast.success(`Order #${res.data.order_number} placed!`); clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
       } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
-    } else { setShowPaymentModal(true); }
+    } else { openPaymentModal(); }
   };
 
-  const handleCheckoutWithPayment = async (method) => {
+  const totalPaid = paymentSplits.reduce((sum, s) => sum + (s.amount || 0), 0);
+  const remaining = Math.max(0, total - totalPaid);
+  const change = Math.max(0, totalPaid - total);
+
+  const updateSplitAmount = (index, amount) => {
+    setPaymentSplits(prev => prev.map((s, i) => i === index ? { ...s, amount: parseFloat(amount) || 0 } : s));
+  };
+  const updateSplitMethod = (index, method) => {
+    setPaymentSplits(prev => prev.map((s, i) => i === index ? { ...s, method } : s));
+  };
+  const addSplit = () => {
+    if (paymentSplits.length < 3 && remaining > 0) {
+      setPaymentSplits(prev => [...prev, { method: 'upi', amount: remaining }]);
+    }
+  };
+  const removeSplit = (index) => {
+    if (paymentSplits.length > 1) {
+      setPaymentSplits(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+  const openPaymentModal = () => {
+    setPaymentSplits([{ method: 'cash', amount: total }]);
+    setShowPaymentModal(true);
+  };
+
+  const handleCheckoutWithPayment = async () => {
+    if (totalPaid < total) { toast.error('Payment is less than total amount'); return; }
     setCheckoutLoading(true);
     try {
-      const res = await orderAPI.create({ order_type: orderType, table_number: null, items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: method, discount_amount: discountAmount, customer_name: customerName.trim(), customer_phone: customerPhone.trim(), customer_email: customerEmail.trim() || null });
+      const payload = {
+        order_type: orderType, table_number: null,
+        items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })),
+        discount_amount: discountAmount,
+        customer_name: customerName.trim(), customer_phone: customerPhone.trim(), customer_email: customerEmail.trim() || null,
+        change_amount: change,
+      };
+      if (paymentSplits.length === 1) {
+        payload.payment_method = paymentSplits[0].method;
+      } else {
+        payload.payment_method = 'split';
+        payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
+      }
+      const res = await orderAPI.create(payload);
       toast.success(`Order #${res.data.order_number} completed!`); await fetchAndShowReceipt(res.data.id); clearCart(); setShowPaymentModal(false);
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
   };
 
-  const handleReleaseAndPay = async (orderId, method) => {
-    try { await orderAPI.pay(orderId, { payment_method: method }); toast.success('Payment confirmed!'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
+  const handleReleaseAndPay = async (orderId) => {
+    if (totalPaid < total) { toast.error('Payment is less than total amount'); return; }
+    try {
+      const payload = { change_amount: change };
+      if (paymentSplits.length === 1) {
+        payload.payment_method = paymentSplits[0].method;
+      } else {
+        payload.payment_method = 'split';
+        payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
+      }
+      await orderAPI.pay(orderId, payload);
+      toast.success('Payment confirmed!'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); setShowPaymentModal(false);
+    } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
   };
 
   const selectRunningOrder = (order) => {
@@ -337,25 +388,98 @@ export default function POSMain() {
           {selectedRunningOrder && (
             <div className="space-y-2">
               <p className="text-[11px] font-medium text-slate-500 text-center">Release Table & Collect Payment</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'cash')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-cash"><Banknote className="w-5 h-5" /><span className="text-[10px] font-semibold">Cash</span></button>
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'card')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-card"><CreditCard className="w-5 h-5" /><span className="text-[10px] font-semibold">Card</span></button>
-                <button onClick={() => handleReleaseAndPay(selectedRunningOrder.id, 'upi')} className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-400 transition-all text-gray-600 hover:text-black" data-testid="pay-upi"><Smartphone className="w-5 h-5" /><span className="text-[10px] font-semibold">UPI</span></button>
-              </div>
+              <button onClick={() => { openPaymentModal(); }} className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-black hover:bg-gray-800 text-white text-sm font-semibold transition-all" data-testid="pay-split-btn">
+                <Wallet className="w-4 h-4" /> Pay ₹{total.toFixed(2)}
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal - Split Payment */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
         <DialogContent className="rounded-2xl max-w-sm">
-          <DialogHeader><DialogTitle className="text-center">Select Payment Method</DialogTitle></DialogHeader>
-          <div className="py-4 space-y-3">
-            <div className="text-center mb-4"><p className="text-2xl font-bold text-slate-900">₹{total.toFixed(2)}</p><p className="text-xs text-slate-500">Total Amount</p></div>
-            {[{ method: 'cash', icon: Banknote, label: 'Cash', color: 'hover:bg-gray-100 hover:border-gray-400' }, { method: 'card', icon: CreditCard, label: 'Card', color: 'hover:bg-gray-100 hover:border-gray-400' }, { method: 'upi', icon: Smartphone, label: 'UPI', color: 'hover:bg-gray-100 hover:border-gray-400' }].map(({ method, icon: Icon, label, color }) => (
-              <button key={method} onClick={() => handleCheckoutWithPayment(method)} disabled={checkoutLoading} className={`w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 transition-all ${color}`} data-testid={`checkout-${method}`}><Icon className="w-6 h-6" /><span className="text-sm font-semibold">{label}</span></button>
-            ))}
+          <DialogHeader><DialogTitle className="text-center font-heading">Payment</DialogTitle></DialogHeader>
+          <div className="py-4 space-y-4">
+            {/* Bill Total */}
+            <div className="text-center">
+              <p className="text-3xl font-bold text-slate-900">₹{total.toFixed(2)}</p>
+              <p className="text-xs text-slate-500">Bill Amount</p>
+            </div>
+
+            {/* Payment Splits */}
+            <div className="space-y-2">
+              {paymentSplits.map((split, idx) => {
+                const SplitIcon = split.method === 'cash' ? Banknote : split.method === 'card' ? CreditCard : Smartphone;
+                const methodLabel = split.method === 'cash' ? 'Cash' : split.method === 'card' ? 'Card' : 'UPI';
+                return (
+                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50">
+                    <select
+                      value={split.method}
+                      onChange={(e) => updateSplitMethod(idx, e.target.value)}
+                      className="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 outline-none"
+                    >
+                      <option value="cash">💵 Cash</option>
+                      <option value="card">💳 Card</option>
+                      <option value="upi">📱 UPI</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={split.amount || ''}
+                      onChange={(e) => updateSplitAmount(idx, e.target.value)}
+                      placeholder="0.00"
+                      className="flex-1 text-sm font-bold text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-right outline-none focus:border-black"
+                    />
+                    {paymentSplits.length > 1 && (
+                      <button onClick={() => removeSplit(idx)} className="text-red-400 hover:text-red-600 p-1">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add payment method */}
+            {paymentSplits.length < 3 && remaining > 0 && (
+              <button onClick={addSplit} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-slate-300 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all">
+                <Plus className="w-3.5 h-3.5" /> Add Payment Method
+              </button>
+            )}
+
+            {/* Summary */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <div className="flex justify-between text-xs"><span className="text-slate-500">Total Paid</span><span className="font-semibold text-slate-900">₹{totalPaid.toFixed(2)}</span></div>
+              {remaining > 0 && (
+                <div className="flex justify-between text-xs"><span className="text-slate-500">Remaining</span><span className="font-semibold text-orange-600">₹{remaining.toFixed(2)}</span></div>
+              )}
+              {change > 0 && (
+                <div className="flex justify-between text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <span className="text-amber-700 font-medium">💰 Change to return</span>
+                  <span className="font-bold text-amber-800">₹{change.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Pay Button */}
+            <button
+              onClick={() => {
+                if (selectedRunningOrder) {
+                  handleReleaseAndPay(selectedRunningOrder.id);
+                } else {
+                  handleCheckoutWithPayment();
+                }
+              }}
+              disabled={checkoutLoading || totalPaid < total}
+              className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
+                totalPaid >= total
+                  ? 'bg-black hover:bg-gray-800 text-white'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
+              data-testid="confirm-payment-btn"
+            >
+              {checkoutLoading ? 'Processing...' : `Pay ₹${total.toFixed(2)}`}
+            </button>
           </div>
         </DialogContent>
       </Dialog>
@@ -390,6 +514,28 @@ export default function POSMain() {
                 {receiptData.order.discount_amount > 0 && <div className="flex justify-between"><span>Discount</span><span>-₹{receiptData.order.discount_amount?.toFixed(2)}</span></div>}
                 <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-slate-300"><span>Total</span><span>₹{receiptData.order.total_amount?.toFixed(2)}</span></div>
               </div>
+
+              {/* Payment Breakup */}
+              {receiptData.order.payment_splits && receiptData.order.payment_splits.length > 0 && (
+                <>
+                  <hr className="border-dashed border-slate-300 my-1" />
+                  <div className="text-[11px] space-y-0.5">
+                    <p className="font-semibold text-slate-600 mb-1">Payment Breakup:</p>
+                    {receiptData.order.payment_splits.map((s, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span className="capitalize">{s.method === 'cash' ? '💵 Cash' : s.method === 'card' ? '💳 Card' : '📱 UPI'}</span>
+                        <span>₹{s.amount?.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {receiptData.order.change_amount > 0 && (
+                <div className="mt-1 p-1.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-center">
+                  <span className="font-semibold text-amber-700">💰 Change: ₹{receiptData.order.change_amount?.toFixed(2)}</span>
+                </div>
+              )}
+
               <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>
             </div>
           )}
