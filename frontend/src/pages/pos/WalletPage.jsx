@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { walletAPI } from '../../lib/api';
 import { Input } from '../../components/ui/input';
 import {
-  Banknote, CreditCard, Smartphone, TrendingUp, TrendingDown, ArrowUpDown, RefreshCw, CalendarDays,
+  Banknote, CreditCard, Smartphone, TrendingUp, TrendingDown, ArrowUpDown, RefreshCw, CalendarDays, Wallet, CircleDollarSign,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 
@@ -13,6 +14,7 @@ const PERIODS = [
 ];
 
 export default function WalletPage() {
+  const { currentSession } = useOutletContext();
   const [summary, setSummary] = useState(null);
   const [period, setPeriod] = useState('today');
   const [loading, setLoading] = useState(true);
@@ -115,6 +117,33 @@ export default function WalletPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Opening Cash & Counter Balance */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+              <CircleDollarSign className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xs text-amber-600 font-medium">Opening Cash</p>
+              <p className="text-xl font-bold text-amber-800">₹{(currentSession?.opening_cash || 0).toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-300 bg-slate-900 p-4 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-300 font-medium">Counter Balance</p>
+              <p className="text-xl font-bold">₹{((currentSession?.opening_cash || 0) + summary.total_cash).toFixed(2)}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Opening + Cash Sales</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Net Summary */}
