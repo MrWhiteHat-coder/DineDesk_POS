@@ -309,6 +309,10 @@ class OrderItemCreate(BaseModel):
     quantity: int
     notes: Optional[str] = None
 
+class PaymentSplit(BaseModel):
+    method: str  # cash, card, upi
+    amount: float
+
 class OrderCreate(BaseModel):
     order_type: str
     table_number: Optional[int] = None
@@ -327,10 +331,6 @@ class OrderAddItems(BaseModel):
 
 class OrderUpdate(BaseModel):
     status: str
-
-class PaymentSplit(BaseModel):
-    method: str  # cash, card, upi
-    amount: float
 
 class OrderPayment(BaseModel):
     payment_method: Optional[str] = None  # legacy single method
