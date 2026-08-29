@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
 import { Skeleton } from '../../components/ui/skeleton';
 import { ChefSleeping, ChefCelebrating } from '../../components/illustrations/ChefBot';
 import {
