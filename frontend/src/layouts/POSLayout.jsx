@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatures } from '../contexts/FeatureContext';
 import { daySessionAPI } from '../lib/api';
 import { toast } from 'sonner';
 import DayCloseReport from '../components/pos/DayCloseReport';
@@ -29,6 +30,7 @@ import {
   Coins,
   Store,
   MoreHorizontal,
+  Lock,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -96,12 +98,14 @@ const ROLE_ACCESS = {
    ═══════════════════════════════════════════════════════ */
 export default function POSLayout() {
   const { user, restaurant, logout } = useAuth();
+  const { isFeatureUnlocked } = useFeatures();
   const navigate = useNavigate();
   const location = useLocation();
 
   const userRole = user?.role || 'owner';
   const permissions = ROLE_ACCESS[userRole] || ROLE_ACCESS.owner;
   const hasAccess = (feature) => permissions.has(feature);
+  const isUnlocked = (feature) => isFeatureUnlocked(feature);
 
   /* ── day session ── */
   const [isDayOpen, setIsDayOpen] = useState(false);
@@ -233,12 +237,20 @@ export default function POSLayout() {
               {allNavItems
                 .filter(item => hasAccess(item.feature))
                 .filter(item => !['/pos', '/pos/orders', '/pos/quick-pos', '/pos/kds', '/pos/wallet'].includes(item.to))
-                .map(sub => (
-                  <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}>
-                    <sub.icon className="w-4 h-4" />
-                    <span>{sub.label}</span>
-                  </NavLink>
-                ))}
+                .map(sub => {
+                  const unlocked = isUnlocked(sub.feature);
+                  return (
+                    <NavLink
+                      key={sub.to}
+                      to={unlocked ? sub.to : '/pos/store'}
+                      className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive && unlocked ? 'text-black font-medium bg-gray-100' : unlocked ? 'text-gray-600 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50'}`}
+                    >
+                      {unlocked ? <sub.icon className="w-4 h-4" /> : <Lock className="w-4 h-4 text-amber-500" />}
+                      <span>{sub.label}</span>
+                      {!unlocked && <span className="ml-auto text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold">PRO</span>}
+                    </NavLink>
+                  );
+                })}
 
               {/* Divider before sections */}
               <div className="border-t border-gray-100 my-1"></div>
@@ -411,23 +423,29 @@ export default function POSLayout() {
 
           <div className="space-y-0.5">
             {/* Main nav items */}
-            {moreNavItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.exact}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-[13px] font-medium ${
-                    isActive
-                      ? 'bg-black text-white'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`
-                }
-              >
-                <item.icon className="w-[18px] h-[18px]" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+            {moreNavItems.map((item) => {
+              const unlocked = isUnlocked(item.feature);
+              return (
+                <NavLink
+                  key={item.to}
+                  to={unlocked ? item.to : '/pos/store'}
+                  end={item.exact}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-[13px] font-medium ${
+                      isActive && unlocked
+                        ? 'bg-black text-white'
+                        : unlocked
+                          ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          : 'text-gray-400 hover:bg-gray-50'
+                    }`
+                  }
+                >
+                  {unlocked ? <item.icon className="w-[18px] h-[18px]" /> : <Lock className="w-[18px] h-[18px] text-amber-500" />}
+                  <span>{item.label}</span>
+                  {!unlocked && <span className="ml-auto text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold">PRO</span>}
+                </NavLink>
+              );
+            })}
 
             {/* Manage Table */}
             {hasAccess('tables') && (

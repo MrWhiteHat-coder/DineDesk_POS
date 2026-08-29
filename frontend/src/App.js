@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FeatureProvider } from './contexts/FeatureContext';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -33,6 +34,8 @@ import CustomersPage from './pages/pos/CustomersPage';
 import GiftCardsPage from './pages/pos/GiftCardsPage';
 import TridentCoinsPage from './pages/pos/TridentCoinsPage';
 import StorePage from './pages/pos/StorePage';
+import FeatureLocked from './components/store/FeatureLocked';
+import { useFeatures } from './contexts/FeatureContext';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -104,6 +107,15 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+/* Feature Gate — shows locked banner if addon not purchased */
+const FeatureGate = ({ featureKey, children }) => {
+  const { isFeatureUnlocked, getRequiredAddon, loading } = useFeatures();
+  if (loading) return null;
+  if (isFeatureUnlocked(featureKey)) return children;
+  const addon = getRequiredAddon(featureKey);
+  return <FeatureLocked addonName={addon?.name} addonPrice={addon?.monthly_price} />;
+};
+
 function AppRoutes() {
   return (
     <Routes>
@@ -123,20 +135,20 @@ function AppRoutes() {
         <Route path="menu" element={<MenuManagement />} />
         <Route path="order-management" element={<OrderManagement />} />
         <Route path="tables" element={<TablesPage />} />
-        <Route path="inventory" element={<InventoryPage />} />
-        <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="inventory" element={<FeatureGate featureKey="inventory"><InventoryPage /></FeatureGate>} />
+        <Route path="analytics" element={<FeatureGate featureKey="analytics"><AnalyticsPage /></FeatureGate>} />
         <Route path="staff" element={<StaffPage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="online-orders" element={<OnlineOrdersPage />} />
+        <Route path="online-orders" element={<FeatureGate featureKey="online_orders"><OnlineOrdersPage /></FeatureGate>} />
         <Route path="kds" element={<KDSPage />} />
         <Route path="wallet" element={<WalletPage />} />
-        <Route path="branches" element={<BranchesPage />} />
+        <Route path="branches" element={<FeatureGate featureKey="branches"><BranchesPage /></FeatureGate>} />
         <Route path="quick-pos" element={<QuickPOSPage />} />
-        <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="gift-cards" element={<GiftCardsPage />} />
-        <Route path="trident-coins" element={<TridentCoinsPage />} />
+        <Route path="purchase-orders" element={<FeatureGate featureKey="purchase_orders"><PurchaseOrdersPage /></FeatureGate>} />
+        <Route path="notifications" element={<FeatureGate featureKey="notifications"><NotificationsPage /></FeatureGate>} />
+        <Route path="customers" element={<FeatureGate featureKey="customers"><CustomersPage /></FeatureGate>} />
+        <Route path="gift-cards" element={<FeatureGate featureKey="gift_cards"><GiftCardsPage /></FeatureGate>} />
+        <Route path="trident-coins" element={<FeatureGate featureKey="trident_coins"><TridentCoinsPage /></FeatureGate>} />
         <Route path="store" element={<StorePage />} />
       </Route>
 
@@ -158,17 +170,18 @@ function AppRoutes() {
 }
 
 function App() {
-  return (
-    <BrowserRouter>
+  return (    <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
-        <Toaster 
-          position="top-right" 
-          richColors 
-          toastOptions={{
-            style: { fontFamily: 'Inter, sans-serif' }
-          }}
-        />
+        <FeatureProvider>
+          <AppRoutes />
+          <Toaster 
+            position="top-right"
+            richColors
+            toastOptions={{
+              style: { fontFamily: 'Inter, sans-serif' }
+            }}
+          />
+        </FeatureProvider>
       </AuthProvider>
     </BrowserRouter>
   );

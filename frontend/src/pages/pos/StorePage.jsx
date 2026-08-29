@@ -3,10 +3,12 @@ import api, { storeAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import PaymentModal from '../../components/store/PaymentModal';
+import { useFeatures } from '../../contexts/FeatureContext';
 import {
   Users, Package, MessageCircle, Building2, BarChart3,
   Code2, Palette, Gift, Check, X, Zap, Star, Crown,
-  ShoppingCart, Sparkles
+  ShoppingCart, Sparkles, CreditCard
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -18,6 +20,9 @@ export default function StorePage() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState('monthly');
+  const [paymentAddon, setPaymentAddon] = useState(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const { refreshFeatures } = useFeatures();
 
   useEffect(() => { fetchData(); }, []);
 
@@ -36,13 +41,20 @@ export default function StorePage() {
     }
   };
 
-  const handleSubscribe = async (addonId) => {
+  const handleOpenPayment = (addon) => {
+    setPaymentAddon(addon);
+    setShowPayment(true);
+  };
+
+  const handlePaymentSuccess = async () => {
+    if (!paymentAddon) return;
     try {
-      const res = await storeAPI.subscribe(addonId, billing);
-      toast.success(res.data.message);
+      const res = await storeAPI.subscribe(paymentAddon.id, billing);
+      toast.success(res.data.message || `${paymentAddon.name} activated!`);
       fetchData();
+      refreshFeatures();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed');
+      toast.error(err.response?.data?.detail || 'Failed to activate');
     }
   };
 
@@ -51,6 +63,7 @@ export default function StorePage() {
       const res = await storeAPI.unsubscribe(addonId);
       toast.success(res.data.message);
       fetchData();
+      refreshFeatures();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed');
     }
@@ -151,10 +164,11 @@ export default function StorePage() {
                     </Button>
                   ) : (
                     <Button
-                      onClick={() => handleSubscribe(addon.id)}
+                      onClick={() => handleOpenPayment(addon)}
                       className="dd-btn-primary text-xs gap-1"
+                      data-testid={`subscribe-${addon.id}`}
                     >
-                      <Zap className="w-3 h-3" /> Add
+                      <CreditCard className="w-3 h-3" /> Subscribe
                     </Button>
                   )}
                 </div>
@@ -180,6 +194,15 @@ export default function StorePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mock Payment Modal */}
+      <PaymentModal
+        open={showPayment}
+        onOpenChange={setShowPayment}
+        addon={paymentAddon}
+        billing={billing}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }
