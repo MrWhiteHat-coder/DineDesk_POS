@@ -378,3 +378,77 @@ main > *:first-child {
 @supports (padding: env(safe-area-inset-bottom)) {
     .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* ═══════════════════════════════════════
+   MOBILE UX ENHANCEMENTS
+   ═══════════════════════════════════════ */
+
+/* Touch-friendly tap targets */
+@media (max-width: 768px) {
+    button, a, [role="button"] {
+        min-height: 44px;
+    }
+    
+    /* Better scrolling on mobile */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+    }
+    .overflow-x-auto > * {
+        scroll-snap-align: start;
+    }
+    
+    /* Card press effect for touch */
+    [data-testid*="menu-item"]:active {
+        transform: scale(0.97);
+        transition: transform 0.1s ease;
+    }
+}
+
+/* Smooth transitions for all interactive elements */
+@media (hover: hover) {
+    .group:hover .group-hover\:scale-105 {
+        transform: scale(1.05);
+    }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Better focus states for accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+    outline: 2px solid #1E3A8A;
+    outline-offset: 2px;
+}
+
+/* Smooth page transitions */
+.page-enter {
+    animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Menu card shine effect on hover */
+@media (hover: hover) {
+    .group::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        transition: left 0.5s ease;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .group:hover::before {
+        left: 100%;
+    }
+}
