@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { authAPI } from '../../lib/api';
 import { Input } from '../../components/ui/input';
 import {
   Mail, Lock, ArrowRight, User, Phone, Shield, Zap, Globe, UtensilsCrossed,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
 const features = [
   { icon: Zap, title: 'Fast POS Billing', desc: 'Process restaurant orders quickly with an intuitive POS interface.' },
@@ -28,6 +30,9 @@ export default function RegisterPage() {
   const [step, setStep] = useState('register'); // 'register' | 'otp' | 'check-email'
   const [resending, setResending] = useState(false);
 
+  const navigate = useNavigate();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
   // OTP state
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpSending, setOtpSending] = useState(false);
@@ -35,6 +40,60 @@ export default function RegisterPage() {
   const [otpTimer, setOtpTimer] = useState(0);
   const [phoneVerified, setPhoneVerified] = useState(false);
   const otpRefs = useRef([]);
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || !window.google) return;
+    const timer = setTimeout(() => {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+        });
+      } catch (e) { console.error('Google init error:', e); }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleGoogleResponse = async (response) => {
+    setGoogleLoading(true);
+    try {
+      const res = await authAPI.googleLogin(response.credential);
+      const { access_token, user: userData } = res.data;
+      sessionStorage.setItem('token', access_token);
+      sessionStorage.setItem('user', JSON.stringify(userData));
+      toast.success('Account created with Google!');
+      if (!userData.restaurant_id) navigate('/onboarding');
+      else navigate('/pos');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Google sign-up failed');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleClick = () => {
+    if (!GOOGLE_CLIENT_ID) {
+      toast.error('Google sign-up is not configured yet.');
+      return;
+    }
+    setGoogleLoading(true);
+    try {
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          window.google.accounts.id.renderButton(
+            document.getElementById('google-signin-btn-register'),
+            { theme: 'outline', size: 'large', width: '100%', text: 'continue_with' }
+          );
+          document.getElementById('google-signin-btn-register')?.click();
+        }
+        setGoogleLoading(false);
+      });
+    } catch (e) {
+      setGoogleLoading(false);
+      toast.error('Google sign-up failed to initialize.');
+    }
+  };
 
   // OTP countdown timer
   useEffect(() => {
@@ -363,9 +422,33 @@ export default function RegisterPage() {
                 <span className="text-[11px] text-gray-400 font-medium uppercase">or</span>
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
+
+              {/* Google Sign-Up */}
+              <button
+                type="button"
+                onClick={handleGoogleClick}
+                disabled={googleLoading}
+                className="w-full h-11 rounded-xl border-2 border-gray-200 bg-white text-gray-700 font-semibold text-sm flex items-center justify-center gap-2.5 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-60"
+              >
+                {googleLoading ? (
+                  <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Continue with Google
+                  </>
+                )}
+              </button>
+              <div id="google-signin-btn-register" className="hidden" />
+
               <Link
                 to="/login"
-                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors"
+                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors mt-3"
               >
                 Sign In to Existing Account
               </Link>

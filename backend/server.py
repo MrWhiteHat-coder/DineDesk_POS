@@ -158,6 +158,9 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleLoginRequest(BaseModel):
+    credential: str  # Google ID token
+
 class UserResponse(BaseModel):
     id: str
     email: str
@@ -993,6 +996,87 @@ async def verify_otp(data: VerifyOTPRequest):
     # OTP verified — remove from store
     _otp_store.pop(phone, None)
     return {"message": "Phone number verified successfully", "verified": True}
+
+@api_router.post("/auth/google", response_model=TokenResponse)
+async def google_login(data: GoogleLoginRequest):
+    """Login or register using a Google ID token."""
+    import requests as http_requests
+    try:
+        # Verify the ID token with Google's tokeninfo endpoint
+        resp = http_requests.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": data.credential},
+            timeout=10
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid Google token")
+        
+        google_data = resp.json()
+        google_email = google_data.get("email")
+        google_name = google_data.get("name", "")
+        google_picture = google_data.get("picture", "")
+        
+        if not google_email:
+            raise HTTPException(status_code=401, detail="Google token missing email")
+        
+        # Find existing user by email
+        user = await db.users.find_one({"email": google_email}, {"_id": 0})
+        
+        if user:
+            # Existing user — update profile pic if not set
+            if not user.get("profile_picture") and google_picture:
+                await db.users.update_one(
+                    {"id": user["id"]},
+                    {"$set": {"profile_picture": google_picture}}
+                )
+                user["profile_picture"] = google_picture
+            # Ensure account is verified
+            if not user.get("is_verified"):
+                await db.users.update_one(
+                    {"id": user["id"]},
+                    {"$set": {"is_verified": True}}
+                )
+                user["is_verified"] = True
+        else:
+            # New user — create account
+            user_id = str(uuid.uuid4())
+            user = {
+                "id": user_id,
+                "email": google_email,
+                "password": hash_password(uuid.uuid4().hex),  # Random password
+                "name": google_name,
+                "phone": None,
+                "phone_verified": True,  # Google accounts are verified
+                "role": "owner",
+                "restaurant_id": None,
+                "branch_id": None,
+                "onboarding_complete": False,
+                "is_verified": True,  # Google accounts are pre-verified
+                "profile_picture": google_picture,
+                "auth_provider": "google",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(user)
+            await log_action("auth", "google_register", user_id=user_id)
+        
+        # Generate JWT
+        token = create_token(user["id"], user["role"], user.get("restaurant_id"))
+        await log_action("auth", "google_login", user_id=user["id"])
+        
+        return TokenResponse(
+            access_token=token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user["id"], email=user["email"], name=user["name"],
+                role=user["role"], restaurant_id=user.get("restaurant_id"),
+                branch_id=user.get("branch_id"), created_at=user["created_at"]
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Google auth failed: {e}")
+        raise HTTPException(status_code=500, detail="Google authentication failed")
 
 @api_router.post("/auth/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest):
