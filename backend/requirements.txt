@@ -81,3 +81,4 @@ websockets==16.0
 yarl==1.23.0
 zipp==3.23.0
 sendgrid
+google-generativeai==0.8.4

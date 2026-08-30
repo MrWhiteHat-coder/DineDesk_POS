@@ -19,6 +19,14 @@ import smtplib
 from email.mime.text import MIMEText
 from contextlib import asynccontextmanager
 
+# Google Gemini AI
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    genai = None
+    GEMINI_AVAILABLE = False
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -41,6 +49,11 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+
+# Gemini AI Config
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+if GEMINI_API_KEY and GEMINI_AVAILABLE:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 # Twilio Config
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
@@ -712,6 +725,110 @@ async def send_sms_otp(phone: str, otp: str):
     except Exception as e:
         logger.error(f"Failed to send OTP to {phone}: {e}")
         return False
+
+
+# ============== AI INSIGHTS ==============
+
+async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Restaurant", report_type: str = "daily") -> str:
+    """Generate AI-powered insights using Google Gemini."""
+    if not GEMINI_API_KEY or not GEMINI_AVAILABLE:
+        return "AI insights require Gemini API key. Add GEMINI_API_KEY to your environment variables."
+    
+    try:
+        # Build context from analytics data
+        daily_sales = analytics_data.get("daily_sales", 0)
+        total_orders = analytics_data.get("total_orders", 0)
+        avg_order = daily_sales / total_orders if total_orders > 0 else 0
+        top_items = analytics_data.get("top_items", [])
+        order_types = analytics_data.get("order_type_breakdown", {})
+        hourly = analytics_data.get("hourly_orders", [])
+        payments = analytics_data.get("payment_breakdown", {})
+        weekly_sales = analytics_data.get("weekly_sales", 0)
+        monthly_sales = analytics_data.get("monthly_sales", 0)
+        
+        # Format top items
+        items_text = "
+".join([f"  - {item.get(chr(110)+chr(97)+chr(109)+chr(101), "Unknown")}: {item.get("count", 0)} sold" for item in top_items[:10]]) if top_items else "  No items sold today"
+        
+        # Format hourly data (only non-zero)
+        peak_hours = [h for h in hourly if h.get("orders", 0) > 0] if hourly else []
+        peak_text = "
+".join([f"  - {h.get("hour", "?")}:00 -> {h.get("orders", 0)} orders, Rs.{h.get("revenue", 0):.0f}" for h in peak_hours[:8]]) if peak_hours else "  No hourly data"
+        
+        # Format order types
+        types_text = "
+".join([f"  - {k.replace(chr(95)+chr(111), " ").title()}: {v}" for k, v in order_types.items()]) if order_types else "  No data"
+        
+        # Format payments
+        pay_text = "
+".join([f"  - {k.upper()}: Rs.{v:.0f}" for k, v in payments.items()]) if payments else "  No data"
+        
+        # Build the prompt
+        data_summary = f"""
+Restaurant: {restaurant_name}
+Report Period: Today ({analytics_data.get("selected_date", "")})
+
+SALES SUMMARY:
+- Daily Sales: Rs.{daily_sales:,.2f}
+- Weekly Sales: Rs.{weekly_sales:,.2f}
+- Monthly Sales: Rs.{monthly_sales:,.2f}
+- Total Orders: {total_orders}
+- Average Order Value: Rs.{avg_order:,.2f}
+
+TOP SELLING ITEMS:
+{items_text}
+
+ORDER TYPES:
+{types_text}
+
+PEAK HOURS:
+{peak_text}
+
+PAYMENT METHODS:
+{pay_text}
+"""
+        
+        system_prompt = f"""You are DineDesk AI, an expert restaurant business analyst powered by advanced analytics. You analyze {restaurant_name}'s sales data and provide actionable, specific insights that help the restaurant owner make better business decisions.
+
+Your insights must be:
+1. SPECIFIC — Reference exact numbers, percentages, and item names from the data
+2. ACTIONABLE — Give concrete steps the owner can take TODAY or THIS WEEK
+3. PROFESSIONAL — Use clean markdown formatting with headers and bullet points
+4. INSIGHTFUL — Find patterns the owner might miss ( correlations, trends, opportunities)
+5. CONCISE — Keep total response under 400 words
+
+Format your response as:
+## Sales Performance Summary
+[Brief 2-3 sentence overview with key numbers]
+
+## Top Performers
+[Highlight best items with percentages and why they matter]
+
+## Peak Hours Analysis  
+[When busiest, staffing implications]
+
+## Recommendations
+[3-5 specific, numbered actionable items with expected impact]
+
+## Tomorrow's Prep
+[Specific prep suggestions based on today's patterns]"""
+
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash",
+            system_instruction=system_prompt
+        )
+        
+        response = model.generate_content(
+            f"Analyze today's restaurant performance and provide insights:
+
+{data_summary}"
+        )
+        
+        return response.text
+        
+    except Exception as e:
+        logger.error(f"AI insights generation failed: {e}")
+        return f"AI insights temporarily unavailable. Error: {str(e)[:100]}"
 
 # ============== AUTH ROUTES ==============
 
@@ -1901,8 +2018,52 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
 
 @api_router.post("/analytics/ai-insights")
 async def get_ai_insights(user: dict = Depends(get_current_user)):
+    """Generate AI-powered analytics insights using Gemini."""
     check_role(user, "analytics")
-    return {"insights": "AI insights feature is currently disabled.", "data_summary": {}}
+    try:
+        # Get today's analytics data
+        now = datetime.now(timezone.utc)
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        restaurant_id = user.get("restaurant_id", "default")
+        
+        day_orders = await db.orders.find({
+            "restaurant_id": restaurant_id,
+            "created_at": {"$gte": day_start},
+            "status": {"$in": ["completed", "paid"]}
+        }).to_list(1000)
+        
+        daily_sales = sum(o.get("total_amount", 0) for o in day_orders)
+        top_items_map = {}
+        for o in day_orders:
+            for item in o.get("items", []):
+                name = item.get("name", "Unknown")
+                top_items_map[name] = top_items_map.get(name, 0) + item.get("quantity", 1)
+        top_items = [{"name": k, "count": v} for k, v in sorted(top_items_map.items(), key=lambda x: -x[1])[:10]]
+        
+        # Get restaurant name
+        restaurant = await db.restaurants.find_one({"id": restaurant_id})
+        restaurant_name = restaurant.get("name", "Restaurant") if restaurant else "Restaurant"
+        
+        # Weekly and monthly sales
+        week_start = (now - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        month_start = (now - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        week_orders = await db.orders.find({"restaurant_id": restaurant_id, "created_at": {"$gte": week_start}, "status": {"$in": ["completed", "paid"]}}).to_list(10000)
+        month_orders = await db.orders.find({"restaurant_id": restaurant_id, "created_at": {"$gte": month_start}, "status": {"$in": ["completed", "paid"]}}).to_list(10000)
+        
+        analytics_data = {
+            "daily_sales": daily_sales,
+            "weekly_sales": sum(o.get("total_amount", 0) for o in week_orders),
+            "monthly_sales": sum(o.get("total_amount", 0) for o in month_orders),
+            "total_orders": len(day_orders),
+            "top_items": top_items,
+            "selected_date": now.strftime("%Y-%m-%d")
+        }
+        
+        insights = await generate_ai_insights(analytics_data, restaurant_name, "daily")
+        return {"insights": insights, "data_summary": analytics_data}
+    except Exception as e:
+        logger.error(f"AI insights error: {e}")
+        return {"insights": f"AI insights temporarily unavailable. Please try again later.", "data_summary": {}}
 
 # ============== ADMIN ROUTES ==============
 
@@ -2375,7 +2536,23 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         except:
             pass
 
-    ai_insights = "AI insights feature is currently disabled."
+    # Generate AI insights for PDF
+    ai_insights = "AI insights unavailable."
+    try:
+        pdf_analytics = {
+            "daily_sales": total_sales,
+            "weekly_sales": total_sales,
+            "monthly_sales": total_sales,
+            "total_orders": len(paid_orders),
+            "top_items": [{"name": k, "count": v} for k, v in item_counts.items()],
+            "order_type_breakdown": order_types,
+            "payment_breakdown": payment_methods,
+            "hourly_orders": [{"hour": h, "orders": v["orders"], "revenue": v["revenue"]} for h, v in sorted(hourly.items())],
+            "selected_date": session.get("date", "")
+        }
+        ai_insights = await generate_ai_insights(pdf_analytics, restaurant.get("name", "Restaurant") if restaurant else "Restaurant", "day_close")
+    except Exception as e:
+        logger.error(f"PDF AI insights error: {e}")
 
     pdf = FPDF()
     pdf.add_page()
@@ -2536,7 +2713,69 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
 @api_router.get("/day-session/{session_id}/ai-insights")
 async def get_day_close_ai_insights(session_id: str, user: dict = Depends(get_current_user)):
     """Get AI insights for a day session for in-app display."""
-    return {"insights": "AI insights feature is currently disabled."}
+    try:
+        session = await db.day_sessions.find_one({"id": session_id})
+        if not session:
+            return {"insights": "Session not found."}
+        
+        restaurant_id = session.get("restaurant_id", user.get("restaurant_id", "default"))
+        restaurant = await db.restaurants.find_one({"id": restaurant_id})
+        restaurant_name = restaurant.get("name", "Restaurant") if restaurant else "Restaurant"
+        
+        # Get orders for this session
+        session_start = session.get("opened_at", "")
+        session_end = session.get("closed_at", datetime.now(timezone.utc).isoformat())
+        
+        orders = await db.orders.find({
+            "restaurant_id": restaurant_id,
+            "created_at": {"$gte": session_start, "$lte": session_end},
+            "status": {"$in": ["completed", "paid"]}
+        }).to_list(10000)
+        
+        total_sales = sum(o.get("total_amount", 0) for o in orders)
+        total_orders = len(orders)
+        
+        # Top items
+        top_items_map = {}
+        for o in orders:
+            for item in o.get("items", []):
+                name = item.get("name", "Unknown")
+                top_items_map[name] = top_items_map.get(name, 0) + item.get("quantity", 1)
+        top_items = [{"name": k, "count": v} for k, v in sorted(top_items_map.items(), key=lambda x: -x[1])[:10]]
+        
+        # Payment breakdown
+        payment_map = {}
+        for o in orders:
+            method = o.get("payment_method", "unknown")
+            payment_map[method] = payment_map.get(method, 0) + o.get("total_amount", 0)
+        
+        # Hourly breakdown
+        hourly = {}
+        for o in orders:
+            try:
+                h = datetime.fromisoformat(o["created_at"]).hour
+                hourly[h] = hourly.get(h, {"orders": 0, "revenue": 0})
+                hourly[h]["orders"] += 1
+                hourly[h]["revenue"] += o.get("total_amount", 0)
+            except:
+                pass
+        
+        analytics_data = {
+            "daily_sales": total_sales,
+            "weekly_sales": total_sales,
+            "monthly_sales": total_sales,
+            "total_orders": total_orders,
+            "top_items": top_items,
+            "payment_breakdown": payment_map,
+            "hourly_orders": [{"hour": h, "orders": v["orders"], "revenue": v["revenue"]} for h, v in sorted(hourly.items())],
+            "selected_date": session.get("date", "")
+        }
+        
+        insights = await generate_ai_insights(analytics_data, restaurant_name, "day_close")
+        return {"insights": insights}
+    except Exception as e:
+        logger.error(f"Day close AI insights error: {e}")
+        return {"insights": "AI insights temporarily unavailable."}
 
 # ============== CUSTOMER CRM ROUTES ==============
 
