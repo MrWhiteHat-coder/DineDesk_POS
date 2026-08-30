@@ -728,7 +728,7 @@ async def send_sms_otp(phone: str, otp: str):
 
 
 # ============== AI INSIGHTS ==============
-
+
 async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Restaurant", report_type: str = "daily") -> str:
     """Generate AI-powered insights using Google Gemini."""
     if not GEMINI_API_KEY or not GEMINI_AVAILABLE:
@@ -746,90 +746,111 @@ async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Res
         weekly_sales = analytics_data.get("weekly_sales", 0)
         monthly_sales = analytics_data.get("monthly_sales", 0)
         
-        # Format top items
-        items_text = "
-".join([f"  - {item.get(chr(110)+chr(97)+chr(109)+chr(101), "Unknown")}: {item.get("count", 0)} sold" for item in top_items[:10]]) if top_items else "  No items sold today"
+        # Format top items (avoid nested quotes in f-strings)
+        items_lines = []
+        for item in top_items[:10]:
+            item_name = item.get("name", "Unknown")
+            item_count = item.get("count", 0)
+            items_lines.append("  - %s: %s sold" % (item_name, item_count))
+        items_text = "\n".join(items_lines) if items_lines else "  No items sold today"
         
         # Format hourly data (only non-zero)
         peak_hours = [h for h in hourly if h.get("orders", 0) > 0] if hourly else []
-        peak_text = "
-".join([f"  - {h.get("hour", "?")}:00 -> {h.get("orders", 0)} orders, Rs.{h.get("revenue", 0):.0f}" for h in peak_hours[:8]]) if peak_hours else "  No hourly data"
+        peak_lines = []
+        for h in peak_hours[:8]:
+            hour = h.get("hour", "?")
+            orders = h.get("orders", 0)
+            revenue = h.get("revenue", 0)
+            peak_lines.append("  - %s:00 -> %s orders, Rs.%.0f" % (hour, orders, revenue))
+        peak_text = "\n".join(peak_lines) if peak_lines else "  No hourly data"
         
         # Format order types
-        types_text = "
-".join([f"  - {k.replace(chr(95)+chr(111), " ").title()}: {v}" for k, v in order_types.items()]) if order_types else "  No data"
+        types_lines = []
+        for k, v in order_types.items():
+            type_name = k.replace("_", " ").title()
+            types_lines.append("  - %s: %s" % (type_name, v))
+        types_text = "\n".join(types_lines) if types_lines else "  No data"
         
         # Format payments
-        pay_text = "
-".join([f"  - {k.upper()}: Rs.{v:.0f}" for k, v in payments.items()]) if payments else "  No data"
+        pay_lines = []
+        for k, v in payments.items():
+            pay_lines.append("  - %s: Rs.%.0f" % (k.upper(), v))
+        pay_text = "\n".join(pay_lines) if pay_lines else "  No data"
         
         # Build the prompt
-        data_summary = f"""
-Restaurant: {restaurant_name}
-Report Period: Today ({analytics_data.get("selected_date", "")})
-
-SALES SUMMARY:
-- Daily Sales: Rs.{daily_sales:,.2f}
-- Weekly Sales: Rs.{weekly_sales:,.2f}
-- Monthly Sales: Rs.{monthly_sales:,.2f}
-- Total Orders: {total_orders}
-- Average Order Value: Rs.{avg_order:,.2f}
-
-TOP SELLING ITEMS:
-{items_text}
-
-ORDER TYPES:
-{types_text}
-
-PEAK HOURS:
-{peak_text}
-
-PAYMENT METHODS:
-{pay_text}
-"""
+        data_summary = (
+            "Restaurant: %s\n"
+            "Report Period: Today (%s)\n"
+            "\n"
+            "SALES SUMMARY:\n"
+            "- Daily Sales: Rs.%,.2f\n"
+            "- Weekly Sales: Rs.%,.2f\n"
+            "- Monthly Sales: Rs.%,.2f\n"
+            "- Total Orders: %s\n"
+            "- Average Order Value: Rs.%,.2f\n"
+            "\n"
+            "TOP SELLING ITEMS:\n"
+            "%s\n"
+            "\n"
+            "ORDER TYPES:\n"
+            "%s\n"
+            "\n"
+            "PEAK HOURS:\n"
+            "%s\n"
+            "\n"
+            "PAYMENT METHODS:\n"
+            "%s"
+        ) % (
+            restaurant_name,
+            analytics_data.get("selected_date", ""),
+            daily_sales, weekly_sales, monthly_sales,
+            total_orders, avg_order,
+            items_text, types_text, peak_text, pay_text
+        )
         
-        system_prompt = f"""You are DineDesk AI, an expert restaurant business analyst powered by advanced analytics. You analyze {restaurant_name}'s sales data and provide actionable, specific insights that help the restaurant owner make better business decisions.
-
-Your insights must be:
-1. SPECIFIC — Reference exact numbers, percentages, and item names from the data
-2. ACTIONABLE — Give concrete steps the owner can take TODAY or THIS WEEK
-3. PROFESSIONAL — Use clean markdown formatting with headers and bullet points
-4. INSIGHTFUL — Find patterns the owner might miss ( correlations, trends, opportunities)
-5. CONCISE — Keep total response under 400 words
-
-Format your response as:
-## Sales Performance Summary
-[Brief 2-3 sentence overview with key numbers]
-
-## Top Performers
-[Highlight best items with percentages and why they matter]
-
-## Peak Hours Analysis  
-[When busiest, staffing implications]
-
-## Recommendations
-[3-5 specific, numbered actionable items with expected impact]
-
-## Tomorrow's Prep
-[Specific prep suggestions based on today's patterns]"""
+        system_prompt = (
+            "You are DineDesk AI, an expert restaurant business analyst powered by advanced analytics. "
+            "You analyze %s's sales data and provide actionable, specific insights that help the restaurant owner make better business decisions.\n"
+            "\n"
+            "Your insights must be:\n"
+            "1. SPECIFIC — Reference exact numbers, percentages, and item names from the data\n"
+            "2. ACTIONABLE — Give concrete steps the owner can take TODAY or THIS WEEK\n"
+            "3. PROFESSIONAL — Use clean markdown formatting with headers and bullet points\n"
+            "4. INSIGHTFUL — Find patterns the owner might miss (correlations, trends, opportunities)\n"
+            "5. CONCISE — Keep total response under 400 words\n"
+            "\n"
+            "Format your response as:\n"
+            "## Sales Performance Summary\n"
+            "[Brief 2-3 sentence overview with key numbers]\n"
+            "\n"
+            "## Top Performers\n"
+            "[Highlight best items with percentages and why they matter]\n"
+            "\n"
+            "## Peak Hours Analysis\n"
+            "[When busiest, staffing implications]\n"
+            "\n"
+            "## Recommendations\n"
+            "[3-5 specific, numbered actionable items with expected impact]\n"
+            "\n"
+            "## Tomorrow's Prep\n"
+            "[Specific prep suggestions based on today's patterns]"
+        ) % restaurant_name
 
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             system_instruction=system_prompt
         )
         
-        response = model.generate_content(
-            f"Analyze today's restaurant performance and provide insights:
-
-{data_summary}"
-        )
+        prompt_text = "Analyze today's restaurant performance and provide insights:\n\n%s" % data_summary
+        response = model.generate_content(prompt_text)
         
         return response.text
         
     except Exception as e:
         logger.error(f"AI insights generation failed: {e}")
-        return f"AI insights temporarily unavailable. Error: {str(e)[:100]}"
-
+        return f"AI insights temporarily unavailable. Error: {str(e)[:100]}"
+
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=RegisterResponse)
@@ -1030,7 +1051,7 @@ async def login(credentials: UserLogin):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Block unverified accounts from logging in
-    if not user.get("is_verified", False):
+    if user.get("is_verified", True) is False:
         raise HTTPException(status_code=403, detail="Please verify your email before logging in. Check your inbox for the verification link.")
 
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
