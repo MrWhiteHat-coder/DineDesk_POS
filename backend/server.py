@@ -176,6 +176,13 @@ class VerifyOTPRequest(BaseModel):
     phone: str
     otp: str
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 # Restaurant Models
 class RestaurantOnboarding(BaseModel):
     name: str
@@ -645,6 +652,38 @@ async def send_verification_email(email: str, name: str, token: str):
     except Exception as e:
         logger.error(f"Failed to send verification email: {e}")
 
+async def send_password_reset_email(email: str, name: str, token: str):
+    """Send password reset link to user via Gmail SMTP."""
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        logger.warning("SMTP not configured — skipping password reset email")
+        return
+    reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
+    subject = "Reset your DineDesk password"
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f5f5f5;font-family:'Segoe UI',Roboto,sans-serif;">
+      <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <div style="background:#111;padding:32px;text-align:center;">
+          <h1 style="color:#fff;font-size:24px;margin:0;">🍽️ DineDesk</h1>
+        </div>
+        <div style="padding:32px;">
+          <h2 style="color:#111;font-size:20px;margin:0 0 8px;">Reset your password</h2>
+          <p style="color:#555;font-size:14px;line-height:1.6;margin:0 0 24px;">Hi {name}, we received a request to reset your password. Click the button below to choose a new one.</p>
+          <a href="{reset_link}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:14px;">Reset Password</a>
+          <p style="color:#999;font-size:12px;margin:24px 0 0;line-height:1.5;">This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    try:
+        await asyncio.to_thread(_send_email_sync, email, subject, html_body)
+        logger.info(f"Password reset email sent to {email}")
+    except Exception as e:
+        logger.error(f"Failed to send password reset email: {e}")
+
 # ============== OTP STORAGE & SMS ==============
 # In-memory OTP store: {phone: {otp, expires_at, attempts}}
 _otp_store: Dict[str, Dict[str, Any]] = {}
@@ -816,6 +855,54 @@ async def verify_otp(data: VerifyOTPRequest):
     # OTP verified — remove from store
     _otp_store.pop(phone, None)
     return {"message": "Phone number verified successfully", "verified": True}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+    """Send a password reset link to the given email."""
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"message": "If that email is registered, a password reset link has been sent."}
+
+    # Rate limit: max 3 reset requests per hour per email
+    if not _check_rate_limit(f"reset:{data.email}", 3):
+        raise HTTPException(status_code=429, detail="Too many reset requests. Please try again later.")
+
+    reset_token = str(uuid.uuid4())
+    reset_expires = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"reset_token": reset_token, "reset_token_expires": reset_expires}}
+    )
+    await send_password_reset_email(user["email"], user["name"], reset_token)
+    return {"message": "If that email is registered, a password reset link has been sent."}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPasswordRequest):
+    """Reset password using the token from the email link."""
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    user = await db.users.find_one({"reset_token": data.token}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+
+    expires = user.get("reset_token_expires")
+    if expires:
+        try:
+            if datetime.fromisoformat(expires) < datetime.now(timezone.utc):
+                raise HTTPException(status_code=400, detail="Reset link has expired. Please request a new one.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"password": hash_password(data.new_password)}, "$unset": {"reset_token": "", "reset_token_expires": ""}}
+    )
+    await log_action("auth", "password_reset", user_id=user["id"])
+    return {"message": "Password reset successful. You can now log in with your new password."}
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):

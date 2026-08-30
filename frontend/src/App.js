@@ -8,6 +8,8 @@ import { FeatureProvider } from './contexts/FeatureContext';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import VerifyEmailPage from './pages/auth/VerifyEmailPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 // Onboarding Pages
 import BusinessCategoryPage from './pages/onboarding/BusinessCategoryPage';
 import RestaurantSetupPage from './pages/onboarding/RestaurantSetupPage';
@@ -123,6 +125,8 @@ function AppRoutes() {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
 <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       {/* Onboarding Routes */}
       <Route path="/onboarding" element={<ProtectedRoute><BusinessCategoryPage /></ProtectedRoute>} />
       <Route path="/onboarding/setup" element={<ProtectedRoute><RestaurantSetupPage /></ProtectedRoute>} />

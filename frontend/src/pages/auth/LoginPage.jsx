@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
 import {
-  Mail, Lock, ArrowRight, Zap, Globe, UtensilsCrossed, BarChart3, Package, AlertTriangle, RefreshCw,
+  Mail, Lock, ArrowRight, Zap, Globe, UtensilsCrossed, BarChart3, Package, AlertTriangle, RefreshCw, KeyRound,
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -175,7 +175,9 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-4 text-center">
-              <a href="#" className="text-xs text-gray-400 hover:text-black transition-colors">Forgot Password?</a>
+              <Link to="/forgot-password" className="text-xs text-gray-400 hover:text-black transition-colors inline-flex items-center gap-1">
+                <KeyRound className="w-3 h-3" /> Forgot Password?
+              </Link>
             </div>
 
             <div className="flex items-center gap-3 my-5">
