@@ -4,8 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
 import {
-  Mail, Lock, ArrowRight, Zap, Globe, UtensilsCrossed, BarChart3, Package,
+  Mail, Lock, ArrowRight, Zap, Globe, UtensilsCrossed, BarChart3, Package, AlertTriangle, RefreshCw,
 } from 'lucide-react';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
 
 const features = [
   { icon: Zap, title: 'Lightning POS', desc: '3-click order placement. Touch-optimized. Works offline.' },
@@ -21,10 +24,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resending, setResending] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setUnverifiedEmail('');
     try {
       const user = await login(email, password);
       toast.success('Welcome back!');
@@ -32,9 +38,26 @@ export default function LoginPage() {
       else if (!user.restaurant_id) navigate('/onboarding');
       else navigate('/pos');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Login failed');
+      const detail = err.response?.data?.detail || 'Login failed';
+      if (err.response?.status === 403 && detail.includes('verify')) {
+        setUnverifiedEmail(email);
+      } else {
+        toast.error(detail);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResending(true);
+    try {
+      await axios.post(`${API}/api/auth/resend-verification`, { email: unverifiedEmail });
+      toast.success('Verification email sent! Check your inbox.');
+    } catch (err) {
+      toast.error('Could not resend. Try again shortly.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -88,13 +111,36 @@ export default function LoginPage() {
               <p className="text-sm text-gray-500">Sign in to your DineDesk dashboard.</p>
             </div>
 
+            {/* Unverified Email Warning */}
+            {unverifiedEmail && (
+              <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-800 mb-1">Email not verified</p>
+                    <p className="text-xs text-amber-700 mb-3">
+                      Please verify <span className="font-semibold">{unverifiedEmail}</span> before logging in. Check your inbox for the verification link.
+                    </p>
+                    <button
+                      onClick={handleResendVerification}
+                      disabled={resending}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 hover:text-amber-900 disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${resending ? 'animate-spin' : ''}`} />
+                      {resending ? 'Sending...' : 'Resend Verification Email'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
-                    type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    type="email" value={email} onChange={(e) => { setEmail(e.target.value); setUnverifiedEmail(''); }}
                     placeholder="you@example.com"
                     className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
                     required data-testid="login-email-input"

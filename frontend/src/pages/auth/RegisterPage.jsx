@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
 import {
-  Mail, Lock, ArrowRight, User, Zap, Globe, UtensilsCrossed, BarChart3, Package,
+  Mail, Lock, ArrowRight, User, Phone, Shield, Zap, Globe, UtensilsCrossed,
+  BarChart3, Package, ChevronLeft, RefreshCw,
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
@@ -22,23 +23,122 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState('register'); // 'register' | 'check-email'
+  const [step, setStep] = useState('register'); // 'register' | 'otp' | 'check-email'
   const [resending, setResending] = useState(false);
 
-  const handleSubmit = async (e) => {
+  // OTP state
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const otpRefs = useRef([]);
+
+  // OTP countdown timer
+  useEffect(() => {
+    if (otpTimer <= 0) return;
+    const interval = setInterval(() => setOtpTimer((t) => t - 1), 1000);
+    return () => clearInterval(interval);
+  }, [otpTimer]);
+
+  const formatPhone = (val) => {
+    // Auto-format: ensure + prefix and digits only
+    let cleaned = val.replace(/[^+\d]/g, '');
+    if (!cleaned.startsWith('+')) cleaned = '+91' + cleaned.replace(/^\+?91/, '');
+    return cleaned;
+  };
+
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return; }
     if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (!phone.trim()) { toast.error('Phone number is required'); return; }
+
+    const formattedPhone = formatPhone(phone);
+    if (formattedPhone.length < 12) { toast.error('Please enter a valid phone number with country code'); return; }
+
     setLoading(true);
     try {
-      await axios.post(`${API}/api/auth/register`, { name, email, password });
-      setStep('check-email');
-      toast.success('Check your email to verify your account.');
+      await axios.post(`${API}/api/auth/register`, { name, email, password, phone: formattedPhone });
+      // Registration succeeded — now send OTP for phone verification
+      await sendOTP(formattedPhone);
+      setStep('otp');
+      toast.success('Account created! Verify your phone number to continue.');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Registration failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendOTP = async (phoneNum) => {
+    setOtpSending(true);
+    try {
+      await axios.post(`${API}/api/auth/send-otp`, { phone: phoneNum || phone });
+      setOtpTimer(60); // 60s cooldown
+      toast.success('OTP sent! Check your phone.');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send OTP');
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) value = value.slice(-1); // Only last char
+    if (!/^\d*$/.test(value)) return; // Only digits
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto-advance to next input
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all 6 digits filled
+    if (newOtp.every((d) => d !== '')) {
+      verifyOTP(newOtp.join(''));
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+      const newOtp = [...otp];
+      newOtp[index - 1] = '';
+      setOtp(newOtp);
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      const newOtp = pasted.split('');
+      setOtp(newOtp);
+      otpRefs.current[5]?.focus();
+      verifyOTP(pasted);
+    }
+  };
+
+  const verifyOTP = async (otpValue) => {
+    setOtpVerifying(true);
+    try {
+      const formattedPhone = formatPhone(phone);
+      await axios.post(`${API}/api/auth/verify-otp`, { phone: formattedPhone, otp: otpValue });
+      setPhoneVerified(true);
+      setStep('check-email');
+      toast.success('Phone number verified!');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Invalid OTP. Please try again.');
+      setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+    } finally {
+      setOtpVerifying(false);
     }
   };
 
@@ -92,7 +192,9 @@ export default function RegisterPage() {
       {/* RIGHT */}
       <div className="lg:w-[40%] bg-white flex items-center justify-center p-6 sm:p-10 lg:p-12">
         <div className="w-full max-w-sm">
-          {step === 'check-email' ? (
+
+          {/* STEP: Check Email */}
+          {step === 'check-email' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8 text-center">
               <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-white" />
@@ -119,13 +221,80 @@ export default function RegisterPage() {
 
               <p className="text-xs text-gray-400 mt-4">Link expires in 24 hours</p>
             </div>
-          ) : (
+          )}
+
+          {/* STEP: OTP Verification */}
+          {step === 'otp' && (
+            <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
+              <button
+                onClick={() => setStep('register')}
+                className="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm mb-5 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" /> Back
+              </button>
+
+              <div className="text-center mb-6">
+                <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-7 h-7 text-green-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Verify your phone</h2>
+                <p className="text-sm text-gray-500">
+                  Enter the 6-digit code sent to <span className="font-semibold text-gray-700">{phone}</span>
+                </p>
+              </div>
+
+              {/* OTP Input */}
+              <div className="flex justify-center gap-2.5 mb-6" onPaste={handleOtpPaste}>
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => (otpRefs.current[i] = el)}
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-200 rounded-xl focus:border-black focus:ring-0 outline-none transition-colors bg-gray-50"
+                    disabled={otpVerifying}
+                  />
+                ))}
+              </div>
+
+              {otpVerifying && (
+                <p className="text-center text-sm text-gray-500 mb-4">Verifying...</p>
+              )}
+
+              {/* Resend OTP */}
+              <div className="text-center">
+                {otpTimer > 0 ? (
+                  <p className="text-sm text-gray-400">
+                    Resend OTP in <span className="font-semibold text-gray-600">{otpTimer}s</span>
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => sendOTP(formatPhone(phone))}
+                    disabled={otpSending}
+                    className="inline-flex items-center gap-1.5 text-sm text-black font-semibold hover:underline disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${otpSending ? 'animate-spin' : ''}`} />
+                    Resend OTP
+                  </button>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-400 text-center mt-4">Didn't receive the code? Check your spam folder or try again.</p>
+            </div>
+          )}
+
+          {/* STEP: Register Form */}
+          {step === 'register' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Create Your Account</h2>
                 <p className="text-sm text-gray-500">Start managing your restaurant today.</p>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-3.5">
+              <form onSubmit={handleRegister} className="space-y-3.5">
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Restaurant Owner Name</label>
                   <div className="relative">
@@ -143,6 +312,21 @@ export default function RegisterPage() {
                       className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
                       required />
                   </div>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      required
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">Include country code (e.g. +91 for India)</p>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Password</label>
@@ -187,6 +371,7 @@ export default function RegisterPage() {
               </Link>
             </div>
           )}
+
           <p className="text-center text-[11px] text-gray-400 mt-5">
             By creating an account, you agree to the Terms of Service and Privacy Policy.
           </p>

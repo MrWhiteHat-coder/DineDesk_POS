@@ -50,6 +50,8 @@ TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 # Gmail SMTP Config — no fallback credentials
 GMAIL_USER = os.environ.get('GMAIL_USER', '')
 GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', GMAIL_USER)
+SENDER_NAME = os.environ.get('SENDER_NAME', 'DineDesk')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
 # Admin bootstrap credentials — from env only
@@ -137,6 +139,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
+    phone: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -165,6 +168,13 @@ class VerifyEmailRequest(BaseModel):
 
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
+
+class SendOTPRequest(BaseModel):
+    phone: str
+
+class VerifyOTPRequest(BaseModel):
+    phone: str
+    otp: str
 
 # Restaurant Models
 class RestaurantOnboarding(BaseModel):
@@ -592,10 +602,12 @@ async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: f
     await db.wallet_transactions.insert_one(txn)
 
 def _send_email_sync(to_email: str, subject: str, html_body: str):
-    msg = MIMEText(html_body, "html")
+    from email.mime.multipart import MIMEMultipart
+    msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = GMAIL_USER
+    msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
     msg["To"] = to_email
+    msg.attach(MIMEText(html_body, "html"))
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
         server.starttls()
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
@@ -607,18 +619,60 @@ async def send_verification_email(email: str, name: str, token: str):
         logger.warning("SMTP not configured — skipping verification email")
         return
     verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
-    subject = "Verify your FoodFlow account"
+    subject = "Verify your DineDesk account"
     html_body = f"""
-        <p>Hi {name},</p>
-        <p>Thanks for signing up for FoodFlow. Please verify your email by clicking the link below:</p>
-        <p><a href="{verify_link}">Verify Email</a></p>
-        <p>This link expires in 24 hours.</p>
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f5f5f5;font-family:'Segoe UI',Roboto,sans-serif;">
+      <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <div style="background:#111;padding:32px;text-align:center;">
+          <h1 style="color:#fff;font-size:24px;margin:0;">🍽️ DineDesk</h1>
+        </div>
+        <div style="padding:32px;">
+          <h2 style="color:#111;font-size:20px;margin:0 0 8px;">Welcome, {name}!</h2>
+          <p style="color:#555;font-size:14px;line-height:1.6;margin:0 0 24px;">Thanks for signing up for DineDesk. Please verify your email address to activate your account.</p>
+          <a href="{verify_link}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:14px;">Verify Email Address</a>
+          <p style="color:#999;font-size:12px;margin:24px 0 0;line-height:1.5;">This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>
     """
     try:
         await asyncio.to_thread(_send_email_sync, email, subject, html_body)
         logger.info(f"Verification email sent to {email}")
     except Exception as e:
         logger.error(f"Failed to send verification email: {e}")
+
+# ============== OTP STORAGE & SMS ==============
+# In-memory OTP store: {phone: {otp, expires_at, attempts}}
+_otp_store: Dict[str, Dict[str, Any]] = {}
+
+import random
+
+def _generate_otp() -> str:
+    """Generate a 6-digit OTP."""
+    return f"{random.randint(100000, 999999)}"
+
+async def send_sms_otp(phone: str, otp: str):
+    """Send OTP via Twilio SMS."""
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_PHONE_NUMBER:
+        logger.warning(f"Twilio not configured — OTP for {phone}: {otp}")
+        return True  # Still allow flow to continue (mock mode)
+    try:
+        from twilio.rest import Client as TwilioClient
+        client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        message = client.messages.create(
+            body=f"Your DineDesk verification code is: {otp}. Valid for 5 minutes. Do not share this code.",
+            from_=TWILIO_PHONE_NUMBER,
+            to=phone
+        )
+        logger.info(f"OTP sent to {phone}, SID: {message.sid}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send OTP to {phone}: {e}")
+        return False
 
 # ============== AUTH ROUTES ==============
 
@@ -639,18 +693,25 @@ async def register(user_data: UserCreate):
         "email": user_data.email,
         "password": hash_password(user_data.password),
         "name": user_data.name,
+        "phone": user_data.phone,
+        "phone_verified": False,
         "role": "owner",
         "restaurant_id": None,
         "branch_id": None,
         "onboarding_complete": False,
-        "is_verified": True,
+        "is_verified": False,
+        "verification_token": verification_token,
+        "verification_token_expires": verification_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
 
+    # Send verification email
+    await send_verification_email(user_data.email, user_data.name, verification_token)
+
     return RegisterResponse(
-        message="Registration successful. You can now log in.",
+        message="Registration successful. Please check your email to verify your account.",
         email=user_data.email
     )
 
@@ -702,6 +763,60 @@ async def resend_verification(data: ResendVerificationRequest):
     await send_verification_email(user["email"], user["name"], verification_token)
     return {"message": "Verification email sent. Please check your inbox."}
 
+@api_router.post("/auth/send-otp")
+async def send_otp(data: SendOTPRequest):
+    """Send a 6-digit OTP to the given phone number via SMS."""
+    phone = data.phone.strip()
+    if not phone.startswith("+") or len(phone) < 10:
+        raise HTTPException(status_code=400, detail="Please enter a valid phone number with country code (e.g. +919876543210)")
+
+    if not _check_rate_limit(f"otp:{phone}", 3):
+        raise HTTPException(status_code=429, detail="Too many OTP requests. Please try again after 1 minute.")
+
+    otp = _generate_otp()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    _otp_store[phone] = {
+        "otp": otp,
+        "expires_at": expires_at,
+        "attempts": 0
+    }
+
+    sent = await send_sms_otp(phone, otp)
+    if not sent and TWILIO_ACCOUNT_SID:
+        raise HTTPException(status_code=500, detail="Failed to send OTP. Please try again.")
+
+    # In dev/mock mode (no Twilio), still return success so frontend flow works
+    if not TWILIO_ACCOUNT_SID:
+        logger.info(f"[DEV MODE] OTP for {phone}: {otp}")
+
+    return {"message": "OTP sent successfully", "expires_in": 300}
+
+@api_router.post("/auth/verify-otp")
+async def verify_otp(data: VerifyOTPRequest):
+    """Verify the OTP sent to the given phone number."""
+    phone = data.phone.strip()
+    otp = data.otp.strip()
+
+    stored = _otp_store.get(phone)
+    if not stored:
+        raise HTTPException(status_code=400, detail="No OTP found for this number. Please request a new one.")
+
+    if datetime.now(timezone.utc) > stored["expires_at"]:
+        _otp_store.pop(phone, None)
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+
+    stored["attempts"] += 1
+    if stored["attempts"] > 5:
+        _otp_store.pop(phone, None)
+        raise HTTPException(status_code=429, detail="Too many attempts. Please request a new OTP.")
+
+    if stored["otp"] != otp:
+        raise HTTPException(status_code=400, detail=f"Invalid OTP. {5 - stored['attempts']} attempts remaining.")
+
+    # OTP verified — remove from store
+    _otp_store.pop(phone, None)
+    return {"message": "Phone number verified successfully", "verified": True}
+
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     if not _check_rate_limit(f"login:{credentials.email}", 10):
@@ -710,9 +825,9 @@ async def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Auto-verify legacy unverified accounts
+    # Block unverified accounts from logging in
     if not user.get("is_verified", False):
-        await db.users.update_one({"id": user["id"]}, {"$set": {"is_verified": True}})
+        raise HTTPException(status_code=403, detail="Please verify your email before logging in. Check your inbox for the verification link.")
 
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     await log_action("auth", "user_login", user_id=user["id"])
