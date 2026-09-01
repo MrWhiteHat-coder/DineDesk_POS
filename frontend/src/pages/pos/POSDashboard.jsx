@@ -426,7 +426,10 @@ export default function POSDashboard() {
             </div>
           </div>
         </div>
-{/* === MODALS === */}
+      </div>
+      </div>
+
+      {/* === MODALS === */}
 
       {/* Today's Orders Detail Modal */}
       <Dialog open={showOrdersDetail} onOpenChange={setShowOrdersDetail}>
