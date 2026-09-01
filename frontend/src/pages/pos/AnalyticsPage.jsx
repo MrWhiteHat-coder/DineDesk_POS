@@ -142,7 +142,7 @@ export default function AnalyticsPage() {
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-slate-200">
+            <Card className="border-slate-200/60 hover-lift">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200/60 hover-lift">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -168,7 +168,7 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200/60 hover-lift">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-slate-200">
+            <Card className="border-slate-200/60 hover-lift">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -236,80 +236,7 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-          {/* Hourly Orders */}
-          <Card className="border-slate-200">
-            <CardHeader><CardTitle className="font-heading text-lg">Peak Order Hours</CardTitle></CardHeader>
-            <CardContent>
-              <div className="h-64">
-                {hourlyData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={hourlyData}>
-                      <defs><linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3B82F6" stopOpacity={0} /></linearGradient></defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                      <XAxis dataKey="hour" tick={{ fontSize: 12 }} stroke="#94A3B8" tickFormatter={(hour) => `${hour}:00`} />
-                      <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
-                      <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} labelFormatter={(hour) => `${hour}:00`} />
-                      <Area type="monotone" dataKey="orders" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (<div className="flex items-center justify-center h-full text-slate-400">No hourly data for this date</div>)}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top Selling Items */}
-          <Card className="border-slate-200">
-            <CardHeader><CardTitle className="font-heading text-lg">Top Selling Items</CardTitle></CardHeader>
-            <CardContent>
-              {analytics?.top_items && analytics.top_items.length > 0 ? (
-                <div className="space-y-3">
-                  {analytics.top_items.slice(0, 10).map((item, index) => (
-                    <div key={item.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <span className="font-numbers font-bold text-slate-800 w-6">#{index + 1}</span>
-                        <span className="font-medium text-slate-900">{item.name}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="w-32 bg-slate-200 rounded-full h-2">
-                          <div className="bg-black h-2 rounded-full" style={{ width: `${(item.count / analytics.top_items[0].count) * 100}%` }} />
-                        </div>
-                        <span className="font-numbers font-semibold text-slate-600 w-16 text-right">{item.count} sold</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (<p className="text-slate-400 text-center py-8">No sales data for this date</p>)}
-            </CardContent>
-          </Card>
-
-          {/* AI Insights Section */}
-          <Card className="border-slate-200 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-700 text-white py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  <CardTitle className="text-base text-white">AI-Powered Insights</CardTitle>
-                </div>
-                <Button onClick={fetchAiInsights} disabled={insightsLoading} variant="outline" className="h-8 rounded-lg bg-white/10 border-white/20 text-white hover:bg-white/20 text-xs gap-1.5" data-testid="ai-insights-btn">
-                  {insightsLoading ? (<div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />) : (<RefreshCw className="w-3.5 h-3.5" />)}
-                  {insightsLoading ? 'Analyzing...' : 'Generate Insights'}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5">
-              {aiInsights ? (
-                <div className="prose prose-sm prose-slate max-w-none" data-testid="ai-insights-content">
-                  <ReactMarkdown>{aiInsights.insights}</ReactMarkdown>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium">Click "Generate Insights" to get AI-powered sales analysis</p>
-                  <p className="text-xs mt-1">Powered by Claude AI</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          
         </>
       )}
     </div>
