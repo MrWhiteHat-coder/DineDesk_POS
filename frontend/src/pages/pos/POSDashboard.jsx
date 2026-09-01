@@ -25,6 +25,8 @@ import {
   CreditCard,
   Smartphone,
   Package, CheckCircle,
+  BarChart3,
+  UtensilsCrossed,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
