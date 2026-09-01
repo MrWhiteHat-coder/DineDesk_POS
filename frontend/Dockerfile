@@ -7,6 +7,13 @@ COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
 COPY . .
+
+# Build-time env vars for React CRA (injected during build)
+ARG REACT_APP_BACKEND_URL
+ARG REACT_APP_GOOGLE_CLIENT_ID
+ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
+ENV REACT_APP_GOOGLE_CLIENT_ID=$REACT_APP_GOOGLE_CLIENT_ID
+
 RUN yarn build
 
 # Production stage — serve with nginx
