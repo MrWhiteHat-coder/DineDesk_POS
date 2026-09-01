@@ -196,48 +196,48 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-          {/* Charts Row */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            <Card className="border-slate-200">
-              <CardHeader><CardTitle className="font-heading text-lg">Order Type Breakdown</CardTitle></CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  {orderTypeData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                          {orderTypeData.map((_, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (<div className="flex items-center justify-center h-full text-slate-400">No order data for this date</div>)}
+                    {/* Charts Row - 3 column layout */}
+          <div className="grid lg:grid-cols-12 gap-5">
+            <div className="lg:col-span-5 space-y-5">
+              <div className="bg-white rounded-2xl border border-slate-200/60 p-5">
+                <h3 className="font-heading font-bold text-slate-900 text-base mb-4">Order Type Breakdown</h3>
+                <div className="h-52">
+                  {orderTypeData.length > 0 ? (<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={55} outerRadius={75} paddingAngle={5} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{orderTypeData.map((_, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><Tooltip /></PieChart></ResponsiveContainer>) : <div className="flex items-center justify-center h-full text-slate-400">No order data</div>}
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200">
-              <CardHeader><CardTitle className="font-heading text-lg">Payment Methods</CardTitle></CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  {paymentData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={paymentData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                        <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#94A3B8" />
-                        <YAxis tick={{ fontSize: 12 }} stroke="#94A3B8" />
-                        <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']} />
-                        <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (<div className="flex items-center justify-center h-full text-slate-400">No payment data for this date</div>)}
+              </div>
+              <div className="bg-white rounded-2xl border border-slate-200/60 p-5">
+                <h3 className="font-heading font-bold text-slate-900 text-base mb-4">Peak Order Hours</h3>
+                <div className="h-48">
+                  {hourlyData.length > 0 ? (<ResponsiveContainer width="100%" height="100%"><AreaChart data={hourlyData}><defs><linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3B82F6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" /><XAxis dataKey="hour" tick={{ fontSize: 11 }} stroke="#94A3B8" tickFormatter={(hour) => `${hour}:00`} /><YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" /><Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} labelFormatter={(hour) => `${hour}:00`} /><Area type="monotone" dataKey="orders" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorOrders)" /></AreaChart></ResponsiveContainer>) : <div className="flex items-center justify-center h-full text-slate-400">No hourly data</div>}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+            <div className="lg:col-span-4 space-y-5">
+              <div className="bg-white rounded-2xl border border-slate-200/60 p-5">
+                <h3 className="font-heading font-bold text-slate-900 text-base mb-4">Payment Methods</h3>
+                <div className="h-48">
+                  {paymentData.length > 0 ? (<ResponsiveContainer width="100%" height="100%"><BarChart data={paymentData}><CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" /><XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94A3B8" /><YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" /><Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px' }} formatter={(value) => [`Rs.${value.toFixed(2)}`, 'Amount']} /><Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>) : <div className="flex items-center justify-center h-full text-slate-400">No payment data</div>}
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl border border-slate-200/60 p-5">
+                <h3 className="font-heading font-bold text-slate-900 text-base mb-4">Top Selling Items</h3>
+                {analytics?.top_items && analytics.top_items.length > 0 ? (<div className="space-y-3">{analytics.top_items.slice(0, 5).map((item, index) => (<div key={item.name} className="flex items-center gap-3"><span className="text-xs font-bold text-slate-400 w-5">{index + 1}</span><div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0"><TrendingUp className="w-4 h-4 text-orange-500" /></div><div className="flex-1 min-w-0"><p className="text-sm font-semibold text-slate-900 truncate">{item.name}</p><p className="text-[10px] text-slate-400">{item.count} orders</p></div></div>))}</div>) : <p className="text-slate-400 text-sm text-center py-4">No sales data</p>}
+              </div>
+            </div>
+            <div className="lg:col-span-3">
+              <div className="bg-white rounded-2xl border border-slate-200/60 p-5">
+                <h3 className="font-heading font-bold text-slate-900 text-base mb-4">AI-Powered Insights</h3>
+                <button onClick={fetchAiInsights} disabled={insightsLoading} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-60 mb-4">
+                  {insightsLoading ? (<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />) : (<Sparkles className="w-4 h-4" />)}
+                  {insightsLoading ? 'Analyzing...' : 'Generate Insights'}
+                </button>
+                {aiInsights ? (<div className="prose prose-sm prose-slate max-w-none text-xs" data-testid="ai-insights-content"><ReactMarkdown>{aiInsights.insights}</ReactMarkdown></div>) : (<div className="text-center py-6 text-slate-400"><Sparkles className="w-8 h-8 mx-auto mb-2 opacity-40" /><p className="text-xs font-medium">Click to get AI-powered sales analysis</p><p className="text-[10px] mt-1 text-slate-300">Powered by Gemini AI</p></div>)}
+              </div>
+            </div>
           </div>
 
-          
-        </>
+
+</>
       )}
     </div>
   );
