@@ -24,7 +24,7 @@ import {
   Banknote,
   CreditCard,
   Smartphone,
-  Package,
+  Package, CheckCircle,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -84,6 +84,7 @@ export default function POSDashboard() {
   const [receiptData, setReceiptData] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showOrdersDetail, setShowOrdersDetail] = useState(false);
+  const [rightTab, setRightTab] = useState('payment');
   const receiptRef = useRef(null);
 
   useEffect(() => { fetchData(); }, [isDayOpen]);
@@ -117,6 +118,8 @@ export default function POSDashboard() {
     let list = [...todayOrders];
     if (orderFilter === 'process') list = list.filter(o => o.status === 'pending' || o.status === 'preparing' || o.status === 'ready');
     if (orderFilter === 'completed') list = list.filter(o => o.status === 'completed');
+    if (orderFilter === 'takeaway') list = list.filter(o => o.order_type === 'takeaway');
+    if (orderFilter === 'dinein') list = list.filter(o => o.order_type === 'dine_in');
     if (orderSearch.trim()) {
       const q = orderSearch.toLowerCase();
       list = list.filter(o =>
@@ -182,7 +185,7 @@ export default function POSDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div className="lg:col-span-4"><Skeleton className="h-80 rounded-xl" /></div>
           <div className="lg:col-span-4"><Skeleton className="h-80 rounded-xl" /></div>
-          <div className="lg:col-span-4 space-y-4"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
+          <div className="lg:col-span-5 space-y-5"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Skeleton className="h-64 rounded-xl" />
@@ -206,54 +209,54 @@ export default function POSDashboard() {
       )}
 
       {/* === ROW 1: Stats Cards === */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-0 text-white shadow-lg hover-lift cursor-default" data-testid="new-orders-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-gray-300">New Orders</p>
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <ClipboardList className="w-5 h-5 text-white" />
-              </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* New Orders */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 hover-lift" data-testid="new-orders-card">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-slate-500">New Orders</p>
+            <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center relative">
+              <ClipboardList className="w-5 h-5 text-emerald-600" />
+              {newOrders > 0 && (<span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-bounce-in">{newOrders}</span>)}
             </div>
-            <p className="font-numbers text-3xl font-bold">{newOrders}</p>
-            <p className="text-[10px] text-gray-400 mt-1">Updated every new order</p>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="font-numbers text-3xl font-bold text-slate-900">{newOrders}</p>
+          <p className="text-[11px] text-slate-400 mt-1">Updated 5s ago</p>
+        </div>
 
-        <Card className="bg-white border-gray-100 hover-lift cursor-pointer shadow-sm" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-gray-500">Total Orders</p>
-              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-blue-600" />
-              </div>
+        {/* Total Orders */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 hover-lift cursor-pointer" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-slate-500">Total Orders</p>
+            <div className="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
             </div>
-            <p className="font-numbers text-3xl font-bold text-slate-900">{totalOrders}</p>
-            <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">Click to view details <ChevronRight className="w-3 h-3" /></p>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="font-numbers text-3xl font-bold text-slate-900">{totalOrders}</p>
+          <p className="text-[11px] text-blue-500 mt-1 font-medium flex items-center gap-1">View Details <ChevronRight className="w-3 h-3" /></p>
+        </div>
 
-        <Card className="bg-white border-gray-100 hover-lift cursor-default shadow-sm" data-testid="waiting-list-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-gray-500">Waiting List</p>
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-600" />
-              </div>
+        {/* Active Orders */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 hover-lift" data-testid="active-orders-card">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-slate-500">Active Orders</p>
+            <div className="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
+              <Clock className="w-5 h-5 text-amber-600" />
             </div>
-            <p className="font-numbers text-3xl font-bold text-slate-900">{waitingList}</p>
-            <p className="text-[10px] text-emerald-600 mt-1">Active kitchen orders</p>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="font-numbers text-3xl font-bold text-slate-900">{waitingList}</p>
+          <p className="text-[11px] text-slate-400 mt-1">To Kitchen</p>
+        </div>
 
-        <button
-          onClick={() => navigate('/pos/orders')}
-          className="bg-gradient-to-br from-black to-gray-800 hover:from-gray-800 hover:to-gray-700 rounded-2xl border-0 shadow-lg text-white font-bold flex items-center justify-center gap-2.5 text-sm transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.97]"
-          data-testid="create-new-order-btn"
-        >
-          <Plus className="w-5 h-5" />
-          <span>CREATE NEW ORDER</span>
-        </button>
+        {/* Quick Actions */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 flex flex-col justify-center gap-2.5" data-testid="quick-actions-card">
+          <p className="text-sm font-medium text-slate-500 mb-1">Quick Actions</p>
+          <button onClick={() => navigate('/pos/orders')} className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
+            <Plus className="w-3.5 h-3.5" /> CREATE NEW ORDER
+          </button>
+          <button onClick={() => navigate('/pos/tables')} className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
+            <Plus className="w-3.5 h-3.5" /> RESERVATION
+          </button>
+        </div>
       </div>
 
       {/* === ROW 2: Operations Panels === */}
@@ -276,20 +279,23 @@ export default function POSDashboard() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex gap-1.5 mb-3">
+            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
               {[
-                { key: 'all', label: 'All' },
-                { key: 'process', label: 'On Process' },
-                { key: 'completed', label: 'Completed' },
+                { key: 'all', label: 'All', icon: ClipboardList },
+                { key: 'process', label: 'On Process', icon: Clock },
+                { key: 'completed', label: 'Completed', icon: CheckCircle },
+                { key: 'takeaway', label: 'Takeaway', icon: Package },
+                { key: 'dinein', label: 'Dine-In', icon: UtensilsCrossed },
               ].map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setOrderFilter(tab.key)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    orderFilter === tab.key ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    orderFilter === tab.key ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                   data-testid={`order-filter-${tab.key}`}
                 >
+                  <tab.icon className="w-3.5 h-3.5" />
                   {tab.label}
                 </button>
               ))}
@@ -375,8 +381,8 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        {/* Right Column: Popular Dishes + Out of Stock */}
-        <div className="lg:col-span-4 space-y-4">
+        {/* RIGHT: Stacked Panels */}
+        <div className="lg:col-span-5 space-y-5">
           {/* Popular Dishes */}
           <Card className="border-slate-200/60 bg-white" data-testid="popular-dishes-panel">
             <CardContent className="p-4">
