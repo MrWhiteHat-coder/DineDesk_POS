@@ -259,10 +259,10 @@ export default function POSDashboard() {
         </div>
       </div>
 
-      {/* === ROW 2: Operations Panels === */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      {/* === ROW 2: Main Content === */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Order List Panel */}
-        <Card className="lg:col-span-4 border-slate-200/60 bg-white" data-testid="order-list-panel">
+        <Card className="lg:col-span-7 border-slate-200/60 bg-white rounded-2xl" data-testid="order-list-panel">
           <CardContent className="p-4">
             <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Order List</h3>
 
@@ -334,174 +334,99 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        {/* Payment Panel */}
-        <Card className="lg:col-span-4 border-slate-200/60 bg-white" data-testid="payment-panel">
-          <CardContent className="p-4">
-            <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Payment</h3>
-
-            <div className="relative mb-3">
-              <Input
-                placeholder="Search a Order"
-                value={paymentSearch}
-                onChange={e => setPaymentSearch(e.target.value)}
-                className="pl-3 pr-9 h-9 rounded-xl bg-slate-50 border-slate-200 text-sm"
-                data-testid="payment-search-input"
-              />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            </div>
-
-            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-              {paymentOrders.length === 0 ? (
-                <p className="text-slate-400 text-sm text-center py-6">No pending payments</p>
-              ) : (
-                paymentOrders.map(order => {
-                  const label = getTableLabel(order);
-                  const color = getTableColor(order.table_number || order.order_type);
-                  return (
-                    <div key={order.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors" data-testid={`payment-row-${order.id}`}>
-                      <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                        <span className="text-white font-bold text-xs">{label}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-slate-900 truncate">{order.customer_name || 'Guest'}</p>
-                        <p className="text-[11px] text-slate-400">Order #{order.order_number}</p>
-                      </div>
-                      <button
-                        onClick={() => handleViewReceipt(order)}
-                        className="flex items-center gap-1 bg-black hover:bg-gray-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-                        data-testid={`pay-now-${order.id}`}
-                      >
-                        Pay Now <ArrowRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* RIGHT: Stacked Panels */}
+        
+                {/* RIGHT: Stacked Panels */}
         <div className="lg:col-span-5 space-y-5">
-          {/* Popular Dishes */}
-          <Card className="border-slate-200/60 bg-white" data-testid="popular-dishes-panel">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-heading font-bold text-slate-900 text-base">Popular Dishes</h3>
-                <button onClick={() => navigate('/pos/analytics')} className="text-[11px] text-black font-semibold hover:underline">View All</button>
-              </div>
-              <div className="text-[10px] text-slate-400 flex items-center gap-4 mb-2 border-b border-slate-100 pb-1.5">
-                <span className="w-6">Rank</span>
-                <span>Name</span>
-              </div>
-              {analytics?.top_items && analytics.top_items.length > 0 ? (
-                <div className="space-y-2">
+
+          {/* Payments & Popular Items */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="payments-popular-panel">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading font-bold text-slate-900 text-base">Payments & Popular Items</h3>
+              <button onClick={() => navigate('/pos/analytics')} className="text-[11px] text-slate-500 font-semibold hover:text-black transition-colors">View All</button>
+            </div>
+            <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4">
+              <button onClick={() => setRightTab('payment')} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${rightTab === 'payment' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Payment</button>
+              <button onClick={() => setRightTab('popular')} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${rightTab === 'popular' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Popular Dishes</button>
+            </div>
+            {rightTab === 'payment' ? (
+              paymentOrders.length === 0 ? (
+                <div className="text-center py-6"><div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><Banknote className="w-8 h-8 text-emerald-500" /></div><p className="text-sm text-slate-500 font-medium">No pending payments</p></div>
+              ) : (
+                <div className="space-y-2 max-h-[140px] overflow-y-auto">
+                  {paymentOrders.map(order => (
+                    <div key={order.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center"><span className="text-xs font-bold text-slate-600">{getTableLabel(order)}</span></div>
+                        <div><p className="text-sm font-semibold text-slate-900">{order.customer_name || 'Guest'}</p><p className="text-[10px] text-slate-400">#{order.order_number}</p></div>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); handleViewReceipt(order); }} className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all active:scale-[0.97]">Pay <ArrowRight className="w-3 h-3" /></button>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              analytics?.top_items && analytics.top_items.length > 0 ? (
+                <div className="space-y-2.5">
                   {analytics.top_items.slice(0, 4).map((item, idx) => (
                     <div key={item.name} className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-slate-400 w-6">0{idx + 1}</span>
-                      <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Package className="w-4 h-4 text-gray-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{item.name}</p>
-                        <p className="text-[10px] text-gray-600 font-medium">Orders: {item.count}</p>
-                      </div>
+                      <span className="text-xs font-bold text-slate-400 w-5">{idx + 1}</span>
+                      <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0"><UtensilsCrossed className="w-4 h-4 text-orange-500" /></div>
+                      <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-slate-900 truncate">{item.name}</p><p className="text-[10px] text-slate-400">{item.count} orders</p></div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-slate-400 text-sm text-center py-4">No sales data yet</p>
-              )}
-            </CardContent>
-          </Card>
+              ) : <p className="text-slate-400 text-sm text-center py-4">No sales data yet</p>
+            )}
+          </div>
 
-          {/* Out of Stock */}
-          <Card className="border-slate-200/60 bg-white" data-testid="out-of-stock-panel">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-heading font-bold text-slate-900 text-base">Out of Stock</h3>
-                <button onClick={() => navigate('/pos/inventory')} className="text-[11px] text-black font-semibold hover:underline">View All</button>
+          {/* Inventory */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="inventory-panel">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading font-bold text-slate-900 text-base">Inventory</h3>
+              <button onClick={() => navigate('/pos/inventory')} className="text-[11px] text-slate-500 font-semibold hover:text-black transition-colors">View All</button>
+            </div>
+            {lowStockItems.length > 0 ? (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100"><div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><span className="text-sm font-medium text-red-700">Out of Stock</span></div><span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{lowStockItems.length}</span></div>
+                {lowStockItems.slice(0, 3).map(item => (<div key={item.id} className="flex items-center justify-between px-1"><span className="text-sm text-slate-700">{item.name}</span><span className="text-[10px] text-amber-600 font-medium">Stock: {item.current_stock} {item.unit}</span></div>))}
               </div>
-              {lowStockItems.length > 0 ? (
-                <div className="space-y-2.5">
-                  {lowStockItems.slice(0, 4).map(item => (
-                    <div key={item.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{item.name}</p>
-                        <p className="text-[10px] text-amber-600 font-medium">
-                          Stock: {item.current_stock} {item.unit}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-emerald-600 text-sm text-center py-4">All items in stock</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            ) : (
+              <div className="text-center py-4"><div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-2"><Package className="w-7 h-7 text-emerald-500" /></div><p className="text-sm text-emerald-600 font-medium">All items in stock!</p></div>
+            )}
+          </div>
 
-      {/* === ROW 3: Charts (Secondary) === */}
-      <div className="grid lg:grid-cols-2 gap-4">
-        <Card className="border-slate-200/60">
-          <CardContent className="p-5">
+          {/* Sales Trend Mini */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="sales-trend-panel">
             <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Sales Trend (Last 7 Days)</h3>
-            <div className="h-52">
+            <div className="flex items-end justify-between mb-2"><p className="text-xs text-slate-500">Total Sales</p><p className="font-numbers text-lg font-bold text-slate-900">Rs.{(analytics?.daily_sales || 0).toFixed(0)}</p></div>
+            <div className="h-28">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={salesChartData}>
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#000000" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#000000" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94A3B8" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="#94A3B8" />
-                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="sales" stroke="#000000" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
+                  <defs><linearGradient id="colorSalesMini" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.2} /><stop offset="95%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>
+                  <XAxis dataKey="date" tick={false} axisLine={false} /><YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '11px' }} />
+                  <Area type="monotone" dataKey="sales" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorSalesMini)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="border-slate-200/60">
-          <CardContent className="p-5">
+          {/* Order Types Mini */}
+          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="order-types-panel">
             <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Order Types</h3>
-            <div className="h-52 flex items-center justify-center">
-              {orderTypeData.length > 0 ? (
+            <div className="flex items-center gap-5">
+              <div className="w-28 h-28">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
-                      {orderTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
+                  <PieChart><Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={30} outerRadius={45} paddingAngle={5} dataKey="value">{orderTypeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><Tooltip /></PieChart>
                 </ResponsiveContainer>
-              ) : (
-                <p className="text-slate-400 text-sm">No order data yet</p>
-              )}
-            </div>
-            {orderTypeData.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-4 mt-2">
-                {orderTypeData.map((entry, index) => (
-                  <div key={entry.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                    <span className="text-xs text-slate-600">{entry.name}: {entry.value}</span>
-                  </div>
-                ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* === MODALS === */}
+              <div className="space-y-2 flex-1">
+                {orderTypeData.map((entry, index) => (<div key={entry.name} className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} /><span className="text-xs text-slate-600 font-medium">{entry.name}</span></div><span className="text-xs font-bold text-slate-900">{entry.value}</span></div>))}
+              </div>
+            </div>
+          </div>
+        </div>
+{/* === MODALS === */}
 
       {/* Today's Orders Detail Modal */}
       <Dialog open={showOrdersDetail} onOpenChange={setShowOrdersDetail}>
