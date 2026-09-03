@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FeatureProvider } from './contexts/FeatureContext';
 
@@ -185,6 +186,7 @@ function App() {
               style: { fontFamily: 'Inter, sans-serif' }
             }}
           />
+          <Analytics />
         </FeatureProvider>
       </AuthProvider>
     </BrowserRouter>
