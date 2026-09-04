@@ -38,7 +38,7 @@ export default function PurchaseOrdersPage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [statusFilter]);
+  useEffect(() => { fetchData(); }, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addItem = () => setForm(prev => ({ ...prev, items: [...prev.items, { inventory_item_id: '', inventory_item_name: '', quantity: '', unit: '', unit_cost: '' }] }));
   const removeItem = (idx) => setForm(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));

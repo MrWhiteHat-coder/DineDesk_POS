@@ -52,7 +52,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchInventory();
-  }, [showLowStock]);
+  }, [showLowStock]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchInventory = async () => {
     try {

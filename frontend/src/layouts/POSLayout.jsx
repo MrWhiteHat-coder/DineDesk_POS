@@ -133,7 +133,7 @@ export default function POSLayout() {
   useEffect(() => {
     if (isTableRoute) setExpandedSections(prev => ({ ...prev, tables: true }));
     if (isDishRoute) setExpandedSections(prev => ({ ...prev, dishes: true }));
-  }, [location.pathname]);
+  }, [location.pathname, isTableRoute, isDishRoute]);
   useEffect(() => { setMoreSheetOpen(false); }, [location.pathname]);
 
   const fetchDaySession = async () => {

@@ -33,7 +33,7 @@ export default function WalletPage() {
     }
   };
 
-  useEffect(() => { fetchSummary(); }, [period, selectedDate]);
+  useEffect(() => { fetchSummary(); }, [period, selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDateChange = (e) => {
     const date = e.target.value;

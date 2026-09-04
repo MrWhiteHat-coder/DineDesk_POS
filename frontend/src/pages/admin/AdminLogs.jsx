@@ -34,7 +34,7 @@ export default function AdminLogs() {
 
   useEffect(() => {
     fetchLogs();
-  }, [logTypeFilter]);
+  }, [logTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchLogs = async () => {
     try {

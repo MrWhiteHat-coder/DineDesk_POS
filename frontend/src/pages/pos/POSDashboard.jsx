@@ -429,7 +429,6 @@ export default function POSDashboard() {
           </div>
         </div>
       </div>
-      </div>
 
       {/* === MODALS === */}
 

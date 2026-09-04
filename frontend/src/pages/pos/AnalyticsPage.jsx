@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
     }
   }, [isOwnerOrManager]);
 
-  useEffect(() => { fetchAnalytics(); }, [selectedDate, selectedBranch]);
+  useEffect(() => { fetchAnalytics(); }, [selectedDate, selectedBranch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -235,10 +235,9 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
 </>
       )}
+    </div>
   );
 }

@@ -30,7 +30,7 @@ export default function AdminRestaurants() {
 
   useEffect(() => {
     fetchRestaurants();
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRestaurants = async () => {
     try {

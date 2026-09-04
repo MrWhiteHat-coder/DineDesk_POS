@@ -51,7 +51,7 @@ export default function RegisterPage() {
       } catch (e) { console.error('Google init error:', e); }
     }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-once google init
 
   const handleGoogleResponse = async (response) => {
     setGoogleLoading(true);
