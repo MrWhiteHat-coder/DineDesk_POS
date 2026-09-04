@@ -8,7 +8,7 @@ import {
   Mail, Lock, ArrowRight, Zap, Globe, UtensilsCrossed, BarChart3, Package, AlertTriangle, RefreshCw, KeyRound,
 } from 'lucide-react';
 
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '19258355498-49tvakpu82hde931s8sp1dj42mbfa03k.apps.googleusercontent.com';
 
 const features = [
   { icon: Zap, title: 'Lightning POS', desc: '3-click order placement. Touch-optimized. Works offline.' },

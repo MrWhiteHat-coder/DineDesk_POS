@@ -8,7 +8,7 @@ import {
   BarChart3, Package, ChevronLeft, RefreshCw,
 } from 'lucide-react';
 
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '19258355498-49tvakpu82hde931s8sp1dj42mbfa03k.apps.googleusercontent.com';
 
 const features = [
   { icon: Zap, title: 'Fast POS Billing', desc: 'Process restaurant orders quickly with an intuitive POS interface.' },
