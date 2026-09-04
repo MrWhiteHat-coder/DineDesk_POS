@@ -67,6 +67,11 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', GMAIL_USER)
 SENDER_NAME = os.environ.get('SENDER_NAME', 'DineDesk')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
+# SendGrid Config — HTTPS API (works on Render free tier, unlike SMTP)
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+SENDGRID_FROM_EMAIL = os.environ.get('SENDGRID_FROM_EMAIL', SENDER_EMAIL or 'support@revontechnologies.in')
+SENDGRID_FROM_NAME = os.environ.get('SENDGRID_FROM_NAME', SENDER_NAME)
+
 # Admin bootstrap credentials — from env only
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@foodflow.com')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
@@ -625,6 +630,27 @@ async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: f
     await db.wallet_transactions.insert_one(txn)
 
 def _send_email_sync(to_email: str, subject: str, html_body: str):
+    # Preferred: SendGrid HTTPS API — works on Render free tier (SMTP port 587 is blocked)
+    if SENDGRID_API_KEY:
+        try:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail
+            message = Mail(
+                from_email=(SENDGRID_FROM_EMAIL, SENDGRID_FROM_NAME),
+                to_emails=to_email,
+                subject=subject,
+                html_content=html_body
+            )
+            sg = SendGridAPIClient(SENDGRID_API_KEY)
+            resp = sg.send(message)
+            if resp.status_code not in (200, 201, 202):
+                raise RuntimeError(f"SendGrid status {resp.status_code}")
+            return
+        except Exception as e:
+            logger.error(f"SendGrid send failed: {e}")
+            # fall through to SMTP fallback
+
+    # Fallback: Gmail SMTP
     from email.mime.multipart import MIMEMultipart
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -729,6 +755,38 @@ async def send_sms_otp(phone: str, otp: str):
         return True
     except Exception as e:
         logger.error(f"Failed to send OTP to {phone}: {e}")
+        return False
+
+async def send_otp_email(email: str, name: str, otp: str):
+    """Send OTP via email (SendGrid) when Twilio SMS is unavailable."""
+    subject = "Your DineDesk verification code"
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f5f5f5;font-family:'Segoe UI',Roboto,sans-serif;">
+      <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <div style="background:#111;padding:32px;text-align:center;">
+          <h1 style="color:#fff;font-size:24px;margin:0;">🍽️ DineDesk</h1>
+        </div>
+        <div style="padding:32px;">
+          <h2 style="color:#111;font-size:20px;margin:0 0 8px;">Hi {name}!</h2>
+          <p style="color:#555;font-size:14px;line-height:1.6;margin:0 0 24px;">Your DineDesk phone verification code is:</p>
+          <div style="background:#f5f5f5;border-radius:12px;padding:20px;text-align:center;margin-bottom:24px;">
+            <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#111;">{otp}</span>
+          </div>
+          <p style="color:#999;font-size:12px;margin:0;line-height:1.5;">This code is valid for 5 minutes. Do not share it with anyone.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    try:
+        await asyncio.to_thread(_send_email_sync, email, subject, html_body)
+        logger.info(f"OTP email sent to {email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send OTP email: {e}")
         return False
 
 
@@ -970,8 +1028,12 @@ async def send_otp(data: SendOTPRequest):
     if not sent and TWILIO_ACCOUNT_SID:
         raise HTTPException(status_code=500, detail="Failed to send OTP. Please try again.")
 
-    # In dev/mock mode (no Twilio), still return success so frontend flow works
+    # If Twilio is not configured, try email fallback (SendGrid)
     if not TWILIO_ACCOUNT_SID:
+        user = await db.users.find_one({"phone": phone}, {"_id": 0})
+        if user and user.get("email"):
+            asyncio.create_task(send_otp_email(user["email"], user.get("name", "there"), otp))
+            return {"message": "OTP sent to your email", "expires_in": 300}
         logger.info(f"[DEV MODE] OTP for {phone}: {otp}")
 
     return {"message": "OTP sent successfully", "expires_in": 300}

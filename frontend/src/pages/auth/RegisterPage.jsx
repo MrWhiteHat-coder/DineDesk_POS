@@ -341,6 +341,13 @@ export default function RegisterPage() {
               </div>
 
               <p className="text-xs text-gray-400 text-center mt-4">Didn't receive the code? Check your spam folder or try again.</p>
+
+              <Link
+                to="/login"
+                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors mt-4"
+              >
+                Skip for now — I'll verify later
+              </Link>
             </div>
           )}
 

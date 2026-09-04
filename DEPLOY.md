@@ -108,6 +108,29 @@ Database (MongoDB)   → MongoDB Atlas (free M0)
 
 ---
 
+## 📧 SendGrid Email Setup (IMPORTANT — replaces broken Gmail SMTP)
+
+Render free tier **blocks SMTP (port 587)** — that's why verification emails
+failed with "Network is unreachable". SendGrid uses HTTPS API (port 443)
+which **works on Render free tier** (100 emails/day free).
+
+1. **https://app.sendgrid.com** → Sign up (free)
+2. **Settings → API Keys** → **Create API Key** → copy it
+3. **Settings → Sender Authentication** → verify `support@revontechnologies.in`
+   (follow SendGrid's domain verification — add their CNAME/TXT DNS records at your registrar)
+4. **Render Dashboard → DineDesk_POS → Environment** → add:
+
+   ```
+   SENDGRID_API_KEY = (your SendGrid API key)
+   SENDGRID_FROM_EMAIL = support@revontechnologies.in
+   SENDGRID_FROM_NAME = DineDesk
+   ```
+
+5. **Manual Deploy → Deploy latest commit**
+
+> OTP note: When Twilio is not configured, OTP codes are emailed to the
+> user's registered email via SendGrid automatically. No Twilio needed.
+
 ## Step 4: Update Backend CORS
 
 Go back to **Render** → Environment Variables → Update:
