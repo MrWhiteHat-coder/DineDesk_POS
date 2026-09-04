@@ -281,9 +281,9 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
                   <div>
                     <p className="font-semibold text-gray-700">Admin Login</p>
-                    <p className="text-gray-400">admin@ordernest.com</p>
+                    <p className="text-gray-400">admin@foodflow.com</p>
                   </div>
-                  <span className="text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium">admin123</span>
+                  <span className="text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium">Check env</span>
                 </div>
                 <div className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
                   <div>

@@ -631,8 +631,10 @@ def _send_email_sync(to_email: str, subject: str, html_body: str):
     msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
     msg["To"] = to_email
     msg.attach(MIMEText(html_body, "html"))
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+    with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+        server.ehlo()
         server.starttls()
+        server.ehlo()
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, [to_email], msg.as_string())
 
@@ -731,7 +733,7 @@ async def send_sms_otp(phone: str, otp: str):
 
 
 # ============== AI INSIGHTS ==============
-
+
 async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Restaurant", report_type: str = "daily") -> str:
     """Generate AI-powered insights using Google Gemini."""
     if not GEMINI_API_KEY or not GEMINI_AVAILABLE:
@@ -851,9 +853,9 @@ async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Res
         
     except Exception as e:
         logger.error(f"AI insights generation failed: {e}")
-        return f"AI insights temporarily unavailable. Error: {str(e)[:100]}"
-
-
+        return f"AI insights temporarily unavailable. Error: {str(e)[:100]}"
+
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=RegisterResponse)
@@ -884,16 +886,25 @@ async def register(user_data: UserCreate):
         "verification_token_expires": verification_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    # If SMTP is not configured, auto-verify the user so they can login immediately
+    smtp_configured = bool(GMAIL_USER and GMAIL_APP_PASSWORD)
+    if not smtp_configured:
+        user["is_verified"] = True
+        user.pop("verification_token", None)
+        user.pop("verification_token_expires", None)
+        logger.info(f"SMTP not configured — auto-verifying user {user_data.email}")
+
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
 
-    # Send verification email
-    await send_verification_email(user_data.email, user_data.name, verification_token)
+    # Send verification email (fire-and-forget — don't block the response)
+    if smtp_configured:
+        asyncio.create_task(send_verification_email(user_data.email, user_data.name, verification_token))
+        msg = "Registration successful. Please check your email to verify your account."
+    else:
+        msg = "Registration successful. You can now log in."
 
-    return RegisterResponse(
-        message="Registration successful. Please check your email to verify your account.",
-        email=user_data.email
-    )
+    return RegisterResponse(message=msg, email=user_data.email)
 
 @api_router.post("/auth/verify-email", response_model=TokenResponse)
 async def verify_email(data: VerifyEmailRequest):
@@ -940,7 +951,7 @@ async def resend_verification(data: ResendVerificationRequest):
         {"id": user["id"]},
         {"$set": {"verification_token": verification_token, "verification_token_expires": verification_expires}}
     )
-    await send_verification_email(user["email"], user["name"], verification_token)
+    asyncio.create_task(send_verification_email(user["email"], user["name"], verification_token))
     return {"message": "Verification email sent. Please check your inbox."}
 
 @api_router.post("/auth/send-otp")
@@ -1096,7 +1107,7 @@ async def forgot_password(data: ForgotPasswordRequest):
         {"id": user["id"]},
         {"$set": {"reset_token": reset_token, "reset_token_expires": reset_expires}}
     )
-    await send_password_reset_email(user["email"], user["name"], reset_token)
+    asyncio.create_task(send_password_reset_email(user["email"], user["name"], reset_token))
     return {"message": "If that email is registered, a password reset link has been sent."}
 
 @api_router.post("/auth/reset-password")
@@ -1136,7 +1147,13 @@ async def login(credentials: UserLogin):
 
     # Block unverified accounts from logging in
     if user.get("is_verified", True) is False:
-        raise HTTPException(status_code=403, detail="Please verify your email before logging in. Check your inbox for the verification link.")
+        # If SMTP is not configured, auto-verify and allow login
+        smtp_on = bool(GMAIL_USER and GMAIL_APP_PASSWORD)
+        if not smtp_on:
+            await db.users.update_one({"id": user["id"]}, {"$set": {"is_verified": True}})
+            user["is_verified"] = True
+        else:
+            raise HTTPException(status_code=403, detail="Please verify your email before logging in. Check your inbox for the verification link.")
 
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     await log_action("auth", "user_login", user_id=user["id"])
