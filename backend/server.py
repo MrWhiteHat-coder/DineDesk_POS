@@ -42,9 +42,9 @@ MAX_UPLOAD_SIZE_MB = int(os.environ.get('MAX_UPLOAD_SIZE_MB', '10'))
 MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 # JWT Configuration — fallback for backward compatibility
-JWT_SECRET = os.environ.get('JWT_SECRET', 'dinedesk-production-secret-key-change-me')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'QWMIL2JmJeZufUwkW_ZPNsW9EXcUoI4DvaO-BZxjDeBuS1ayF_6iYvbIPN7A2yIH')
 if JWT_SECRET == '':
-    JWT_SECRET = 'dinedesk-production-secret-key-change-me'
+    JWT_SECRET = 'QWMIL2JmJeZufUwkW_ZPNsW9EXcUoI4DvaO-BZxjDeBuS1ayF_6iYvbIPN7A2yIH'
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
 
@@ -665,9 +665,9 @@ def _send_email_sync(to_email: str, subject: str, html_body: str):
         server.sendmail(GMAIL_USER, [to_email], msg.as_string())
 
 async def send_verification_email(email: str, name: str, token: str):
-    """Send email verification link to newly registered user via Gmail SMTP."""
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        logger.warning("SMTP not configured — skipping verification email")
+    """Send email verification link to newly registered user (SendGrid or SMTP)."""
+    if not SENDGRID_API_KEY and (not GMAIL_USER or not GMAIL_APP_PASSWORD):
+        logger.warning("Email not configured (no SendGrid key or SMTP creds) — skipping verification email")
         return
     verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
     subject = "Verify your DineDesk account"
@@ -697,9 +697,9 @@ async def send_verification_email(email: str, name: str, token: str):
         logger.error(f"Failed to send verification email: {e}")
 
 async def send_password_reset_email(email: str, name: str, token: str):
-    """Send password reset link to user via Gmail SMTP."""
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        logger.warning("SMTP not configured — skipping password reset email")
+    """Send password reset link to user (SendGrid or SMTP)."""
+    if not SENDGRID_API_KEY and (not GMAIL_USER or not GMAIL_APP_PASSWORD):
+        logger.warning("Email not configured (no SendGrid key or SMTP creds) — skipping password reset email")
         return
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
     subject = "Reset your DineDesk password"

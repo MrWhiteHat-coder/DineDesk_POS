@@ -68,9 +68,12 @@ Database (MongoDB)   → MongoDB Atlas (free M0)
    FRONTEND_URL = https://YOUR-VERCEL-APP.vercel.app
    GEMINI_API_KEY = (your existing key)
    GMAIL_USER = support@revontechnologies.in
-   GMAIL_APP_PASSWORD = (your Gmail app password)
+   GMAIL_APP_PASSWORD = (optional — SendGrid is preferred)
    SENDER_EMAIL = support@revontechnologies.in
    SENDER_NAME = DineDesk
+   SENDGRID_API_KEY = (your SendGrid API key — see SendGrid section below)
+   SENDGRID_FROM_EMAIL = support@revontechnologies.in
+   SENDGRID_FROM_NAME = DineDesk
    LOG_LEVEL = INFO
    PYTHON_VERSION = 3.11.8
    ```
@@ -80,6 +83,42 @@ Database (MongoDB)   → MongoDB Atlas (free M0)
 9. Your backend URL will be: `https://dinedesk-backend.onrender.com`
 10. Test: Visit `https://dinedesk-backend.onrender.com/health`
     - Should return: `{"status":"healthy","version":"3.0.0","mongodb":"connected"}`
+
+---
+
+## ⚙️ Live Production Reference (current deployment)
+
+Actual services this repo currently runs on:
+
+| Service | URL |
+|---------|-----|
+| Frontend (Vercel) | https://revontechologies.in |
+| Backend (Render) | https://dinedesk-pos.onrender.com |
+| MongoDB (Atlas) | `dinedesk.nynxzwe.mongodb.net` — DB `DineDesk` |
+
+**Render Environment Variables (production):**
+
+```
+MONGO_URL = mongodb+srv://<db_user>:<db_password>@dinedesk.nynxzwe.mongodb.net/DineDesk?retryWrites=true&w=majority&appName=DineDesk
+DB_NAME = DineDesk
+JWT_SECRET = QWMIL2JmJeZufUwkW_ZPNsW9EXcUoI4DvaO-BZxjDeBuS1ayF_6iYvbIPN7A2yIH   (same as server.py fallback)
+CORS_ORIGINS = https://revontechnologies.in,https://www.revontechnologies.in
+FRONTEND_URL = https://revontechnologies.in
+SENDGRID_API_KEY = SG.<your-key>          (never commit the real key)
+SENDGRID_FROM_EMAIL = support@revontechnologies.in
+SENDGRID_FROM_NAME = DineDesk
+GEMINI_API_KEY = <your-gemini-key>
+LOG_LEVEL = INFO
+PYTHON_VERSION = 3.11.8
+```
+
+> **Security:** this repo is public — never commit real secrets (MongoDB password,
+> SendGrid key). Keep them in Render env vars only. `JWT_SECRET` ships as a code
+> fallback so the API works even if the env var is missing; set the same value in
+> Render for consistency.
+
+> **Email:** verification / password-reset / OTP emails go out through **SendGrid**
+> (HTTPS API). Gmail SMTP is only a fallback and is blocked on Render free tier.
 
 ---
 
