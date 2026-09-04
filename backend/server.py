@@ -944,19 +944,17 @@ async def register(user_data: UserCreate):
         "verification_token_expires": verification_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    # Auto-verify user so they can login immediately.
-    # Email verification is optional — only enforced if SMTP is proven working.
-    user["is_verified"] = True
-    user.pop("verification_token", None)
-    user.pop("verification_token_expires", None)
-
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
 
-    # Try to send verification email in background (fire-and-forget)
+    # Send verification link email in background (fire-and-forget — never blocks the response)
     asyncio.create_task(send_verification_email(user_data.email, user_data.name, verification_token))
 
-    return RegisterResponse(message="Registration successful. You can now log in.", email=user_data.email)
+    return RegisterResponse(
+        message="Registration successful! We've sent a verification link to your email. "
+                "Please verify your email to activate your account, then log in.",
+        email=user_data.email
+    )
 
 @api_router.post("/auth/verify-email", response_model=TokenResponse)
 async def verify_email(data: VerifyEmailRequest):
@@ -1201,10 +1199,13 @@ async def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Auto-verify any unverified users (email verification is optional)
-    if user.get("is_verified", True) is False:
-        await db.users.update_one({"id": user["id"]}, {"$set": {"is_verified": True}})
-        user["is_verified"] = True
+    # Email verification required before login (verification link sent at registration)
+    if not user.get("is_verified", False):
+        raise HTTPException(
+            status_code=403,
+            detail="Email not verified yet. We've sent a verification link to your email — "
+                   "please click it to activate your account, or request a new link below."
+        )
 
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     await log_action("auth", "user_login", user_id=user["id"])

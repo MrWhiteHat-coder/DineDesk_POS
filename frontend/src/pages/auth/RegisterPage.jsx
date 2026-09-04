@@ -119,10 +119,10 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await authAPI.register({ name, email, password, phone: formattedPhone });
-      // Registration succeeded — now send OTP for phone verification
-      await sendOTP(formattedPhone);
-      setStep('otp');
-      toast.success('Account created! Verify your phone number to continue.');
+      // Registration succeeded — email verification link sent. Email must be
+      // verified before login/onboarding, so show the check-email screen.
+      setStep('check-email');
+      toast.success('Account created! We sent a verification link to your email.');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Registration failed');
     } finally {
