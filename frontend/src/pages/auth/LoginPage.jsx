@@ -7,9 +7,7 @@ import { Input } from '../../components/ui/input';
 import {
   Mail, Lock, ArrowRight, Zap, Globe, UtensilsCrossed, BarChart3, Package, AlertTriangle, RefreshCw, KeyRound,
 } from 'lucide-react';
-import axios from 'axios';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
 const features = [
@@ -69,7 +67,7 @@ export default function LoginPage() {
   const handleResendVerification = async () => {
     setResending(true);
     try {
-      await axios.post(`${API}/api/auth/resend-verification`, { email: unverifiedEmail });
+      await authAPI.resendVerification(unverifiedEmail);
       toast.success('Verification email sent! Check your inbox.');
     } catch (err) {
       toast.error('Could not resend. Try again shortly.');

@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'sonner';
+import { authAPI } from '../../lib/api';
 import { Input } from '../../components/ui/input';
 import { Mail, ArrowRight, ArrowLeft, UtensilsCrossed, CheckCircle } from 'lucide-react';
-
-const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -16,7 +14,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API}/api/auth/forgot-password`, { email });
+      await authAPI.forgotPassword(email);
       setSent(true);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Something went wrong. Please try again.');

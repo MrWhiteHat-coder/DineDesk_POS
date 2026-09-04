@@ -3367,11 +3367,20 @@ app.include_router(api_router)
 
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
-CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000')
+_cors_raw = os.environ.get('CORS_ORIGINS', '')
+if _cors_raw:
+    _cors_list = [o.strip() for o in _cors_raw.split(',') if o.strip()]
+else:
+    _cors_list = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://revontechologies.in',
+        'https://www.revontechologies.in',
+    ]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=CORS_ORIGINS.split(','),
+    allow_origins=_cors_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )

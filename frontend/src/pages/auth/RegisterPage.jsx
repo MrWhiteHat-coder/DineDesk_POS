@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'sonner';
 import { authAPI } from '../../lib/api';
 import { Input } from '../../components/ui/input';
@@ -9,7 +8,6 @@ import {
   BarChart3, Package, ChevronLeft, RefreshCw,
 } from 'lucide-react';
 
-const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
 const features = [
@@ -120,7 +118,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await axios.post(`${API}/api/auth/register`, { name, email, password, phone: formattedPhone });
+      await authAPI.register({ name, email, password, phone: formattedPhone });
       // Registration succeeded — now send OTP for phone verification
       await sendOTP(formattedPhone);
       setStep('otp');
@@ -135,7 +133,7 @@ export default function RegisterPage() {
   const sendOTP = async (phoneNum) => {
     setOtpSending(true);
     try {
-      await axios.post(`${API}/api/auth/send-otp`, { phone: phoneNum || phone });
+      await authAPI.sendOTP(phoneNum || phone);
       setOtpTimer(60); // 60s cooldown
       toast.success('OTP sent! Check your phone.');
     } catch (err) {
@@ -188,7 +186,7 @@ export default function RegisterPage() {
     setOtpVerifying(true);
     try {
       const formattedPhone = formatPhone(phone);
-      await axios.post(`${API}/api/auth/verify-otp`, { phone: formattedPhone, otp: otpValue });
+      await authAPI.verifyOTP(formattedPhone, otpValue);
       setPhoneVerified(true);
       setStep('check-email');
       toast.success('Phone number verified!');
@@ -204,7 +202,7 @@ export default function RegisterPage() {
   const handleResend = async () => {
     setResending(true);
     try {
-      await axios.post(`${API}/api/auth/resend-verification`, { email });
+      await authAPI.resendVerification(email);
       toast.success('Verification email sent! Check your inbox.');
     } catch (err) {
       toast.error('Could not resend. Try again shortly.');

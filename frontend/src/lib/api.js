@@ -38,6 +38,10 @@ export const authAPI = {
   getPermissions: () => api.get('/auth/permissions'),
   verifyEmail: (token) => api.post('/auth/verify-email', { token }),
   resendVerification: (email) => api.post('/auth/resend-verification', { email }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, newPassword) => api.post('/auth/reset-password', { token, new_password: newPassword }),
+  sendOTP: (phone) => api.post('/auth/send-otp', { phone }),
+  verifyOTP: (phone, otp) => api.post('/auth/verify-otp', { phone, otp }),
 };
 
 // Restaurant APIs

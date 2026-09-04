@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
 import { toast } from 'sonner';
+import { authAPI } from '../../lib/api';
 import { Input } from '../../components/ui/input';
 import { Lock, ArrowRight, ArrowLeft, UtensilsCrossed, CheckCircle, AlertTriangle } from 'lucide-react';
-
-const API = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-rft1.onrender.com';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -31,7 +29,7 @@ export default function ResetPasswordPage() {
     }
     setLoading(true);
     try {
-      await axios.post(`${API}/api/auth/reset-password`, { token, new_password: password });
+      await authAPI.resetPassword(token, password);
       setSuccess(true);
       toast.success('Password reset successful!');
     } catch (err) {
