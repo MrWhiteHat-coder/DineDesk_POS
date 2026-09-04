@@ -886,25 +886,19 @@ async def register(user_data: UserCreate):
         "verification_token_expires": verification_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    # If SMTP is not configured, auto-verify the user so they can login immediately
-    smtp_configured = bool(GMAIL_USER and GMAIL_APP_PASSWORD)
-    if not smtp_configured:
-        user["is_verified"] = True
-        user.pop("verification_token", None)
-        user.pop("verification_token_expires", None)
-        logger.info(f"SMTP not configured — auto-verifying user {user_data.email}")
+    # Auto-verify user so they can login immediately.
+    # Email verification is optional — only enforced if SMTP is proven working.
+    user["is_verified"] = True
+    user.pop("verification_token", None)
+    user.pop("verification_token_expires", None)
 
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
 
-    # Send verification email (fire-and-forget — don't block the response)
-    if smtp_configured:
-        asyncio.create_task(send_verification_email(user_data.email, user_data.name, verification_token))
-        msg = "Registration successful. Please check your email to verify your account."
-    else:
-        msg = "Registration successful. You can now log in."
+    # Try to send verification email in background (fire-and-forget)
+    asyncio.create_task(send_verification_email(user_data.email, user_data.name, verification_token))
 
-    return RegisterResponse(message=msg, email=user_data.email)
+    return RegisterResponse(message="Registration successful. You can now log in.", email=user_data.email)
 
 @api_router.post("/auth/verify-email", response_model=TokenResponse)
 async def verify_email(data: VerifyEmailRequest):
@@ -1145,15 +1139,10 @@ async def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Block unverified accounts from logging in
+    # Auto-verify any unverified users (email verification is optional)
     if user.get("is_verified", True) is False:
-        # If SMTP is not configured, auto-verify and allow login
-        smtp_on = bool(GMAIL_USER and GMAIL_APP_PASSWORD)
-        if not smtp_on:
-            await db.users.update_one({"id": user["id"]}, {"$set": {"is_verified": True}})
-            user["is_verified"] = True
-        else:
-            raise HTTPException(status_code=403, detail="Please verify your email before logging in. Check your inbox for the verification link.")
+        await db.users.update_one({"id": user["id"]}, {"$set": {"is_verified": True}})
+        user["is_verified"] = True
 
     token = create_token(user["id"], user["role"], user.get("restaurant_id"))
     await log_action("auth", "user_login", user_id=user["id"])

@@ -188,8 +188,8 @@ export default function RegisterPage() {
       const formattedPhone = formatPhone(phone);
       await authAPI.verifyOTP(formattedPhone, otpValue);
       setPhoneVerified(true);
-      setStep('check-email');
-      toast.success('Phone number verified!');
+      toast.success('Phone verified! Redirecting to login...');
+      setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Invalid OTP. Please try again.');
       setOtp(['', '', '', '', '', '']);
