@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Skeleton } from '../../components/ui/skeleton';
+import { Switch } from '../../components/ui/switch';
 import { ChefSleeping, ChefCelebrating } from '../../components/illustrations/ChefBot';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -30,6 +31,7 @@ import {
   Bell,
   Gauge,
   MoreVertical,
+  MoreHorizontal,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -107,6 +109,8 @@ export default function POSDashboard() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [showOrdersDetail, setShowOrdersDetail] = useState(false);
   const [rightTab, setRightTab] = useState('payment');
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
+  const [showLowStock, setShowLowStock] = useState(false);
   const receiptRef = useRef(null);
 
   useEffect(() => { fetchData(); }, [isDayOpen]);
@@ -195,6 +199,9 @@ export default function POSDashboard() {
   };
 
   const salesChartData = sessionHistory.slice(0, 7).reverse().map(s => ({ date: s.date, sales: s.total_sales, orders: s.total_orders }));
+  const lastSales = salesChartData[salesChartData.length - 1]?.sales || 0;
+  const prevSales = salesChartData[salesChartData.length - 2]?.sales || 0;
+  const salesDelta = prevSales > 0 ? Math.round(((lastSales - prevSales) / prevSales) * 100) : null;
   const orderTypeData = analytics?.order_type_breakdown
     ? Object.entries(analytics.order_type_breakdown).map(([name, value]) => ({ name: name.replace('_', ' ').toUpperCase(), value }))
     : [];
@@ -289,7 +296,12 @@ export default function POSDashboard() {
         {/* Order List Panel */}
         <Card className="lg:col-span-7 border-slate-200/60 bg-white rounded-2xl" data-testid="order-list-panel">
           <CardContent className="p-4">
-            <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Order List</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading font-bold text-slate-900 text-base">Order List</h3>
+              <button className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors" aria-label="Order list options">
+                <MoreHorizontal className="w-4.5 h-4.5" />
+              </button>
+            </div>
 
             {/* Search */}
             <div className="relative mb-3">
@@ -365,11 +377,12 @@ export default function POSDashboard() {
                       </div>
 
                       {/* Progress bar */}
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2.5">
+                      <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2.5">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${order.status === 'cancelled' ? 'bg-red-400' : order.status === 'completed' ? 'bg-emerald-500' : 'bg-slate-900'}`}
                           style={{ width: `${progress}%` }}
                         />
+                        <span className="absolute right-1.5 -top-0.5 font-numbers text-[9px] text-slate-500">{progress}</span>
                       </div>
 
                       {/* Meta row */}
@@ -459,9 +472,13 @@ export default function POSDashboard() {
                 <AlertCircle className={`w-4 h-4 ${outOfStockItems.length > 0 ? 'text-red-500' : 'text-slate-300'}`} />
                 <span className="text-sm font-medium text-slate-700">Out of Stock</span>
               </div>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${outOfStockItems.length > 0 ? 'text-red-600 bg-red-100' : 'text-slate-400 bg-slate-100'}`}>{outOfStockItems.length}</span>
+              <Switch
+                checked={showOutOfStock}
+                onCheckedChange={setShowOutOfStock}
+                aria-label="Toggle out of stock list"
+              />
             </div>
-            {outOfStockItems.length > 0 && (
+            {showOutOfStock && outOfStockItems.length > 0 && (
               <div className="py-1.5">
                 {outOfStockItems.slice(0, 3).map(item => (
                   <div key={item.id} className="flex items-center justify-between px-1 py-1">
@@ -483,9 +500,13 @@ export default function POSDashboard() {
                 <TrendingUp className={`w-4 h-4 ${lowStockOnly.length > 0 ? 'text-amber-500' : 'text-slate-300'}`} />
                 <span className="text-sm font-medium text-slate-700">Low Stock</span>
               </div>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${lowStockOnly.length > 0 ? 'text-amber-600 bg-amber-100' : 'text-slate-400 bg-slate-100'}`}>{lowStockOnly.length}</span>
+              <Switch
+                checked={showLowStock}
+                onCheckedChange={setShowLowStock}
+                aria-label="Toggle low stock list"
+              />
             </div>
-            {lowStockOnly.length > 0 && (
+            {showLowStock && lowStockOnly.length > 0 && (
               <div className="pt-1.5">
                 {lowStockOnly.slice(0, 3).map(item => (
                   <div key={item.id} className="flex items-center justify-between px-1 py-1">
@@ -505,19 +526,21 @@ export default function POSDashboard() {
         <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="sales-trend-panel">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-heading font-bold text-slate-900 text-base">Sales Trend (Last 7 Days)</h3>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-              <div className="text-right">
-                <p className="text-[9px] text-slate-400 font-medium leading-none">Total Sales</p>
-                <p className="font-numbers text-sm font-bold text-slate-900 leading-tight">₹{(analytics?.daily_sales || 0).toFixed(0)}</p>
-              </div>
-            </div>
+            <button className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors" aria-label="Sales trend options">
+              <MoreHorizontal className="w-4.5 h-4.5" />
+            </button>
           </div>
           <div className="flex items-center gap-4 mb-2">
             <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-2 h-2 rounded-full bg-emerald-500"></span>Revenue</span>
             <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-2 h-2 rounded-full bg-slate-900"></span>Dine-In</span>
           </div>
-          <div className="h-40">
+          <div className="relative h-40">
+            {/* Floating total-sales card (reference style) */}
+            <div className="hidden sm:block absolute top-1 right-1 z-10 bg-white border border-slate-200 rounded-xl shadow-md px-3 py-1.5 text-right">
+              <p className="text-[9px] text-slate-400 font-medium leading-none">{salesDelta !== null ? `${salesDelta >= 0 ? '+' : ''}${salesDelta}% vs last period` : 'Total'}</p>
+              <p className="font-numbers text-base font-bold text-slate-900 leading-tight">₹{(analytics?.daily_sales || 0).toFixed(0)}</p>
+              <p className="text-[9px] text-slate-400 leading-none">Total Sales · last period</p>
+            </div>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={salesChartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
                 <defs><linearGradient id="colorSalesMini" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.2} /><stop offset="95%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>

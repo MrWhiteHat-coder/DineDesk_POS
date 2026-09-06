@@ -345,15 +345,34 @@ export default function POSLayout() {
           </div>
         </nav>
 
-        {/* RIGHT: Branch + Day status + Profile */}
+        {/* RIGHT: Restaurant card (reference style) + Theme + Profile */}
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Branch badge */}
-          <div className="hidden md:flex items-center gap-2 bg-gray-100 px-2.5 py-1.5 rounded-lg border border-gray-200">
-            <div className="w-2 h-2 rounded-full bg-gray-600"></div>
-            <span className="text-xs font-medium text-gray-800 truncate max-w-[120px]">
-              {restaurant?.name || 'Restaurant'}
-            </span>
-          </div>
+          {/* Restaurant / Day-status card */}
+          <button
+            onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
+            className="hidden md:flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl pl-1.5 pr-2 py-1 hover:border-gray-400 hover:shadow-sm transition-all flex-shrink-0"
+            data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
+            title={isDayOpen ? 'Close the day' : 'Open the day'}
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-base" aria-hidden="true">
+              🍩
+            </div>
+            <div className="text-left leading-tight">
+              <p className="text-xs font-semibold text-gray-900 truncate max-w-[110px]">{restaurant?.name || 'Restaurant'}</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-px rounded-full ${isDayOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                  <span className={`w-1 h-1 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                  {isDayOpen ? 'Open' : 'Closed'}
+                </span>
+                <span className="text-[10px] text-gray-500 font-medium">
+                  {restaurant?.opening_time && restaurant?.closing_time
+                    ? `${restaurant.opening_time} - ${restaurant.closing_time}`
+                    : '08:30 - 20:20'}
+                </span>
+              </div>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+          </button>
 
           {/* Night Shift toggle */}
           <button
@@ -366,18 +385,18 @@ export default function POSLayout() {
             {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Day status */}
-          {isDayOpen ? (
-            <button onClick={() => setShowDayCloseModal(true)} className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-green-200 hover:bg-green-100 transition-colors" data-testid="close-day-btn">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-              <span className="hidden sm:inline">Open</span>
-            </button>
-          ) : (
-            <button onClick={() => setShowDayOpenModal(true)} className="flex items-center gap-1.5 bg-red-50 text-red-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 hover:bg-red-100 transition-colors" data-testid="open-day-btn">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-              <span className="hidden sm:inline">Closed</span>
-            </button>
-          )}
+          {/* Compact day-status pill (mobile fallback) */}
+          <button
+            onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
+            className={`md:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex-shrink-0 ${
+              isDayOpen
+                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+            }`}
+          >
+            <div className={`w-1.5 h-1.5 rounded-full ${isDayOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="hidden sm:inline">{isDayOpen ? 'Open' : 'Closed'}</span>
+          </button>
 
           {/* Time (desktop) */}
           <div className="hidden lg:flex items-center gap-1.5 text-gray-500 text-xs">
