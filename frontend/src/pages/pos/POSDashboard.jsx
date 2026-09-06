@@ -27,6 +27,9 @@ import {
   Package, CheckCircle,
   BarChart3,
   UtensilsCrossed,
+  Bell,
+  Gauge,
+  MoreVertical,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -41,6 +44,15 @@ const STATUS_STYLES = {
   preparing: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'In Progress' },
   pending: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Pending' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled' },
+};
+
+// Status -> kitchen progress bar fill (%)
+const STATUS_PROGRESS = {
+  pending: 20,
+  preparing: 60,
+  ready: 85,
+  completed: 100,
+  cancelled: 0,
 };
 
 const TABLE_COLORS = ['bg-black', 'bg-gray-700', 'bg-gray-600', 'bg-gray-800', 'bg-gray-500', 'bg-gray-900'];
@@ -68,6 +80,14 @@ function getStatusInfo(order) {
     pending: 'New order',
   };
   return { ...s, sublabel: sublabels[order.status] || '' };
+}
+
+function getOrderTime(order) {
+  try {
+    return new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
 }
 
 export default function POSDashboard() {
@@ -114,6 +134,10 @@ export default function POSDashboard() {
   const newOrders = todayOrders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
   const totalOrders = todayOrders.length;
   const waitingList = todayOrders.filter(o => o.status === 'ready' || o.status === 'preparing').length;
+
+  // Inventory split: quantity === 0 -> out of stock; rest -> low stock
+  const outOfStockItems = lowStockItems.filter(i => (i.quantity ?? 0) <= 0);
+  const lowStockOnly = lowStockItems.filter(i => (i.quantity ?? 0) > 0);
 
   // Filtered order list
   const filteredOrders = useMemo(() => {
@@ -185,12 +209,11 @@ export default function POSDashboard() {
           <Skeleton className="h-28 rounded-xl" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-4"><Skeleton className="h-80 rounded-xl" /></div>
-          <div className="lg:col-span-4"><Skeleton className="h-80 rounded-xl" /></div>
+          <div className="lg:col-span-7"><Skeleton className="h-80 rounded-xl" /></div>
           <div className="lg:col-span-5 space-y-5"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Skeleton className="h-64 rounded-xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Skeleton className="h-64 rounded-xl lg:col-span-2" />
           <Skeleton className="h-64 rounded-xl" />
         </div>
       </div>
@@ -217,7 +240,7 @@ export default function POSDashboard() {
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-slate-500">New Orders</p>
             <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center relative">
-              <ClipboardList className="w-5 h-5 text-emerald-600" />
+              <Bell className="w-5 h-5 text-emerald-600" />
               {newOrders > 0 && (<span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-bounce-in">{newOrders}</span>)}
             </div>
           </div>
@@ -242,7 +265,7 @@ export default function POSDashboard() {
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-slate-500">Active Orders</p>
             <div className="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
+              <Gauge className="w-5 h-5 text-amber-600" />
             </div>
           </div>
           <p className="font-numbers text-3xl font-bold text-slate-900">{waitingList}</p>
@@ -252,7 +275,7 @@ export default function POSDashboard() {
         {/* Quick Actions */}
         <div className="bg-white rounded-2xl border border-slate-200/60 p-5 flex flex-col justify-center gap-2.5" data-testid="quick-actions-card">
           <p className="text-sm font-medium text-slate-500 mb-1">Quick Actions</p>
-          <button onClick={() => navigate('/pos/orders')} className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
+          <button onClick={() => navigate('/pos/orders')} className="w-full py-2.5 rounded-xl border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
             <Plus className="w-3.5 h-3.5" /> CREATE NEW ORDER
           </button>
           <button onClick={() => navigate('/pos/tables')} className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
@@ -261,7 +284,7 @@ export default function POSDashboard() {
         </div>
       </div>
 
-      {/* === ROW 2: Main Content === */}
+      {/* === ROW 2: Order List + Right Rail === */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Order List Panel */}
         <Card className="lg:col-span-7 border-slate-200/60 bg-white rounded-2xl" data-testid="order-list-panel">
@@ -280,7 +303,7 @@ export default function POSDashboard() {
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             </div>
 
-            {/* Filter Tabs */}
+            {/* Filter Pills */}
             <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
               {[
                 { key: 'all', label: 'All', icon: ClipboardList },
@@ -292,8 +315,10 @@ export default function POSDashboard() {
                 <button
                   key={tab.key}
                   onClick={() => setOrderFilter(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                    orderFilter === tab.key ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
+                    orderFilter === tab.key
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
                   }`}
                   data-testid={`order-filter-${tab.key}`}
                 >
@@ -303,29 +328,63 @@ export default function POSDashboard() {
               ))}
             </div>
 
-            {/* Order Rows */}
-            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+            {/* Order Card Grid (2-col like reference) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[420px] overflow-y-auto pr-1">
               {filteredOrders.length === 0 ? (
-                <p className="text-slate-400 text-sm text-center py-6">No orders found</p>
+                <p className="text-slate-400 text-sm text-center py-6 col-span-full">No orders found</p>
               ) : (
                 filteredOrders.map(order => {
                   const status = getStatusInfo(order);
                   const label = getTableLabel(order);
                   const color = getTableColor(order.table_number || order.order_type);
+                  const progress = STATUS_PROGRESS[order.status] ?? 20;
                   return (
-                    <div key={order.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleViewReceipt(order)} data-testid={`order-row-${order.id}`}>
-                      <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                        <span className="text-white font-bold text-xs">{label}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-slate-900 truncate">{order.customer_name || `Order #${order.order_number}`}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${status.bg} ${status.text}`}>{status.label}</span>
+                    <div
+                      key={order.id}
+                      className="relative border border-slate-200/70 rounded-2xl p-3 hover:border-slate-400 hover:shadow-card transition-all cursor-pointer bg-white"
+                      onClick={() => handleViewReceipt(order)}
+                      data-testid={`order-row-${order.id}`}
+                    >
+                      {/* Kebab */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleViewReceipt(order); }}
+                        className="absolute top-2.5 right-2.5 w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                        aria-label="Order actions"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+
+                      {/* Title row */}
+                      <div className="flex items-center gap-2 mb-2 pr-6">
+                        <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                          <span className="text-white font-bold text-[11px]">{label}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                          <span>{(order.items || []).length} Items</span>
-                          <span>·</span>
-                          <span>{status.sublabel}</span>
+                        <span className="font-semibold text-sm text-slate-900 truncate">
+                          {order.customer_name || `Order ${order.order_number}`}
+                        </span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2.5">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${order.status === 'cancelled' ? 'bg-red-400' : order.status === 'completed' ? 'bg-emerald-500' : 'bg-slate-900'}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+
+                      {/* Meta row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`w-5 h-5 ${color} rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0`}>
+                            {(order.customer_name || 'G').slice(0, 2).toUpperCase()}
+                          </span>
+                          <span className="text-[11px] text-slate-500 truncate">
+                            Customer {order.customer_name ? order.customer_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-[10px] text-slate-400">Order Time: {getOrderTime(order)}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${status.bg} ${status.text}`}>{status.label}</span>
                         </div>
                       </div>
                     </div>
@@ -336,25 +395,35 @@ export default function POSDashboard() {
           </CardContent>
         </Card>
 
-        
-                {/* RIGHT: Stacked Panels */}
+        {/* RIGHT: Stacked Panels */}
         <div className="lg:col-span-5 space-y-5">
 
           {/* Payments & Popular Items */}
           <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="payments-popular-panel">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-slate-900 text-base">Payments & Popular Items</h3>
-              <button onClick={() => navigate('/pos/analytics')} className="text-[11px] text-slate-500 font-semibold hover:text-black transition-colors">View All</button>
+              <h3 className="font-heading font-bold text-slate-900 text-base">Payments &amp; Popular Items</h3>
             </div>
-            <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4">
-              <button onClick={() => setRightTab('payment')} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${rightTab === 'payment' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Payment</button>
-              <button onClick={() => setRightTab('popular')} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${rightTab === 'popular' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Popular Dishes</button>
+            {/* Tab row like reference: Payment | Popular Dishes | View All */}
+            <div className="flex items-center gap-4 border-b border-slate-100 mb-4">
+              <button
+                onClick={() => setRightTab('payment')}
+                className={`pb-2 text-xs font-semibold border-b-2 -mb-px transition-colors ${rightTab === 'payment' ? 'text-slate-900 border-slate-900' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+              >
+                Payment
+              </button>
+              <button
+                onClick={() => setRightTab('popular')}
+                className={`pb-2 text-xs font-semibold border-b-2 -mb-px transition-colors ${rightTab === 'popular' ? 'text-slate-900 border-slate-900' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+              >
+                Popular Dishes
+              </button>
+              <button onClick={() => navigate('/pos/analytics')} className="ml-auto pb-2 text-[11px] text-slate-500 font-semibold hover:text-black transition-colors">View All</button>
             </div>
             {rightTab === 'payment' ? (
               paymentOrders.length === 0 ? (
                 <div className="text-center py-6"><div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><Banknote className="w-8 h-8 text-emerald-500" /></div><p className="text-sm text-slate-500 font-medium">No pending payments</p></div>
               ) : (
-                <div className="space-y-2 max-h-[140px] overflow-y-auto">
+                <div className="space-y-2 max-h-[180px] overflow-y-auto">
                   {paymentOrders.map(order => (
                     <div key={order.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
                       <div className="flex items-center gap-2.5">
@@ -383,50 +452,101 @@ export default function POSDashboard() {
 
           {/* Inventory */}
           <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="inventory-panel">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-heading font-bold text-slate-900 text-base">Inventory</h3>
-              <button onClick={() => navigate('/pos/inventory')} className="text-[11px] text-slate-500 font-semibold hover:text-black transition-colors">View All</button>
-            </div>
-            {lowStockItems.length > 0 ? (
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100"><div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><span className="text-sm font-medium text-red-700">Out of Stock</span></div><span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{lowStockItems.length}</span></div>
-                {lowStockItems.slice(0, 3).map(item => (<div key={item.id} className="flex items-center justify-between px-1"><span className="text-sm text-slate-700">{item.name}</span><span className="text-[10px] text-amber-600 font-medium">Stock: {item.quantity} {item.unit}</span></div>))}
+            <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Inventory</h3>
+            {/* Out of Stock row */}
+            <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <AlertCircle className={`w-4 h-4 ${outOfStockItems.length > 0 ? 'text-red-500' : 'text-slate-300'}`} />
+                <span className="text-sm font-medium text-slate-700">Out of Stock</span>
               </div>
-            ) : (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${outOfStockItems.length > 0 ? 'text-red-600 bg-red-100' : 'text-slate-400 bg-slate-100'}`}>{outOfStockItems.length}</span>
+            </div>
+            {outOfStockItems.length > 0 && (
+              <div className="py-1.5">
+                {outOfStockItems.slice(0, 3).map(item => (
+                  <div key={item.id} className="flex items-center justify-between px-1 py-1">
+                    <span className="text-sm text-slate-700">{item.name}</span>
+                    <span className="text-[10px] text-red-500 font-medium">0 {item.unit}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* All items in stock illustration */}
+            {lowStockItems.length === 0 ? (
               <div className="text-center py-4"><div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-2"><Package className="w-7 h-7 text-emerald-500" /></div><p className="text-sm text-emerald-600 font-medium">All items in stock!</p></div>
+            ) : (
+              <div className="text-center py-3"><div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-2"><CheckCircle className="w-6 h-6 text-emerald-500" /></div><p className="text-sm text-emerald-600 font-medium">{lowStockItems.length} items need attention</p></div>
+            )}
+            {/* Low Stock row */}
+            <div className="flex items-center justify-between py-2.5 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <TrendingUp className={`w-4 h-4 ${lowStockOnly.length > 0 ? 'text-amber-500' : 'text-slate-300'}`} />
+                <span className="text-sm font-medium text-slate-700">Low Stock</span>
+              </div>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${lowStockOnly.length > 0 ? 'text-amber-600 bg-amber-100' : 'text-slate-400 bg-slate-100'}`}>{lowStockOnly.length}</span>
+            </div>
+            {lowStockOnly.length > 0 && (
+              <div className="pt-1.5">
+                {lowStockOnly.slice(0, 3).map(item => (
+                  <div key={item.id} className="flex items-center justify-between px-1 py-1">
+                    <span className="text-sm text-slate-700">{item.name}</span>
+                    <span className="text-[10px] text-amber-600 font-medium">Stock: {item.quantity} {item.unit}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
+        </div>
+      </div>
 
-          {/* Sales Trend Mini */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="sales-trend-panel">
-            <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Sales Trend (Last 7 Days)</h3>
-            <div className="flex items-end justify-between mb-2"><p className="text-xs text-slate-500">Total Sales</p><p className="font-numbers text-lg font-bold text-slate-900">Rs.{(analytics?.daily_sales || 0).toFixed(0)}</p></div>
-            <div className="h-28">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesChartData}>
-                  <defs><linearGradient id="colorSalesMini" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.2} /><stop offset="95%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>
-                  <XAxis dataKey="date" tick={false} axisLine={false} /><YAxis hide />
-                  <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '11px' }} />
-                  <Area type="monotone" dataKey="sales" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorSalesMini)" />
-                </AreaChart>
-              </ResponsiveContainer>
+      {/* === ROW 3: Charts side by side === */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Sales Trend */}
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="sales-trend-panel">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-heading font-bold text-slate-900 text-base">Sales Trend (Last 7 Days)</h3>
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              <div className="text-right">
+                <p className="text-[9px] text-slate-400 font-medium leading-none">Total Sales</p>
+                <p className="font-numbers text-sm font-bold text-slate-900 leading-tight">₹{(analytics?.daily_sales || 0).toFixed(0)}</p>
+              </div>
             </div>
           </div>
+          <div className="flex items-center gap-4 mb-2">
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-2 h-2 rounded-full bg-emerald-500"></span>Revenue</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-2 h-2 rounded-full bg-slate-900"></span>Dine-In</span>
+          </div>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={salesChartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                <defs><linearGradient id="colorSalesMini" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.2} /><stop offset="95%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} width={50} />
+                <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '11px' }} />
+                <Area type="monotone" dataKey="sales" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorSalesMini)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-          {/* Order Types Mini */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="order-types-panel">
-            <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Order Types</h3>
-            <div className="flex items-center gap-5">
-              <div className="w-28 h-28">
+        {/* Order Types */}
+        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="order-types-panel">
+          <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Order Types</h3>
+          {orderTypeData.length === 0 ? (
+            <p className="text-slate-400 text-sm text-center py-10">No order data yet</p>
+          ) : (
+            <>
+              <div className="w-36 h-36 mx-auto mb-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart><Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={30} outerRadius={45} paddingAngle={5} dataKey="value">{orderTypeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><Tooltip /></PieChart>
+                  <PieChart><Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={38} outerRadius={58} paddingAngle={5} dataKey="value">{orderTypeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><Tooltip /></PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="space-y-2 flex-1">
-                {orderTypeData.map((entry, index) => (<div key={entry.name} className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} /><span className="text-xs text-slate-600 font-medium">{entry.name}</span></div><span className="text-xs font-bold text-slate-900">{entry.value}</span></div>))}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                {orderTypeData.map((entry, index) => (<div key={entry.name} className="flex items-center justify-between"><div className="flex items-center gap-2 min-w-0"><div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} /><span className="text-xs text-slate-600 font-medium truncate">{entry.name}</span></div><span className="text-xs font-bold text-slate-900">{entry.value}</span></div>))}
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -452,7 +572,7 @@ export default function POSDashboard() {
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm font-bold text-slate-900">#{order.order_number}</span>
+                          <span className="font-numbers text-sm font-bold text-slate-900">#{order.order_number}</span>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                             order.order_type === 'dine_in' ? 'bg-blue-100 text-blue-700'
                             : order.order_type === 'takeaway' ? 'bg-green-100 text-green-700'
@@ -472,7 +592,7 @@ export default function POSDashboard() {
                           <span>· {new Date(order.created_at).toLocaleTimeString()}</span>
                         </div>
                       </div>
-                      <p className="text-lg font-bold text-slate-900">₹{order.total_amount.toFixed(2)}</p>
+                      <p className="text-lg font-bold font-numbers text-slate-900">₹{order.total_amount.toFixed(2)}</p>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 mb-3">
                       {(order.items || []).map((item, idx) => (
@@ -514,7 +634,7 @@ export default function POSDashboard() {
                 <p className="text-[10px] text-slate-500">{receiptData.restaurant.phone}</p>
               </div>
               <div className="text-[11px] mb-2">
-                <div className="flex justify-between"><span>Order #</span><span className="font-mono">{receiptData.order.order_number}</span></div>
+                <div className="flex justify-between"><span>Order #</span><span className="font-numbers">{receiptData.order.order_number}</span></div>
                 <div className="flex justify-between"><span>Type</span><span className="capitalize">{receiptData.order.order_type?.replace('_', ' ')}</span></div>
                 <div className="flex justify-between"><span>Payment</span><span className="capitalize">{receiptData.order.payment_method}</span></div>
                 <div className="flex justify-between"><span>Date</span><span>{new Date(receiptData.order.created_at).toLocaleString()}</span></div>
@@ -539,7 +659,7 @@ export default function POSDashboard() {
                   <div className="flex justify-between"><span>Discount</span><span>-₹{receiptData.order.discount_amount?.toFixed(2)}</span></div>
                 )}
                 <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-slate-300">
-                  <span>Total</span><span>₹{receiptData.order.total_amount?.toFixed(2)}</span>
+                  <span>Total</span><span className="font-numbers">₹{receiptData.order.total_amount?.toFixed(2)}</span>
                 </div>
               </div>
               <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>
