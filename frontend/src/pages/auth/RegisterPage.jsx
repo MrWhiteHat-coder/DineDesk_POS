@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authAPI } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../../components/ui/input';
 import {
   Mail, Lock, ArrowRight, User, Phone, Shield, Zap, Globe, UtensilsCrossed,
@@ -25,6 +26,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
   const [step, setStep] = useState('register'); // 'register' | 'otp' | 'check-email'
   const [resending, setResending] = useState(false);
 
@@ -118,13 +120,13 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const res = await authAPI.register({ name, email, password, phone: formattedPhone });
-      const data = res.data || {};
-      if (data.access_token && data.user) {
+      // Use AuthContext.register so the in-memory user state is updated too.
+      // Without this, ProtectedRoute still thinks we're logged out and sends
+      // the user straight back to /login after a successful signup.
+      const user = await register(name, email, password, formattedPhone);
+      if (user) {
         // Auto-login mode (email verification not required) — straight to onboarding
-        sessionStorage.setItem('token', data.access_token);
-        sessionStorage.setItem('user', JSON.stringify(data.user));
-        toast.success(`Welcome to DineDesk, ${data.user.name}! 🎉`);
+        toast.success(`Welcome to DineDesk, ${user.name}! 🎉`);
         navigate('/onboarding');
       } else {
         // Verification mode — email link sent, show check-email screen

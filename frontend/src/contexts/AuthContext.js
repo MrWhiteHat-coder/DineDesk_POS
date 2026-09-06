@@ -67,8 +67,8 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const register = async (name, email, password) => {
-    const response = await authAPI.register({ name, email, password });
+  const register = async (name, email, password, phone) => {
+    const response = await authAPI.register({ name, email, password, phone });
     const data = response.data || {};
 
     // Verification mode: backend returns {message, email} — no session yet.
@@ -77,11 +77,24 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
 
-    // Auto-login mode: session starts immediately.
+    // Auto-login mode: session starts immediately. We set BOTH the storage
+    // AND the in-memory user state here so ProtectedRoute sees the user as
+    // authenticated and routes them into onboarding/POS instead of bouncing
+    // them back to the login page.
     const userData = data.user;
     sessionStorage.setItem('token', data.access_token);
     sessionStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
+
+    if (userData.restaurant_id) {
+      try {
+        const res = await restaurantAPI.getMy();
+        setRestaurant(res.data);
+      } catch (e) {
+        console.error('Failed to fetch restaurant:', e);
+      }
+    }
+
     return userData;
   };
 
