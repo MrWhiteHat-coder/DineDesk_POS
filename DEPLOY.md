@@ -43,7 +43,7 @@ Database (MongoDB)   → MongoDB Atlas (free M0)
 3. Click **"New +"** → **"Web Service"**
 4. **Connect your GitHub repo**: `MrWhiteHat-coder/DineDesk_POS`
 5. Fill in:
-   - **Name**: `dinedesk-backend`
+   - **Name**: `dinedesk-pos`
    - **Region**: Singapore or Mumbai (closest)
    - **Branch**: `main`
    - **Runtime**: Python 3
@@ -80,8 +80,8 @@ Database (MongoDB)   → MongoDB Atlas (free M0)
 
 7. Click **"Create Web Service"**
 8. Wait for deployment (2-5 min)
-9. Your backend URL will be: `https://dinedesk-backend.onrender.com`
-10. Test: Visit `https://dinedesk-backend.onrender.com/health`
+9. Your backend URL will be: `https://dinedesk-pos.onrender.com`
+10. Test: Visit `https://dinedesk-pos.onrender.com/health`
     - Should return: `{"status":"healthy","version":"3.0.0","mongodb":"connected"}`
 
 ---
@@ -92,7 +92,7 @@ Actual services this repo currently runs on:
 
 | Service | URL |
 |---------|-----|
-| Frontend (Vercel) | https://revontechologies.in |
+| Frontend (Vercel) | https://revontechnologies.in |
 | Backend (Render) | https://dinedesk-pos.onrender.com |
 | MongoDB (Atlas) | `dinedesk.nynxzwe.mongodb.net` — DB `DineDesk` |
 
@@ -137,7 +137,7 @@ PYTHON_VERSION = 3.11.8
 
 6. **Environment Variables** → Add:
    ```
-   REACT_APP_BACKEND_URL = https://dinedesk-backend.onrender.com
+   REACT_APP_BACKEND_URL = https://dinedesk-pos.onrender.com
    REACT_APP_GOOGLE_CLIENT_ID = 19258355498-49tvakpu82hde931s8sp1dj42mbfa03k.apps.googleusercontent.com
    ```
 
@@ -182,11 +182,11 @@ Then **"Manual Deploy"** → **"Deploy latest commit"** to restart with new CORS
 
 ---
 
-## Step 5: Custom Domain (revontechologies.in)
+## Step 5: Custom Domain (revontechnologies.in)
 
 ### On Vercel:
 1. Vercel Project → **Settings** → **Domains**
-2. Add `revontechologies.in`
+2. Add `revontechnologies.in`
 3. Vercel gives you DNS records to add
 
 ### On your domain registrar (GoDaddy/Namecheap/etc):
@@ -199,30 +199,62 @@ CNAME   www     cname.vercel-dns.com
 
 ### On Render (optional custom domain):
 1. Render → Settings → **Custom Domains**
-2. Add `api.revontechologies.in`
+2. Add `api.revontechnologies.in`
 3. Update DNS:
 ```
 Type    Name    Value
-CNAME   api     dinedesk-backend.onrender.com
+CNAME   api     dinedesk-pos.onrender.com
 ```
 
 ---
 
-## Step 6: Update Google OAuth
+## Step 6: Configure Google OAuth (Sign in with Google)
 
-Go to https://console.cloud.google.com → APIs & Services → Credentials
-1. Edit your OAuth Client ID
-2. Add ** Authorized JavaScript origins**:
+Go to https://console.cloud.google.com → **APIs & Services → Credentials**,
+then edit your **OAuth 2.0 Client ID** (must be a **Web application** client —
+not Android/iOS/Desktop).
+
+1. Copy the **full client ID** (ends in `.apps.googleusercontent.com`) and set
+   it as the Vercel environment variable `REACT_APP_GOOGLE_CLIENT_ID` for
+   **Production and Development** (and Preview if you test Google there).
+   ⚠️ Environment variable changes only take effect after a **new
+   build/deployment**.
+
+2. **Authorized JavaScript origins** — add ONLY complete origins, spelled
+   EXACTLY as they appear in the browser address bar (scheme + host, no path,
+   no trailing slash, no wildcard, no `/login`):
    ```
-   https://revontechologies.in
-   https://www.revontechologies.in
-   https://dinedesk-XXXX.vercel.app   (Vercel preview URL)
+   https://revontechnologies.in
+   https://www.revontechnologies.in
+   https://dinedesk-XXXX.vercel.app   (each Vercel preview you test Google on)
+   http://localhost:3000              (local development)
    ```
-3. Add **Authorized redirect URIs**:
-   ```
-   https://revontechologies.in
-   https://www.revontechologies.in
-   ```
+
+   ⚠️ `Error 400: origin_mismatch` means the origin in the address bar is not
+   listed (or is misspelled) in **Authorized JavaScript origins**. This flow
+   uses Google Identity Services' JavaScript credential callback — adding
+   **Authorized redirect URIs** alone does **not** fix `origin_mismatch`.
+   Redirect URIs are only needed for OAuth server-side flows, not this one.
+   Note the spelling: `revon**tech**nologies.in` — the `n` after `tech`
+   matters (older docs/screenshots misspelled it as `revontechologies.in`).
+
+3. Keep the consent screen published (External, testing → production when
+   ready) so accounts outside your test list can sign in.
+
+---
+
+## ⚠️ Verify after deploying the Google fix
+
+- [ ] Vercel → Project → Settings → Environment Variables:
+  `REACT_APP_GOOGLE_CLIENT_ID` = the full Web client ID and
+  `REACT_APP_BACKEND_URL` = `https://dinedesk-pos.onrender.com`
+- [ ] Trigger a **redeploy** after any env change (env is inlined at build time)
+- [ ] Google Console → authorized JS origins contain BOTH
+  `https://revontechnologies.in` AND `https://www.revontechnologies.in`
+  (correctly spelled — see note above)
+- [ ] Open the live site and click **Continue with Google** → choose an
+  account → app routes correctly (new → onboarding, subscribed → POS,
+  unsubscribed → subscription, admin → admin)
 
 ---
 
@@ -239,7 +271,7 @@ Go to https://console.cloud.google.com → APIs & Services → Credentials
 ## 🧪 Test Checklist
 
 After deployment:
-- [ ] Visit `https://revontechologies.in` — frontend loads
+- [ ] Visit `https://revontechnologies.in` — frontend loads
 - [ ] Login with email/password — works
 - [ ] Google Sign-In — works
 - [ ] Create an order — works
