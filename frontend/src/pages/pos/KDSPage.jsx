@@ -122,8 +122,8 @@ export default function KDSPage() {
                     {delayed && <AlertTriangle className="w-4 h-4 text-white animate-pulse" />}
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-white/80">
-                    <span>Order #{order.order_number}</span>
-                    <span>Token: {order.order_number?.slice(-3)}</span>
+                    <span className="font-numbers text-[13px]">Order #{order.order_number}</span>
+                    <span className="font-numbers text-[13px]">Token: {order.order_number?.slice(-3)}</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-white/80 mt-0.5">
                     <span>{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

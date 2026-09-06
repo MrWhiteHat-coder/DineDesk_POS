@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
     "./public/index.html"
@@ -7,37 +8,40 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'heading': ['Poppins', 'sans-serif'],
-        'heading-xl': ['Montserrat', 'sans-serif'],
+        'heading': ['Manrope', 'sans-serif'],
+        'heading-xl': ['Manrope', 'sans-serif'],
         'body': ['Inter', 'sans-serif'],
-        'numbers': ['Inter', 'sans-serif'],
+        'numbers': ['Barlow Condensed', 'sans-serif'],
       },
       colors: {
-        // DineDesk Brand Colors
+        // DineDesk Brand Colors (White + Black)
         'dd': {
-          'blue': '#1E3A8A',       // Neelakanta Blue (primary accent)
-          'blue-light': '#2563EB', // Lighter blue for hover
-          'blue-dark': '#1E40AF',  // Darker blue
-          'saffron': '#F59E0B',    // Saffron (secondary accent)
-          'saffron-light': '#FBBF24',
-          'saffron-dark': '#D97706',
-          'black': '#0A0A0A',      // Primary surface
+          'ink': '#111827',        // primary CTA / emphasis
+          'ink-soft': '#1F2937',   // hover state of ink
+          'ink-mid': '#374151',
+          'ink-light': '#6B7280',
+          'ink-faint': '#9CA3AF',
+          'paper': '#FFFFFF',      // primary surface
+          'paper-dim': '#F9FAFB',
+          'line': '#E5E7EB',
+          'night': '#0F1115',      // Night Shift background
+          'night-card': '#161A20', // Night Shift card surface
           'success': '#059669',
           'warning': '#F59E0B',
           'error': '#DC2626',
         },
         // Semantic aliases
         primary: {
-          DEFAULT: '#1E3A8A',
+          DEFAULT: '#111827',
           foreground: '#FFFFFF',
-          light: '#2563EB',
-          dark: '#1E40AF',
+          light: '#1F2937',
+          dark: '#0A0F1A',
         },
         accent: {
-          DEFAULT: '#F59E0B',
-          foreground: '#000000',
-          light: '#FBBF24',
-          dark: '#D97706',
+          DEFAULT: '#111827',
+          foreground: '#FFFFFF',
+          light: '#1F2937',
+          dark: '#0A0F1A',
         },
         surface: {
           DEFAULT: '#FFFFFF',
@@ -71,8 +75,7 @@ module.exports = {
         'card': '0 1px 3px rgba(0,0,0,0.08)',
         'card-hover': '0 4px 12px rgba(0,0,0,0.12)',
         'elevated': '0 4px 12px rgba(0,0,0,0.12)',
-        'blue': '0 4px 12px rgba(30,58,138,0.25)',
-        'saffron': '0 4px 12px rgba(245,158,11,0.25)',
+        'ink': '0 4px 12px rgba(17,24,39,0.25)',
       },
       keyframes: {
         'accordion-down': {

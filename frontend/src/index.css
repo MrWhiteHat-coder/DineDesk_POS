@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,7 +6,7 @@
 
 body {
     margin: 0;
-    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'tnum' on, 'lnum' on;
@@ -19,11 +19,11 @@ code {
 
 @layer base {
     :root {
-        --dd-blue: #1E3A8A;
-        --dd-blue-light: #2563EB;
-        --dd-saffron: #F59E0B;
-        --dd-saffron-light: #FBBF24;
-        --dd-black: #0A0A0A;
+        /* DineDesk White + Black tokens */
+        --dd-ink: #111827;            /* primary CTA / emphasis */
+        --dd-ink-soft: #1F2937;       /* hover state of ink */
+        --dd-on-ink: #FFFFFF;         /* text on ink */
+        --dd-ring: #111827;           /* focus ring */
         --dd-success: #059669;
         --dd-error: #DC2626;
         --dd-bg: #FFFFFF;
@@ -43,25 +43,67 @@ code {
         --card-foreground: 0 0% 7%;
         --popover: 0 0% 100%;
         --popover-foreground: 0 0% 7%;
-        --primary: 222 47% 33%;
+        --primary: 0 0% 9%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 43 96% 56%;
-        --secondary-foreground: 0 0% 0%;
+        --secondary: 0 0% 96%;
+        --secondary-foreground: 0 0% 9%;
         --muted: 0 0% 96%;
         --muted-foreground: 0 0% 45%;
-        --accent: 43 96% 56%;
-        --accent-foreground: 0 0% 0%;
+        --accent: 0 0% 9%;
+        --accent-foreground: 0 0% 98%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
         --border: 0 0% 91%;
         --input: 0 0% 91%;
-        --ring: 222 47% 33%;
-        --chart-1: 222 47% 33%;
-        --chart-2: 43 96% 56%;
-        --chart-3: 160 41% 40%;
-        --chart-4: 0 84% 60%;
-        --chart-5: 0 0% 60%;
+        --ring: 0 0% 9%;
+        --chart-1: 0 0% 15%;
+        --chart-2: 0 0% 45%;
+        --chart-3: 0 0% 65%;
+        --chart-4: 0 0% 80%;
+        --chart-5: 0 0% 90%;
         --radius: 0.75rem;
+    }
+
+    /* ═══════════════════════════════
+       NIGHT SHIFT — dark theme tokens
+       ═══════════════════════════════ */
+    html.dark {
+        --dd-ink: #FFFFFF;
+        --dd-ink-soft: #E5E7EB;
+        --dd-on-ink: #0F1115;
+        --dd-ring: #F3F4F6;
+        --dd-bg: #161A20;
+        --dd-surface: #14181D;
+        --dd-border: #262B33;
+        --dd-text: #F3F4F6;
+        --dd-text-secondary: #9CA3AF;
+        --dd-shadow-card: 0 1px 3px rgba(0,0,0,0.4);
+        --dd-shadow-elevated: 0 4px 12px rgba(0,0,0,0.5);
+
+        --background: 220 13% 7%;
+        --foreground: 0 0% 93%;
+        --card: 220 12% 11%;
+        --card-foreground: 0 0% 93%;
+        --popover: 220 12% 11%;
+        --popover-foreground: 0 0% 93%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 0 0% 9%;
+        --secondary: 220 10% 18%;
+        --secondary-foreground: 0 0% 93%;
+        --muted: 220 10% 16%;
+        --muted-foreground: 220 6% 62%;
+        --accent: 0 0% 98%;
+        --accent-foreground: 0 0% 9%;
+        --destructive: 0 72% 55%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 220 10% 20%;
+        --input: 220 10% 20%;
+        --ring: 0 0% 85%;
+        --chart-1: 0 0% 95%;
+        --chart-2: 0 0% 70%;
+        --chart-3: 0 0% 50%;
+        --chart-4: 0 0% 35%;
+        --chart-5: 0 0% 25%;
     }
 }
 
@@ -73,77 +115,118 @@ code {
         @apply text-[#111111];
         background-color: #FAFAFA;
     }
+    html.dark body {
+        background-color: #0F1115;
+        color: #F3F4F6;
+    }
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Poppins', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-weight: 700;
     }
 }
 
 @layer utilities {
     .font-heading {
-        font-family: 'Poppins', sans-serif;
+        font-family: 'Manrope', sans-serif;
     }
     .font-heading-xl {
-        font-family: 'Montserrat', sans-serif;
+        font-family: 'Manrope', sans-serif;
         font-weight: 800;
+        letter-spacing: -0.02em;
     }
     .font-body {
         font-family: 'Inter', sans-serif;
     }
+    /* Prices, timers, order numbers — glare-proof condensed numerals */
     .font-numbers {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Barlow Condensed', sans-serif;
         font-variant-numeric: tabular-nums;
+        letter-spacing: 0.01em;
     }
 
-    /* DineDesk Brand Utilities */
+    /* DineDesk Brand Utilities (monochrome, theme-aware) */
     .dd-gradient-blue {
-        background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+        background: linear-gradient(135deg, #111827 0%, #374151 100%);
     }
     .dd-gradient-saffron {
-        background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+        background: linear-gradient(135deg, #1F2937 0%, #4B5563 100%);
     }
     .dd-gradient-hero {
-        background: linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 50%, #1E3A8A 100%);
+        background: linear-gradient(135deg, #0A0A0A 0%, #111827 55%, #1F2937 100%);
     }
     .dd-card {
-        @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+        background: var(--dd-bg);
+        border: 1px solid var(--dd-border);
+        border-radius: var(--dd-radius);
+        box-shadow: var(--dd-shadow-card);
     }
     .dd-card-elevated {
-        @apply bg-white rounded-xl shadow-md;
+        background: var(--dd-bg);
+        border-radius: var(--dd-radius);
+        box-shadow: var(--dd-shadow-elevated);
     }
     .dd-btn-primary {
-        @apply bg-[#1E3A8A] text-white font-semibold rounded-lg px-5 py-2.5 
-               hover:bg-[#2563EB] active:scale-[0.97] transition-all duration-150
-               shadow-md hover:shadow-lg;
+        @apply font-semibold rounded-lg px-5 py-2.5 active:scale-[0.97] transition-all duration-150;
+        background: var(--dd-ink);
+        color: var(--dd-on-ink);
+    }
+    .dd-btn-primary:hover {
+        background: var(--dd-ink-soft);
+        box-shadow: var(--dd-shadow-elevated);
     }
     .dd-btn-accent {
-        @apply bg-[#F59E0B] text-black font-semibold rounded-lg px-5 py-2.5 
-               hover:bg-[#FBBF24] active:scale-[0.97] transition-all duration-150;
+        @apply font-semibold rounded-lg px-5 py-2.5 active:scale-[0.97] transition-all duration-150;
+        background: var(--dd-ink);
+        color: var(--dd-on-ink);
+    }
+    .dd-btn-accent:hover {
+        background: var(--dd-ink-soft);
     }
     .dd-btn-outline {
-        @apply border-2 border-gray-200 text-gray-900 font-semibold rounded-lg px-5 py-2.5 
-               hover:border-[#1E3A8A] hover:text-[#1E3A8A] active:scale-[0.97] transition-all duration-150;
+        @apply font-semibold rounded-lg px-5 py-2.5 active:scale-[0.97] transition-all duration-150;
+        border: 2px solid var(--dd-border);
+        color: var(--dd-text);
+        background: transparent;
+    }
+    .dd-btn-outline:hover {
+        border-color: var(--dd-ink);
+        color: var(--dd-ink);
     }
     .dd-input {
-        @apply h-11 px-4 bg-white border border-gray-200 rounded-md text-sm
-               focus:ring-2 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] outline-none transition-all;
+        @apply h-11 px-4 rounded-md text-sm outline-none transition-all;
+        background: var(--dd-bg);
+        border: 1px solid var(--dd-border);
+        color: var(--dd-text);
+    }
+    .dd-input:focus {
+        border-color: var(--dd-ink);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--dd-ring) 25%, transparent);
     }
     .dd-badge {
         @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
     }
     .dd-badge-blue {
-        @apply dd-badge bg-blue-50 text-[#1E3A8A];
+        background: var(--dd-surface);
+        color: var(--dd-text-secondary);
+        border: 1px solid var(--dd-border);
     }
     .dd-badge-saffron {
-        @apply dd-badge bg-amber-50 text-[#D97706];
+        background: var(--dd-surface);
+        color: var(--dd-text-secondary);
+        border: 1px solid var(--dd-border);
     }
     .dd-badge-success {
-        @apply dd-badge bg-emerald-50 text-[#059669];
+        background: rgba(5, 150, 105, 0.1);
+        color: #059669;
     }
     .dd-badge-error {
-        @apply dd-badge bg-red-50 text-[#DC2626];
+        background: rgba(220, 38, 38, 0.1);
+        color: #DC2626;
     }
 }
+
+html.dark .dd-badge-success { color: #6EE7B7; }
+html.dark .dd-badge-error { color: #FCA5A5; }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
@@ -165,25 +248,47 @@ code {
     background: #a3a3a3;
 }
 
+html.dark ::-webkit-scrollbar-track { background: #14181D; }
+html.dark ::-webkit-scrollbar-thumb { background: #2E343D; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #3D444E; }
+
 /* DineDesk POS utilities */
 .pos-card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200;
+    background: var(--dd-bg);
+    border: 1px solid var(--dd-border);
+    border-radius: var(--dd-radius);
+    box-shadow: var(--dd-shadow-card);
+    transition: box-shadow 0.2s ease;
 }
+.pos-card:hover { box-shadow: var(--dd-shadow-elevated); }
 
 .pos-btn {
     @apply min-h-[48px] px-4 py-3 rounded-lg font-medium transition-all duration-150 active:scale-[0.97];
 }
 
 .pos-btn-primary {
-    @apply pos-btn bg-[#1E3A8A] text-white hover:bg-[#2563EB] shadow-md;
+    background: var(--dd-ink);
+    color: var(--dd-on-ink);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
+.pos-btn-primary:hover { background: var(--dd-ink-soft); }
 
 .pos-btn-secondary {
-    @apply pos-btn bg-gray-50 text-gray-800 hover:bg-gray-100;
+    background: var(--dd-surface);
+    color: var(--dd-text);
+    border: 1px solid var(--dd-border);
 }
+.pos-btn-secondary:hover { background: var(--dd-border); }
 
 .pos-input {
-    @apply h-12 px-4 bg-white border border-gray-200 rounded-md focus:ring-2 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] outline-none transition-all;
+    @apply h-12 px-4 rounded-md outline-none transition-all;
+    background: var(--dd-bg);
+    border: 1px solid var(--dd-border);
+    color: var(--dd-text);
+}
+.pos-input:focus {
+    border-color: var(--dd-ink);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--dd-ring) 25%, transparent);
 }
 
 /* Hover animations */
@@ -271,6 +376,11 @@ button:active:not(:disabled) {
     animation: shimmer 1.5s infinite;
 }
 
+html.dark .animate-shimmer {
+    background: linear-gradient(90deg, #1C2128 25%, #262B33 50%, #1C2128 75%);
+    background-size: 200% 100%;
+}
+
 .stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.1s; }
 .stagger-3 { animation-delay: 0.15s; }
@@ -285,12 +395,18 @@ button:active:not(:disabled) {
     transform: translateY(-3px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
+html.dark .hover-lift:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+}
 
 .hover-glow {
     transition: box-shadow 0.2s ease;
 }
 .hover-glow:hover {
     box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
+}
+html.dark .hover-glow:hover {
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.12);
 }
 
 .press-scale {
@@ -313,38 +429,34 @@ main > *:first-child {
 
 /* ═══════════════════════════════════════
    CALM MODE — Signature DineDesk Feature
+   Slow, gentle transitions; perf-safe
+   (colors/shadows/opacity only — never
+   layout props on every element)
    ═══════════════════════════════════════ */
-.calm-mode {
-    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+.calm-mode *,
+.calm-mode *::before,
+.calm-mode *::after {
+    transition: color 0.8s ease, background-color 0.8s ease, border-color 0.8s ease, box-shadow 0.8s ease, opacity 0.8s ease !important;
 }
-.calm-mode * {
-    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.calm-mode [data-testid*="menu-item-card"]:hover,
+.calm-mode .hover-lift:hover {
+    transform: none;
 }
-.calm-mode body,
-.calm-mode .bg-gray-50,
-.calm-mode .bg-white {
-    background-color: #f8f9fc !important;
+html:not(.dark) .calm-mode body,
+html:not(.dark) .calm-mode .bg-gray-50,
+html:not(.dark) .calm-mode .bg-white {
+    background-color: #F6F7F9 !important;
 }
-.calm-mode .bg-black,
-.calm-mode [class*="bg-black"] {
-    background-color: #1E3A8A !important;
-}
-.calm-mode .text-white {
-    color: white !important;
-}
-.calm-mode main {
-    background: linear-gradient(180deg, #f0f4ff 0%, #f8f9fc 50%, #fffbeb 100%) !important;
-}
-.calm-mode [class*="bg-red"] {
-    opacity: 0.7;
-}
-.calm-mode button {
-    animation: none !important;
-    transition: all 0.8s ease !important;
+html:not(.dark) .calm-mode main {
+    background: linear-gradient(180deg, #F3F5FA 0%, #F6F7F9 60%, #FAFAF7 100%) !important;
 }
 .calm-mode .shadow-card,
 .calm-mode .shadow-sm {
-    box-shadow: 0 1px 6px rgba(30, 58, 138, 0.06) !important;
+    box-shadow: 0 1px 6px rgba(17, 24, 39, 0.06) !important;
+}
+html.dark .calm-mode .shadow-card,
+html.dark .calm-mode .shadow-sm {
+    box-shadow: 0 1px 6px rgba(0,0,0,0.35) !important;
 }
 
 /* Trident watermarks for empty states */
@@ -421,11 +533,11 @@ main > *:first-child {
     }
 }
 
-/* Better focus states for accessibility */
+/* Better focus states for accessibility (token-driven, theme-aware) */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
-    outline: 2px solid #1E3A8A;
+    outline: 2px solid var(--dd-ring);
     outline-offset: 2px;
 }
 
@@ -433,6 +545,114 @@ input:focus-visible {
 .page-enter {
     animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ═══════════════════════════════════════
+   NIGHT SHIFT SHIM
+   Legacy utility classes (bg-white, gray-*)
+   adapt under html.dark so pages without
+   token classes still render correctly.
+   ═══════════════════════════════════════ */
+html.dark .bg-white { background-color: #161A20 !important; }
+html.dark .bg-gray-50 { background-color: #14181D !important; }
+html.dark .bg-gray-50\/50 { background-color: transparent !important; }
+html.dark .bg-gray-100 { background-color: #1C2128 !important; }
+html.dark .bg-gray-200 { background-color: #242A32 !important; }
+html.dark .bg-gray-900 { background-color: #0A0C0F !important; }
+
+/* CTA inversion: ink/black buttons flip to white in Night Shift for contrast.
+   Only targets the button pattern (bg + hover pairing) — hero panels and
+   decorative black surfaces are untouched. */
+html.dark .bg-gray-900.hover\:bg-gray-700 {
+    background-color: #FFFFFF !important;
+    color: #0F1115 !important;
+}
+html.dark .bg-gray-900.hover\:bg-gray-700:hover {
+    background-color: #E5E7EB !important;
+}
+html.dark .bg-gray-900.hover\:bg-gray-700 .animate-spin {
+    border-color: #0F1115 !important;
+    border-top-color: transparent !important;
+}
+html.dark .bg-black.hover\:bg-gray-800 {
+    background-color: #FFFFFF !important;
+    color: #0F1115 !important;
+}
+html.dark .bg-black.hover\:bg-gray-800:hover {
+    background-color: #E5E7EB !important;
+}
+html.dark .bg-black.hover\:bg-gray-800 .animate-spin {
+    border-color: #0F1115 !important;
+    border-top-color: transparent !important;
+}
+
+html.dark .text-black { color: #F3F4F6 !important; }
+html.dark .text-gray-900,
+html.dark .text-gray-800 { color: #F3F4F6 !important; }
+html.dark .text-gray-700 { color: #D1D5DB !important; }
+html.dark .text-gray-600,
+html.dark .text-gray-500 { color: #9CA3AF !important; }
+html.dark .text-gray-400 { color: #6B7280 !important; }
+
+html.dark .text-slate-900,
+html.dark .text-slate-800 { color: #F3F4F6 !important; }
+html.dark .text-slate-700 { color: #D1D5DB !important; }
+html.dark .text-slate-600,
+html.dark .text-slate-500 { color: #9CA3AF !important; }
+html.dark .text-slate-400 { color: #6B7280 !important; }
+
+html.dark .bg-slate-50 { background-color: #14181D !important; }
+html.dark .bg-slate-100 { background-color: #1C2128 !important; }
+html.dark .bg-slate-200 { background-color: #242A32 !important; }
+
+html.dark .border-slate-100 { border-color: #22272F !important; }
+html.dark .border-slate-200 { border-color: #262B33 !important; }
+html.dark .border-slate-300 { border-color: #2E343D !important; }
+
+html.dark .border-gray-100 { border-color: #22272F !important; }
+html.dark .border-gray-200 { border-color: #262B33 !important; }
+html.dark .border-gray-300 { border-color: #2E343D !important; }
+
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #22272F; }
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #262B33; }
+
+html.dark .shadow-card { box-shadow: 0 1px 4px rgba(0,0,0,0.4) !important; }
+html.dark .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.35) !important; }
+html.dark .shadow-md { box-shadow: 0 4px 14px rgba(0,0,0,0.45) !important; }
+html.dark .shadow-lg { box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important; }
+
+/* Status colors stay functional, slightly brightened for dark AA contrast */
+html.dark .bg-emerald-50 { background-color: rgba(16,185,129,0.12) !important; }
+html.dark .bg-green-50 { background-color: rgba(34,197,94,0.12) !important; }
+html.dark .bg-red-50 { background-color: rgba(239,68,68,0.14) !important; }
+html.dark .bg-amber-50 { background-color: rgba(245,158,11,0.12) !important; }
+html.dark .bg-yellow-50 { background-color: rgba(234,179,8,0.12) !important; }
+
+/* Soft status gradients -> tinted glass in dark (notifies amber/orange banners) */
+html.dark [class*="from-amber-50"] {
+    background-image: none !important;
+    background-color: rgba(245,158,11,0.08) !important;
+}
+html.dark [class*="from-orange-50"],
+html.dark [class*="from-red-50"],
+html.dark [class*="from-emerald-50"],
+html.dark [class*="from-green-50"],
+html.dark [class*="from-blue-50"],
+html.dark [class*="from-slate-50"],
+html.dark [class*="from-gray-50"] {
+    background-image: none !important;
+    background-color: transparent !important;
+}
+html.dark .text-amber-900 { color: #FCD34D !important; }
+html.dark .text-amber-800 { color: #FCD34D !important; }
+html.dark .border-amber-200 { border-color: rgba(245,158,11,0.25) !important; }
+html.dark .border-red-200 { border-color: rgba(239,68,68,0.25) !important; }
+html.dark .border-emerald-200 { border-color: rgba(16,185,129,0.25) !important; }
+html.dark .border-green-200 { border-color: rgba(34,197,94,0.25) !important; }
+html.dark .text-emerald-600, html.dark .text-emerald-700,
+html.dark .text-green-600, html.dark .text-green-700 { color: #6EE7B7 !important; }
+html.dark .text-red-600, html.dark .text-red-700 { color: #FCA5A5 !important; }
+html.dark .text-amber-600, html.dark .text-amber-700,
+html.dark .text-yellow-600, html.dark .text-yellow-700 { color: #FCD34D !important; }
 
 /* Menu card shine effect on hover */
 @media (hover: hover) {

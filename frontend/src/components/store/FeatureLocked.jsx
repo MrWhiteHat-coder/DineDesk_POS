@@ -37,7 +37,7 @@ export default function FeatureLocked({ addonName, addonPrice, featureDescriptio
             {addonPrice && (
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200">
                 <span className="text-xs text-slate-400">Starting from</span>
-                <span className="text-lg font-bold text-[#1E3A8A]">₹{addonPrice}/mo</span>
+                <span className="text-lg font-bold text-gray-900">₹{addonPrice}/mo</span>
               </div>
             )}
           </div>
@@ -45,7 +45,7 @@ export default function FeatureLocked({ addonName, addonPrice, featureDescriptio
           <div className="space-y-2">
             <Button
               onClick={() => navigate('/pos/store')}
-              className="w-full bg-[#1E3A8A] hover:bg-[#2563EB] text-white rounded-xl h-11 gap-2"
+              className="w-full bg-gray-900 hover:bg-gray-700 text-white rounded-xl h-11 gap-2"
               data-testid="unlock-feature-btn"
             >
               <Zap className="w-4 h-4" /> Unlock in Store <ArrowRight className="w-4 h-4" />

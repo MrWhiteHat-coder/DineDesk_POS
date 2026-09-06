@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { daySessionAPI } from '../lib/api';
 import { toast } from 'sonner';
 import DayCloseReport from '../components/pos/DayCloseReport';
@@ -31,6 +32,8 @@ import {
   Store,
   MoreHorizontal,
   Lock,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -98,6 +101,7 @@ const ROLE_ACCESS = {
    ═══════════════════════════════════════════════════════ */
 export default function POSLayout() {
   const { user, restaurant, logout } = useAuth();
+  const { dark, toggle: toggleTheme } = useTheme();
   const { isFeatureUnlocked } = useFeatures();
   const navigate = useNavigate();
   const location = useLocation();
@@ -351,6 +355,17 @@ export default function POSLayout() {
             </span>
           </div>
 
+          {/* Night Shift toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex-shrink-0"
+            data-testid="theme-toggle"
+            aria-label={dark ? 'Switch to light mode' : 'Switch to Night Shift'}
+            title={dark ? 'Light Mode' : 'Night Shift'}
+          >
+            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
           {/* Day status */}
           {isDayOpen ? (
             <button onClick={() => setShowDayCloseModal(true)} className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-green-200 hover:bg-green-100 transition-colors" data-testid="close-day-btn">
@@ -522,6 +537,16 @@ export default function POSLayout() {
                 <span>Staff</span>
               </NavLink>
             )}
+
+            {/* Night Shift toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+              data-testid="theme-toggle-mobile"
+            >
+              {dark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+              <span>{dark ? 'Light Mode' : 'Night Shift'}</span>
+            </button>
 
             {/* Settings */}
             {hasAccess('settings') && (

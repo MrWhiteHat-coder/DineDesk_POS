@@ -1,62 +1,63 @@
 {
   "brand_identity": {
-    "name": "FoodFlow POS",
-    "tone": "Efficient, Appetizing, Reliable, Clean",
-    "archetype": "The Performance Pro (with a flavor twist)",
+    "name": "DineDesk POS",
+    "company": "Trident Ventures",
+    "tone": "Efficient, Minimal, Reliable, Calm",
+    "archetype": "The Performance Pro",
     "audience": "Restaurant Owners, Staff, Kitchen Managers",
-    "core_values": ["Speed", "Accuracy", "Cleanliness", "Taste"]
+    "core_values": ["Speed", "Accuracy", "Cleanliness", "Calm"],
+    "tagline": "Absorbs chaos. Serves calm."
   },
   "typography": {
     "headings": {
       "family": "Manrope",
       "weights": ["600", "700", "800"],
-      "usage": "Use for all page titles, modal headers, and major stats. Tight tracking."
+      "tailwind_class": "font-heading / font-heading-xl",
+      "usage": "All page titles, modal headers, major stats. Tight tracking (-0.02em on font-heading-xl)."
     },
     "body": {
       "family": "Inter",
-      "weights": ["400", "500"],
-      "usage": "Use for all standard text, menus, and tables. Optimized for readability."
+      "weights": ["300", "400", "500", "600", "700"],
+      "tailwind_class": "font-body (default)",
+      "usage": "Standard text, menus, tables. Optimized for readability."
     },
     "numbers": {
       "family": "Barlow Condensed",
-      "weights": ["600", "700"],
-      "usage": "Use for PRICES, TIMERS, and ORDER NUMBERS to maximize visibility."
-    }
+      "weights": ["500", "600", "700"],
+      "tailwind_class": "font-numbers",
+      "usage": "PRICES, TIMERS, ORDER NUMBERS, TOKENS, RECEIPT TOTALS. Glare-proof condensed numerals for kitchen/counter readability. Must keep tabular-nums."
+    },
+    "legacy_fonts_removed": ["Poppins", "Montserrat", "Plus Jakarta Sans"]
   },
   "colors": {
-    "primary": {
-      "name": "Zest Orange",
-      "hex": "#F97316",
-      "tailwind": "orange-500",
-      "usage": "Primary buttons, active states, key highlights"
+    "brand": {
+      "ink": { "hex": "#111827", "tailwind": "gray-900 / dd-ink", "usage": "Primary buttons/CTAs, active states, emphasis text" },
+      "ink_soft": { "hex": "#1F2937", "usage": "Ink hover state" },
+      "paper": { "hex": "#FFFFFF", "usage": "Cards, surfaces" },
+      "paper_dim": { "hex": "#F9FAFB", "tailwind": "gray-50 / dd-surface", "usage": "Page background, subtle section fills" },
+      "line": { "hex": "#E5E7EB", "tailwind": "gray-200 / dd-border", "usage": "1px card borders, dividers" }
     },
-    "secondary": {
-      "name": "Cream Soda",
-      "hex": "#FFF7ED",
-      "tailwind": "orange-50",
-      "usage": "Backgrounds for active items, subtle highlights"
-    },
-    "accent": {
-      "name": "Burnt Ember",
-      "hex": "#C2410C",
-      "tailwind": "orange-700",
-      "usage": "Hover states, critical alerts"
-    },
-    "background": {
-      "default": "#F8FAFC",
-      "paper": "#FFFFFF",
-      "sidebar": "#FFFFFF"
-    },
-    "text": {
-      "primary": "#0F172A",
-      "secondary": "#64748B",
-      "muted": "#94A3B8"
+    "night_shift": {
+      "background": "#0F1115",
+      "card": "#161A20",
+      "surface": "#14181D",
+      "border": "#262B33",
+      "ink_inverted": "#FFFFFF",
+      "strategy": "Class-based (html.dark) + CSS variable overrides + legacy utility shim (html.dark .bg-white etc). Do NOT hardcode hex in JSX - use tokens."
     },
     "functional": {
-      "success": "#22C55E",
-      "warning": "#EAB308",
-      "error": "#EF4444",
-      "info": "#3B82F6"
+      "success": { "hex": "#059669", "dark_variant": "#6EE7B7", "usage": "Paid, completed, day-open, positive deltas" },
+      "warning": { "hex": "#F59E0B", "dark_variant": "#FCD34D", "usage": "Low stock, pending, delayed KDS orders" },
+      "error": { "hex": "#DC2626", "dark_variant": "#FCA5A5", "usage": "Cancelled, failed, day-closed, destructive actions" },
+      "info": { "hex": "#3B82F6", "usage": "Informational chips/badges only - NEVER for primary CTAs or brand moments" }
+    },
+    "retired_colors": {
+      "neelakanta_blue": "#1E3A8A - retired, do not reintroduce",
+      "saffron": "#F59E0B - retired as brand accent (allowed only inside ChefBot illustration + functional warning)"
+    },
+    "chart_palette": {
+      "note": "Neutral grayscale 5-step (chart-1..chart-5) driven by CSS vars; use for all Recharts series.",
+      "rationale": "Grayscale charts stay readable in both themes; status semantics come from labels, not chart colors."
     }
   },
   "layout_strategy": {
@@ -64,70 +65,65 @@
       "structure": "Split Screen (70% Menu / 30% Cart)",
       "grid": "Bento Grid for Menu Items (Responsive: 2 cols mobile, 4 cols tablet, 6 cols desktop)",
       "spacing": "Generous touch targets (min 48px)",
-      "navigation": "Sidebar or Bottom Bar (Tablet optimized)"
+      "navigation": "Top navbar desktop + bottom bar + Sheet drawer mobile"
     },
     "admin_dashboard": {
-      "structure": "Sidebar Layout",
+      "structure": "Sidebar Layout (bg-slate-900, always dark - independent of theme)",
       "container": "Max width 1400px centered content",
       "spacing": "Relaxed (p-6 to p-8)"
+    },
+    "theme_toggle": {
+      "desktop": "Sun/Moon icon button in POS navbar + Admin sidebar",
+      "mobile": "Night Shift row in POS Sheet menu",
+      "persistence": "localStorage key 'dd-theme'; no-flash inline script in public/index.html"
     }
   },
   "component_rules": {
     "buttons": {
-      "style": "Rounded-md or Pill",
-      "shadow": "shadow-sm hover:shadow-md",
-      "transition": "transform active:scale-95"
+      "primary": "bg-gray-900 text-white hover:bg-gray-700 (light) - inverts via --dd-ink token in dark",
+      "style": "Rounded-lg, min-h-[48px] in POS contexts",
+      "transition": "active:scale-[0.97]"
     },
     "cards": {
-      "style": "Flat with 1px border (slate-200) or soft shadow-sm",
-      "hover": "translate-y-[-2px] transition-transform duration-200"
+      "style": "Flat with 1px border (var(--dd-border)) or shadow-sm; use .dd-card / .pos-card utilities",
+      "hover": "shadow elevation change; translate-y-[-2px] on menu-item-card"
     },
     "inputs": {
-      "style": "h-12 (Touch Optimized) bg-white border-slate-200 focus:ring-orange-500"
+      "style": "h-11/h-12 (Touch Optimized), var(--dd-bg) background, focus: ink border + 25% ink ring via .dd-input/.pos-input"
     },
     "modals": {
-      "style": "Rounded-xl, Backdrop blur-sm"
+      "style": "Rounded-xl, backdrop blur"
+    },
+    "badges": {
+      "style": ".dd-badge-* utilities; status badges keep functional colors with tinted backgrounds"
     }
   },
   "visual_enhancers": {
-    "shadows": "Soft, diffuse shadows (shadow-orange-500/10)",
-    "borders": "1px solid slate-200",
-    "glassmorphism": "Use sparingly on sticky headers (bg-white/80 backdrop-blur-md)",
-    "textures": "Subtle noise on auth pages or empty states"
-  },
-  "image_assets": {
-    "logo_placeholder": "https://via.placeholder.com/150?text=FoodFlow",
-    "categories": {
-      "burgers": "https://images.unsplash.com/photo-1760533535707-3450990d41ff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwyfHxkZWxpY2lvdXMlMjBnb3VybWV0JTIwYnVyZ2VyJTIwb24lMjB3b29kZW4lMjBwbGF0ZXxlbnwwfHx8fDE3NzMwMzEzNzZ8MA&ixlib=rb-4.1.0&q=85",
-      "pizza": "https://images.unsplash.com/photo-1761515397046-44035db91504?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHwxfHxkZWxpY2lvdXMlMjBnb3VybWV0JTIwYnVyZ2VyJTIwb24lMjB3b29kZW4lMjBwbGF0ZXxlbnwwfHx8fDE3NzMwMzEzNzZ8MA&ixlib=rb-4.1.0&q=85",
-      "salads": "https://images.pexels.com/photos/35290619/pexels-photo-35290619.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-      "coffee": "https://images.unsplash.com/photo-1705672763732-538d9a515ec1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHw0fHxsYXR0ZSUyMGFydCUyMGNvZmZlZSUyMGN1cHxlbnwwfHx8fDE3NzMwMzEzNzh8MA&ixlib=rb-4.1.0&q=85",
-      "sushi": "https://images.unsplash.com/photo-1770164520620-a5612325635b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxzdXNoaSUyMHBsYXR0ZXIlMjBwcmVzZW50YXRpb258ZW58MHx8fHwxNzczMDMxMzc5fDA&ixlib=rb-4.1.0&q=85",
-      "pasta": "https://images.unsplash.com/photo-1765100778802-f684a4b7fd20?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NjZ8MHwxfHNlYXJjaHw0fHxnb3VybWV0JTIwcGFzdGElMjBkaXNofGVufDB8fHx8MTc3MzAzMTM4MHww&ixlib=rb-4.1.0&q=85"
+    "shadows": "Neutral diffuse shadows (card/elevated vars; dark variants auto-applied)",
+    "borders": "1px solid var(--dd-border)",
+    "calm_mode": {
+      "description": "Signature feature: slows all transitions to 0.8s for a calm visual rhythm",
+      "implementation": ".calm-mode class on html/body; transitions colors/shadows/opacity ONLY (perf-safe, never layout props)",
+      "composes_with": "Night Shift (html.dark .calm-mode overrides provided)"
     },
-    "people": {
-      "chef": "https://images.unsplash.com/photo-1767785990437-dfe1fe516fe8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTJ8MHwxfHNlYXJjaHwzfHxjaGVmJTIwcGxhdGluZyUyMGZvb2QlMjBpbiUyMGNvbW1lcmNpYWwlMjBraXRjaGVufGVufDB8fHx8MTc3MzAzMTM4MXww&ixlib=rb-4.1.0&q=85",
-      "manager": "https://images.unsplash.com/photo-1649151139875-ae8ea07082e2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxmcmllbmRseSUyMHdhaXRlciUyMGhvbGRpbmclMjB0YWJsZXR8ZW58MHx8fHwxNzczMDMxMzgyfDA&ixlib=rb-4.1.0&q=85"
-    },
-    "environment": {
-      "restaurant": "https://images.unsplash.com/photo-1744168222850-85b5e5e9aa24?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjByZXN0YXVyYW50JTIwaW50ZXJpb3IlMjBidXN5fGVufDB8fHx8MTc3MzAzMTM4M3ww&ixlib=rb-4.1.0&q=85"
-    }
+    "motion": "fadeInUp page entrance, stagger-1..6 delays, hover-lift; always respect prefers-reduced-motion"
   },
-  "instructions_to_main_agent": [
-    "INSTALL_DEPENDENCIES: yarn add lucide-react @radix-ui/react-icons recharts framer-motion clsx tailwind-merge date-fns react-day-picker",
-    "SETUP_THEME: Update tailwind.config.js to use the Orange primary color palette defined in colors section.",
-    "LAYOUT: Create two distinct layouts - 'AdminLayout' (Sidebar) and 'POSLayout' (Full screen, hidden nav).",
-    "POS_UI: Ensure all clickable elements in POS view have min-h-[48px] for touch accessibility.",
-    "NAVIGATION: POS navigation should be category based tabs or a side rail.",
-    "MOCK_DATA: Populate the Menu Grid with the provided food images and prices.",
-    "CHARTS: Use Recharts for the Admin Dashboard (Revenue, Orders per day).",
-    "DARK_MODE: Implement a 'Night Shift' toggle for low-light restaurant environments (Dark grey background, Orange accents)."
-  ],
+  "accessibility": {
+    "focus": "2px outline var(--dd-ring) with 2px offset on :focus-visible",
+    "contrast": "AA in both themes; status colors brightened under html.dark",
+    "touch": "48px POS targets, 44px mobile minimums",
+    "text_on_ink": "Always white on ink (light) / night on inverted ink (dark) - never black-on-black"
+  },
   "universal_guidelines": [
-    "Do NOT use default 'blue' for primary actions. Use Orange-500.",
-    "Do NOT use 'Inter' for Headings. Use 'Manrope'.",
-    "Always add hover effects: brightness-95 or translate-y-[-2px].",
+    "Do NOT use blue/saffron for primary actions - ink only.",
+    "Do NOT use 'Inter' for headings - use Manrope.",
+    "Do NOT use Poppins/Montserrat/Plus Jakarta Sans - they are retired.",
+    "Do NOT hardcode #1E3A8A, #2563EB, saffron hexes, or dd-blue/dd-saffron classes.",
+    "Use var(--dd-*) tokens or theme-aware utilities for anything theme-dependent.",
+    "Always add hover effects: brightness/translate-y or elevation.",
     "Use 'sonner' for all toast notifications.",
-    "Ensure high contrast for text on orange backgrounds (use white text on orange-500)."
+    "Ensure high contrast on ink backgrounds (white text on ink).",
+    "New pages must support Night Shift: check dark rendering before merge.",
+    "Functional status colors (success/warning/error/info) may never be used as brand/CTA colors."
   ]
 }

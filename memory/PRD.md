@@ -38,6 +38,8 @@ Build a multi-tenant, cloud-based Restaurant POS SaaS platform with:
 - Mobile responsive sidebar (Sheet/Drawer)
 - Full rebranding from FoodFlow to OrderNest
 - Clean White/Black UI theme overhaul
+- Night Shift dark mode (class-based, localStorage 'dd-theme', toggle in POS navbar + admin sidebar) with full legacy-utility dark shim
+- Design tokens unified: ink #111827 CTAs, Manrope headings / Inter body / Barlow Condensed numbers (font-numbers); blue/saffron brand colors retired (design_guidelines.json is the single source of truth)
 - Mobile scrolling fixes for all pages
 - Code quality fixes: XSS removal, sessionStorage, array keys, hook deps
 - Production build fix (syntax error in QuickPOSPage.jsx)

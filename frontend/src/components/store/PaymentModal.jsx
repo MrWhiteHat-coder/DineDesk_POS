@@ -62,7 +62,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
         {/* Processing State */}
         {step === 'processing' && (
           <div className="p-8 text-center">
-            <div className="w-16 h-16 border-4 border-slate-200 border-t-[#1E3A8A] rounded-full animate-spin mx-auto mb-4" />
+            <div className="w-16 h-16 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4" />
             <p className="font-heading font-bold text-lg text-slate-900">Processing Payment...</p>
             <p className="text-sm text-slate-500 mt-1">Please don't close this window</p>
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
@@ -89,7 +89,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
             </div>
             <Button
               onClick={handleDone}
-              className="w-full mt-6 bg-[#1E3A8A] hover:bg-[#2563EB] text-white rounded-xl h-11"
+              className="w-full mt-6 bg-gray-900 hover:bg-gray-700 text-white rounded-xl h-11"
               data-testid="payment-success-btn"
             >
               <Sparkles className="w-4 h-4 mr-2" /> Start Using {addon.name}
@@ -102,7 +102,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
           <>
             <DialogHeader className="p-6 pb-0">
               <DialogTitle className="font-heading text-lg flex items-center gap-2">
-                <Zap className="w-5 h-5 text-[#F59E0B]" /> Subscribe to {addon.name}
+                <Zap className="w-5 h-5 text-gray-900" /> Subscribe to {addon.name}
               </DialogTitle>
             </DialogHeader>
             <div className="p-6 space-y-4">
@@ -137,7 +137,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
                         onClick={() => setSelectedMethod(method.id)}
                         className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1.5 ${
                           isSelected
-                            ? 'border-[#1E3A8A] bg-blue-50 ring-1 ring-[#1E3A8A]/20'
+                            ? 'border-gray-900 bg-gray-100 ring-1 ring-gray-900/20'
                             : 'border-slate-200 hover:border-slate-300 bg-white'
                         }`}
                         data-testid={`payment-method-${method.id}`}
@@ -145,7 +145,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${method.color}`}>
                           <Icon className="w-4 h-4" />
                         </div>
-                        <span className={`text-xs font-semibold ${isSelected ? 'text-[#1E3A8A]' : 'text-slate-600'}`}>
+                        <span className={`text-xs font-semibold ${isSelected ? 'text-gray-900' : 'text-slate-600'}`}>
                           {method.label}
                         </span>
                       </button>
@@ -156,7 +156,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
 
               <Button
                 onClick={handleProceed}
-                className="w-full bg-[#1E3A8A] hover:bg-[#2563EB] text-white rounded-xl h-11"
+                className="w-full bg-gray-900 hover:bg-gray-700 text-white rounded-xl h-11"
                 data-testid="payment-proceed-btn"
               >
                 Continue <ChevronRight className="w-4 h-4 ml-1" />
@@ -267,7 +267,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
                           onClick={() => setFormData(p => ({ ...p, upiId: bank }))}
                           className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
                             formData.upiId === bank
-                              ? 'border-[#1E3A8A] bg-blue-50 text-[#1E3A8A]'
+                              ? 'border-gray-900 bg-gray-100 text-gray-900'
                               : 'border-slate-200 text-slate-600 hover:border-slate-300'
                           }`}
                         >
@@ -292,7 +292,7 @@ export default function PaymentModal({ open, onOpenChange, addon, billing, onSuc
                 </Button>
                 <Button
                   onClick={handlePay}
-                  className="flex-1 bg-[#1E3A8A] hover:bg-[#2563EB] text-white rounded-xl h-11"
+                  className="flex-1 bg-gray-900 hover:bg-gray-700 text-white rounded-xl h-11"
                   data-testid="pay-now-btn"
                 >
                   <Zap className="w-4 h-4 mr-1" /> Pay ₹{billing === 'monthly' ? price?.toLocaleString() : annualPrice?.toLocaleString()}

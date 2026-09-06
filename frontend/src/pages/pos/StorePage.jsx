@@ -74,7 +74,7 @@ export default function StorePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-dd-blue border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-gray-900 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -82,12 +82,12 @@ export default function StorePage() {
   return (
     <div className="space-y-6">
       {/* Hero Header */}
-      <div className="bg-gradient-to-br from-dd-blue via-blue-900 to-indigo-900 rounded-card p-8 text-white relative overflow-hidden">
+      <div className="bg-dd-gradient-hero rounded-card p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/4" />
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
-            <ShoppingCart className="w-5 h-5 text-dd-saffron" />
+            <ShoppingCart className="w-5 h-5 text-gray-200" />
             <span className="text-sm text-blue-200 font-medium">DineDesk Store</span>
           </div>
           <h1 className="text-3xl font-heading font-bold mb-2">Grow Your Restaurant</h1>
@@ -129,15 +129,15 @@ export default function StorePage() {
           const price = billing === 'monthly' ? addon.monthly_price : Math.round(addon.annual_price / 12);
 
           return (
-            <Card key={addon.id} className={`relative transition-all hover:shadow-card-hover ${isActive ? 'border-dd-blue ring-1 ring-dd-blue/20' : 'border-dd-border'}`}>
+            <Card key={addon.id} className={`relative transition-all hover:shadow-card-hover ${isActive ? 'border-gray-900 ring-1 ring-gray-900/20' : 'border-dd-border'}`}>
               {isActive && (
-                <div className="absolute -top-2 right-3 bg-dd-blue text-white text-[10px] font-bold px-2 py-0.5 rounded-pill flex items-center gap-1">
+                <div className="absolute -top-2 right-3 bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-pill flex items-center gap-1">
                   <Check className="w-3 h-3" /> Active
                 </div>
               )}
               <CardContent className="p-5">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className={`w-11 h-11 rounded-card flex items-center justify-center ${isActive ? 'bg-dd-blue text-white' : 'bg-gray-100 text-gray-600'}`}>
+                  <div className={`w-11 h-11 rounded-card flex items-center justify-center ${isActive ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
@@ -182,7 +182,7 @@ export default function StorePage() {
       <Card className="border-dd-border">
         <CardContent className="p-5">
           <h3 className="font-heading font-bold text-gray-900 mb-3 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-dd-saffron" /> Always Included (Base Plan)
+            <Sparkles className="w-5 h-5 text-gray-700" /> Always Included (Base Plan)
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {['POS Billing', 'Table Management', 'Menu Management', 'KOT Display', 'Basic Reports', 'Day Session', 'Staff Roles', 'Receipt Printing'].map(feature => (

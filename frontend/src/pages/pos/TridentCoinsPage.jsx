@@ -14,8 +14,8 @@ import {
 
 const TXN_ICONS = {
   earn: { icon: TrendingUp, color: 'text-dd-success', bg: 'bg-emerald-50' },
-  redeem: { icon: ArrowDownRight, color: 'text-dd-blue', bg: 'bg-blue-50' },
-  topup: { icon: Smartphone, color: 'text-dd-saffron-dark', bg: 'bg-amber-50' },
+  redeem: { icon: ArrowDownRight, color: 'text-gray-700', bg: 'bg-blue-50' },
+  topup: { icon: Smartphone, color: 'text-gray-900', bg: 'bg-amber-50' },
   donate: { icon: Heart, color: 'text-pink-600', bg: 'bg-pink-50' },
   bonus: { icon: Gift, color: 'text-purple-600', bg: 'bg-purple-50' },
 };
@@ -97,7 +97,7 @@ export default function TridentCoinsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-dd-blue border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-gray-900 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -107,18 +107,18 @@ export default function TridentCoinsPage() {
       {/* Header */}
       <div>
         <h1 className="font-heading text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Coins className="w-6 h-6 text-dd-saffron" /> Trident Coins Wallet
+          <Coins className="w-6 h-6 text-gray-700" /> Trident Coins Wallet
         </h1>
         <p className="text-sm text-gray-500">100 Trident Coins = ₹20 value · Earn, redeem, and donate</p>
       </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-dd-blue to-blue-800 text-white border-0">
+        <Card className="bg-dd-gradient-hero text-white border-0">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-blue-200">Total Coins Issued</p>
-              <Coins className="w-5 h-5 text-dd-saffron" />
+              <Coins className="w-5 h-5 text-gray-200" />
             </div>
             <p className="text-3xl font-bold font-numbers">{totalCoinsIssued.toLocaleString()}</p>
             <p className="text-[10px] text-blue-300 mt-1">Liability: ₹{totalLiability.toLocaleString()}</p>
@@ -151,20 +151,20 @@ export default function TridentCoinsPage() {
       </div>
 
       {/* Value Guide */}
-      <div className="bg-gradient-to-r from-dd-blue/5 to-dd-saffron/5 rounded-card p-4 border border-dd-border">
+      <div className="bg-gray-100 rounded-card p-4 border border-dd-border">
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-dd-saffron" />
+            <Coins className="w-5 h-5 text-gray-700" />
             <span className="font-semibold">100 Coins</span>
             <span className="text-gray-400">=</span>
-            <span className="font-bold text-dd-blue">₹20</span>
+            <span className="font-bold text-gray-900">₹20</span>
           </div>
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-dd-saffron" />
+            <Zap className="w-4 h-4 text-gray-700" />
             <span>Earn: ₹1000 bill = 10 coins</span>
           </div>
           <div className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-dd-blue" />
+            <Smartphone className="w-4 h-4 text-gray-900" />
             <span>Top-up: 3% fee</span>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function TridentCoinsPage() {
             const TierIcon = tier === 'platinum' ? Crown : tier === 'gold' ? Star : Award;
             return (
               <div key={customer.id} className="flex items-center gap-4 p-4 bg-white rounded-card border border-dd-border hover:shadow-card-hover transition-all">
-                <div className="w-11 h-11 bg-dd-blue rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-11 h-11 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-sm">{customer.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -205,7 +205,7 @@ export default function TridentCoinsPage() {
                   <p className="text-xs text-gray-400">{customer.phone}</p>
                 </div>
                 <div className="text-right mr-2">
-                  <div className="flex items-center gap-1 justify-end text-dd-saffron-dark font-bold">
+                  <div className="flex items-center gap-1 justify-end text-gray-900 font-bold">
                     <Coins className="w-4 h-4" />
                     <span className="font-numbers text-lg">{(customer.loyalty_points || 0).toLocaleString()}</span>
                   </div>
@@ -214,7 +214,7 @@ export default function TridentCoinsPage() {
                 <div className="flex gap-1">
                   <button
                     onClick={() => { setSelectedCustomer(customer); setShowTopup(true); }}
-                    className="p-2 rounded-lg bg-blue-50 text-dd-blue hover:bg-blue-100 transition-colors"
+                    className="p-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors"
                     title="Top up"
                   >
                     <Smartphone className="w-4 h-4" />
@@ -251,7 +251,7 @@ export default function TridentCoinsPage() {
                     <p className="text-sm font-medium text-gray-900">{txn.description}</p>
                     <p className="text-xs text-gray-400">{cust?.name || 'Customer'} · {new Date(txn.created_at).toLocaleString()}</p>
                   </div>
-                  <span className={`font-bold font-numbers text-sm ${txn.type === 'earn' || txn.type === 'topup' ? 'text-dd-success' : txn.type === 'donate' ? 'text-pink-600' : 'text-dd-blue'}`}>
+                  <span className={`font-bold font-numbers text-sm ${txn.type === 'earn' || txn.type === 'topup' ? 'text-dd-success' : txn.type === 'donate' ? 'text-pink-600' : 'text-gray-900'}`}>
                     {txn.type === 'redeem' || txn.type === 'donate' ? '-' : '+'}{txn.coins} coins
                   </span>
                 </div>
@@ -279,7 +279,7 @@ export default function TridentCoinsPage() {
               <div className="bg-blue-50 rounded-card p-3 text-sm">
                 <p>Amount: ₹{parseFloat(topupAmount).toFixed(2)}</p>
                 <p>Fee (3%): ₹{(parseFloat(topupAmount) * 0.03).toFixed(2)}</p>
-                <p className="font-semibold text-dd-blue mt-1">
+                <p className="font-semibold text-gray-900 mt-1">
                   Coins: {Math.floor(((parseFloat(topupAmount) * 0.97) / 20) * 100)}
                 </p>
               </div>

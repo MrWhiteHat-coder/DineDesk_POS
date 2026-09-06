@@ -103,7 +103,7 @@ export default function GiftCardsPage() {
   const statusIcon = (status) => {
     switch (status) {
       case 'active': return <CheckCircle className="w-4 h-4 text-dd-success" />;
-      case 'redeemed': return <Clock className="w-4 h-4 text-dd-saffron" />;
+      case 'redeemed': return <Clock className="w-4 h-4 text-gray-500" />;
       case 'expired': return <XCircle className="w-4 h-4 text-dd-error" />;
       default: return <Clock className="w-4 h-4 text-gray-400" />;
     }
@@ -132,7 +132,7 @@ export default function GiftCardsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="bg-dd-blue text-white border-0">
+        <Card className="bg-gray-900 text-white border-0">
           <CardContent className="p-4">
             <p className="text-sm text-blue-200">Active Cards</p>
             <p className="text-3xl font-bold font-numbers">{cards.filter(c => c.status === 'active').length}</p>
@@ -171,7 +171,7 @@ export default function GiftCardsPage() {
         ) : (
           filtered.map(card => (
             <div key={card.id} className="flex items-center gap-4 p-4 bg-white rounded-card border border-dd-border hover:shadow-card-hover transition-all">
-              <div className="w-12 h-12 bg-gradient-to-br from-dd-blue to-dd-saffron rounded-card flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 bg-dd-gradient-hero rounded-card flex items-center justify-center flex-shrink-0">
                 <Gift className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
@@ -206,7 +206,7 @@ export default function GiftCardsPage() {
                   onClick={() => { setSelectedAmount(amount); setCustomAmount(''); }}
                   className={`p-4 rounded-card border-2 text-center transition-all ${
                     selectedAmount === amount && !customAmount
-                      ? 'border-dd-blue bg-blue-50 text-dd-blue'
+                      ? 'border-gray-900 bg-gray-100 text-gray-900'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
@@ -226,7 +226,7 @@ export default function GiftCardsPage() {
               />
             </div>
             <div className="bg-blue-50 rounded-card p-3 border border-blue-100">
-              <p className="text-xs text-dd-blue font-medium">
+              <p className="text-xs text-gray-900 font-medium">
                 💰 You'll receive {Math.floor((customAmount || selectedAmount) / 1000 * 10)} Trident Coins with this purchase
               </p>
             </div>
@@ -296,7 +296,7 @@ export default function GiftCardsPage() {
                   onClick={() => { setSelectedAmount(amount); setCustomAmount(''); }}
                   className={`p-3 rounded-card border-2 text-center transition-all ${
                     selectedAmount === amount && !customAmount
-                      ? 'border-dd-saffron bg-amber-50 text-dd-saffron-dark'
+                      ? 'border-gray-900 bg-gray-100 text-gray-900'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >

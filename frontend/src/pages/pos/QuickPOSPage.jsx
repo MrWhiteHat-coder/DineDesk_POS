@@ -253,7 +253,7 @@ export default function QuickPOSPage() {
             <div className="space-y-0.5 text-[11px]">
               <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-semibold">{'\u20B9'}{subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Tax</span><span className="font-semibold">{'\u20B9'}{tax.toFixed(2)}</span></div>
-              <div className="flex justify-between text-sm font-bold pt-1 border-t border-gray-100"><span>Total</span><span>{'\u20B9'}{total.toFixed(2)}</span></div>
+              <div className="flex justify-between text-sm font-bold pt-1 border-t border-gray-100"><span>Total</span><span className="font-numbers">{'\u20B9'}{total.toFixed(2)}</span></div>
             </div>
             {/* Customer Details */}
             <div className="space-y-1.5 pt-1 border-t border-gray-100">
@@ -361,7 +361,7 @@ export default function QuickPOSPage() {
                 <div className="flex justify-between"><span>Subtotal</span><span>{'\u20B9'}{receiptData.order.subtotal?.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>Tax</span><span>{'\u20B9'}{receiptData.order.tax_amount?.toFixed(2)}</span></div>
                 {receiptData.order.discount_amount > 0 && <div className="flex justify-between"><span>Discount</span><span>-{'\u20B9'}{receiptData.order.discount_amount?.toFixed(2)}</span></div>}
-                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-gray-300"><span>Total</span><span>{'\u20B9'}{receiptData.order.total_amount?.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-gray-300"><span>Total</span><span className="font-numbers">{'\u20B9'}{receiptData.order.total_amount?.toFixed(2)}</span></div>
               </div>
               {receiptData.order.payment_splits && receiptData.order.payment_splits.length > 0 && (
                 <>

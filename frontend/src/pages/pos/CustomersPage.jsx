@@ -83,7 +83,7 @@ export default function CustomersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-dd-blue border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-gray-900 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -103,7 +103,7 @@ export default function CustomersPage() {
 
       {/* Tier Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-dd-blue text-white border-0">
+        <Card className="bg-gray-900 text-white border-0">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-blue-200">Total Customers</p>
@@ -145,7 +145,7 @@ export default function CustomersPage() {
               key={tier}
               onClick={() => setTierFilter(tier)}
               className={`px-3 py-2 rounded-btn text-xs font-semibold transition-all ${
-                tierFilter === tier ? 'bg-dd-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                tierFilter === tier ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               {tier ? TIER_CONFIG[tier].label : 'All'}
@@ -175,7 +175,7 @@ export default function CustomersPage() {
                 onClick={() => { setSelectedCustomer(customer); setShowDetail(true); }}
                 data-testid={`customer-row-${customer.id}`}
               >
-                <div className="w-11 h-11 bg-dd-blue rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-11 h-11 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-sm">{customer.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -191,7 +191,7 @@ export default function CustomersPage() {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className="flex items-center gap-1 text-dd-saffron-dark font-bold text-sm">
+                  <div className="flex items-center gap-1 text-gray-900 font-bold text-sm">
                     <Coins className="w-4 h-4" />
                     {customer.loyalty_points?.toLocaleString() || 0}
                   </div>
@@ -255,7 +255,7 @@ export default function CustomersPage() {
           {selectedCustomer && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-dd-blue rounded-full flex items-center justify-center">
+                <div className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-xl">{selectedCustomer.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <div>
@@ -265,8 +265,8 @@ export default function CustomersPage() {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-dd-blue/5 rounded-card p-3 text-center">
-                  <Coins className="w-5 h-5 text-dd-saffron mx-auto mb-1" />
+                <div className="bg-gray-100 rounded-card p-3 text-center">
+                  <Coins className="w-5 h-5 text-gray-700 mx-auto mb-1" />
                   <p className="text-xl font-bold font-numbers">{selectedCustomer.loyalty_points || 0}</p>
                   <p className="text-[10px] text-gray-500">Trident Coins</p>
                 </div>
@@ -289,7 +289,7 @@ export default function CustomersPage() {
               )}
               {selectedCustomer.preferences && (
                 <div className="bg-blue-50 rounded-card p-3 border border-blue-200">
-                  <p className="text-xs font-semibold text-dd-blue">Preferences</p>
+                  <p className="text-xs font-semibold text-gray-900">Preferences</p>
                   <p className="text-sm text-gray-700 mt-1">{selectedCustomer.preferences}</p>
                 </div>
               )}

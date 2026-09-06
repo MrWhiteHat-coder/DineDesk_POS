@@ -298,7 +298,7 @@ export default function POSMain() {
         <div className="px-4 py-3 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-slate-900">{selectedRunningOrder ? `Table ${selectedRunningOrder.table_number}` : 'Order Summary'}</h2>
-            <span className="text-xs text-slate-400 font-mono">{selectedRunningOrder ? `#${selectedRunningOrder.order_number}` : `#${orderNumber}`}</span>
+            <span className="text-xs text-slate-400 font-numbers">{selectedRunningOrder ? `#${selectedRunningOrder.order_number}` : `#${orderNumber}`}</span>
           </div>
         </div>
 
@@ -339,7 +339,7 @@ export default function POSMain() {
               <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-semibold text-slate-900">₹{subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">Taxes (5%)</span><span className="font-semibold text-slate-900">₹{taxAmount.toFixed(2)}</span></div>
               {discountAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span className="font-semibold">-₹{discountAmount.toFixed(2)}</span></div>}
-              <div className="flex justify-between pt-2 border-t border-slate-100 text-base font-bold"><span className="text-slate-900">Total</span><span className="text-slate-900">₹{total.toFixed(2)}</span></div>
+              <div className="flex justify-between pt-2 border-t border-slate-100 text-base font-bold"><span className="text-slate-900">Total</span><span className="text-slate-900 font-numbers text-lg">₹{total.toFixed(2)}</span></div>
             </div>
           )}
 
@@ -524,7 +524,7 @@ export default function POSMain() {
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{receiptData.order.subtotal?.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>Tax</span><span>₹{receiptData.order.tax_amount?.toFixed(2)}</span></div>
                 {receiptData.order.discount_amount > 0 && <div className="flex justify-between"><span>Discount</span><span>-₹{receiptData.order.discount_amount?.toFixed(2)}</span></div>}
-                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-slate-300"><span>Total</span><span>₹{receiptData.order.total_amount?.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-slate-300"><span>Total</span><span className="font-numbers">₹{receiptData.order.total_amount?.toFixed(2)}</span></div>
               </div>
 
               {/* Payment Breakup */}

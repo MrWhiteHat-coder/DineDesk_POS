@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   LayoutDashboard,
   Store,
@@ -12,6 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -26,6 +29,7 @@ const navItems = [
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
+  const { dark, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -87,6 +91,14 @@ export default function AdminLayout() {
 
         {/* Logout */}
         <div className="p-2 border-t border-black">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-3 px-3 py-3 w-full rounded-lg text-slate-400 hover:bg-black hover:text-white transition-all"
+            data-testid="admin-theme-toggle"
+          >
+            {dark ? <Sun className="w-5 h-5 flex-shrink-0" /> : <Moon className="w-5 h-5 flex-shrink-0" />}
+            {!collapsed && <span className="font-medium text-sm">{dark ? 'Light Mode' : 'Night Shift'}</span>}
+          </button>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-3 w-full rounded-lg text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-all"

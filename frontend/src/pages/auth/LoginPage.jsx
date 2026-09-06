@@ -224,7 +224,7 @@ export default function LoginPage() {
 
             <Link
               to="/register"
-              className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-dd-blue hover:text-dd-blue transition-colors mt-3"
+              className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-gray-900 hover:text-gray-900 transition-colors mt-3"
               data-testid="register-link"
             >
               Create New Account
