@@ -2,14 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authAPI } from '../../lib/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth, getPostAuthPath } from '../../contexts/AuthContext';
 import { Input } from '../../components/ui/input';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import {
   Mail, Lock, ArrowRight, User, Phone, Shield, Zap, Globe, UtensilsCrossed,
   BarChart3, Package, ChevronLeft, RefreshCw,
 } from 'lucide-react';
-
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '19258355498-49tvakpu82hde931s8sp1dj42mbfa03k.apps.googleusercontent.com';
 
 const features = [
   { icon: Zap, title: 'Fast POS Billing', desc: 'Process restaurant orders quickly with an intuitive POS interface.' },
@@ -20,18 +19,23 @@ const features = [
 ];
 
 export default function RegisterPage() {
+  // Must come from the build environment (Vercel). No hard-coded fallback:
+  // without an explicit client id the shared button shows "not configured".
+  const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, googleLogin } = useAuth();
   const [step, setStep] = useState('register'); // 'register' | 'otp' | 'check-email'
   const [resending, setResending] = useState(false);
 
   const navigate = useNavigate();
-  const [googleLoading, setGoogleLoading] = useState(false);
+  // Busy only while the Google credential is actually being exchanged with the
+  // backend. A cancelled popup never sets it, so no indefinite spinner.
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   // OTP state
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -41,57 +45,22 @@ export default function RegisterPage() {
   const [phoneVerified, setPhoneVerified] = useState(false);
   const otpRefs = useRef([]);
 
-  // Initialize Google Sign-In
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !window.google) return;
-    const timer = setTimeout(() => {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleResponse,
-        });
-      } catch (e) { console.error('Google init error:', e); }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-once google init
-
-  const handleGoogleResponse = async (response) => {
-    setGoogleLoading(true);
+  // Called by the shared Google button once the popup returns a credential.
+  const handleGoogleCredential = async (credential) => {
+    if (googleBusy) return; // ignore duplicate callbacks while exchanging
+    setGoogleBusy(true);
     try {
-      const res = await authAPI.googleLogin(response.credential);
-      const { access_token, user: userData } = res.data;
-      sessionStorage.setItem('token', access_token);
-      sessionStorage.setItem('user', JSON.stringify(userData));
-      toast.success('Account created with Google!');
-      if (!userData.restaurant_id) navigate('/onboarding');
-      else navigate('/pos');
+      const { user: userData, restaurant: restaurantData } = await googleLogin(credential);
+      toast.success('Welcome to DineDesk! Signed in with Google.');
+      // Admins (including via signup) → /admin. Everyone else follows the
+      // standard onboarding / subscription / POS routing.
+      navigate(getPostAuthPath(userData, restaurantData));
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Google sign-up failed');
+      // Keep the failure visible on the page instead of forcing a reload —
+      // the api layer no longer redirects anonymous 401s.
+      toast.error(err.response?.data?.detail || 'Google sign-up failed. Please try again.');
     } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleGoogleClick = () => {
-    if (!GOOGLE_CLIENT_ID) {
-      toast.error('Google sign-up is not configured yet.');
-      return;
-    }
-    setGoogleLoading(true);
-    try {
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          window.google.accounts.id.renderButton(
-            document.getElementById('google-signin-btn-register'),
-            { theme: 'outline', size: 'large', width: '100%', text: 'continue_with' }
-          );
-          document.getElementById('google-signin-btn-register')?.click();
-        }
-        setGoogleLoading(false);
-      });
-    } catch (e) {
-      setGoogleLoading(false);
-      toast.error('Google sign-up failed to initialize.');
+      setGoogleBusy(false);
     }
   };
 
@@ -442,28 +411,19 @@ export default function RegisterPage() {
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
 
-              {/* Google Sign-Up */}
-              <button
-                type="button"
-                onClick={handleGoogleClick}
-                disabled={googleLoading}
-                className="w-full h-11 rounded-xl border-2 border-gray-200 bg-white text-gray-700 font-semibold text-sm flex items-center justify-center gap-2.5 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-60"
-              >
-                {googleLoading ? (
-                  <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                    Continue with Google
-                  </>
-                )}
-              </button>
-              <div id="google-signin-btn-register" className="hidden" />
+              {/* Google Sign-Up — shared official button (no One Tap / hidden-container clicks) */}
+              <GoogleSignInButton
+                clientId={GOOGLE_CLIENT_ID}
+                onSuccess={handleGoogleCredential}
+                onError={(message) => toast.error(message)}
+                disabled={googleBusy}
+              />
+              {googleBusy && (
+                <div className="flex items-center justify-center gap-2 mt-2" data-testid="google-busy">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                  <span className="text-xs text-gray-500">Creating your account with Google…</span>
+                </div>
+              )}
 
               <Link
                 to="/login"

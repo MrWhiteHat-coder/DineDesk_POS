@@ -2,6 +2,25 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-pos.onrender.com';
 
+// Endpoints that return 401 for reasons OTHER than an expired/missing session
+// (bad credentials, wrong OTP, invalid Google token, …). A 401 here must stay
+// visible as an error message instead of wiping the session/reloading the page.
+const PUBLIC_AUTH_PATHS = [
+  '/auth/login',
+  '/auth/google',
+  '/auth/register',
+  '/auth/send-otp',
+  '/auth/verify-otp',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+];
+
+// Google token exchange can legitimately take several seconds (popup → token
+// verification on the backend). Give it 60s instead of failing early.
+export const GOOGLE_LOGIN_TIMEOUT_MS = 60000;
+
 const api = axios.create({
   baseURL: API_URL ? `${API_URL}/api` : '/api',
   headers: { 'Content-Type': 'application/json' },
@@ -21,9 +40,30 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('user');
-      window.location.href = '/login';
+      const config = error.config || {};
+      const headers = config.headers || {};
+      const authHeader =
+        headers?.Authorization ||
+        headers?.authorization ||
+        (typeof headers?.get === 'function' ? headers.get('Authorization') : undefined);
+      const hadSession = typeof authHeader === 'string' && authHeader.startsWith('Bearer ');
+      const path = String(config.url || '').split('?')[0];
+      const isPublicAuthPath = PUBLIC_AUTH_PATHS.some(
+        (p) => path === p || path.startsWith(`${p}/`)
+      );
+
+      // Only a request that was actually sent with a bearer token can mean
+      // "your session expired". Anonymous 401s (wrong password, bad OTP,
+      // invalid Google credential, …) must not reload the page or hide the
+      // error behind a redirect.
+      if (hadSession && !isPublicAuthPath) {
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        // Avoid redirect loops when we are already on the login page.
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.assign('/login');
+        }
+      }
     }
     return Promise.reject(error);
   }
@@ -33,7 +73,8 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
-  googleLogin: (credential) => api.post('/auth/google', { credential }),
+  googleLogin: (credential) =>
+    api.post('/auth/google', { credential }, { timeout: GOOGLE_LOGIN_TIMEOUT_MS }),
   getMe: () => api.get('/auth/me'),
   getPermissions: () => api.get('/auth/permissions'),
   verifyEmail: (token) => api.post('/auth/verify-email', { token }),
