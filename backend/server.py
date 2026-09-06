@@ -48,6 +48,20 @@ if JWT_SECRET == '':
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
 
+# Restaurant timezone — all day boundaries, analytics and peak-hours are
+# computed in this zone (default IST) instead of UTC.
+try:
+    from zoneinfo import ZoneInfo
+    RESTAURANT_TZ = ZoneInfo(os.environ.get('RESTAURANT_TZ', 'Asia/Kolkata'))
+except Exception:
+    RESTAURANT_TZ = timezone.utc
+
+# Email verification flow: when True AND an email provider is configured,
+# users must click the emailed link before logging in. When False (default,
+# dev/self-host), accounts are auto-verified at registration so signup works
+# without any email provider — no more permanent lockout.
+EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'false').strip().lower() in ('true', '1', 'yes')
+
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
 # Gemini AI Config
@@ -71,6 +85,10 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
 SENDGRID_FROM_EMAIL = os.environ.get('SENDGRID_FROM_EMAIL', SENDER_EMAIL or 'support@revontechnologies.in')
 SENDGRID_FROM_NAME = os.environ.get('SENDGRID_FROM_NAME', SENDER_NAME)
+
+# True when any email provider (SendGrid or Gmail SMTP) is configured —
+# gates the mandatory email-verification flow.
+EMAIL_CONFIGURED = bool(SENDGRID_API_KEY or (GMAIL_USER and GMAIL_APP_PASSWORD))
 
 # Admin bootstrap credentials — from env only
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@foodflow.com')
@@ -217,6 +235,7 @@ class RestaurantOnboarding(BaseModel):
     address: str
     city: str
     pincode: str
+    tax_rate: float = 5.0  # GST/restaurant tax percent
 
 class RestaurantUpdate(BaseModel):
     name: Optional[str] = None
@@ -224,6 +243,7 @@ class RestaurantUpdate(BaseModel):
     contact_phone: Optional[str] = None
     address: Optional[str] = None
     is_active: Optional[bool] = None
+    tax_rate: Optional[float] = None
 
 class RestaurantResponse(BaseModel):
     id: str
@@ -238,6 +258,7 @@ class RestaurantResponse(BaseModel):
     address: str
     city: str
     pincode: str
+    tax_rate: float = 5.0
     is_active: bool
     subscription_status: str
     subscription_expires: Optional[str] = None
@@ -616,6 +637,78 @@ async def deduct_inventory(restaurant_id: str, order_items_data: list):
                     }}
                 )
 
+
+def _restock_inventory(restaurant_id: str, order_items: list):
+    """Fire-and-forget inventory restore for cancelled orders (recipe-aware).
+
+    Restores the same quantities that deduct_inventory removed. Runs as a
+    background task so cancellation stays fast; failures are logged.
+    """
+    async def _run():
+        try:
+            for item_data in order_items:
+                menu_item = await db.menu_items.find_one({"id": item_data["menu_item_id"]}, {"_id": 0})
+                if not menu_item or not menu_item.get("recipe"):
+                    continue
+                for ingredient in menu_item["recipe"]:
+                    qty_to_restore = ingredient["quantity_needed"] * item_data.get("quantity", 0)
+                    inv_item = await db.inventory.find_one({
+                        "id": ingredient["inventory_item_id"],
+                        "restaurant_id": restaurant_id
+                    })
+                    if inv_item:
+                        new_qty = inv_item["quantity"] + qty_to_restore
+                        await db.inventory.update_one(
+                            {"id": ingredient["inventory_item_id"]},
+                            {"$set": {
+                                "quantity": new_qty,
+                                "is_low_stock": new_qty <= inv_item["min_quantity"]
+                            }}
+                        )
+        except Exception as e:
+            logger.error(f"Inventory restock failed: {e}")
+    asyncio.create_task(_run())
+
+
+async def _get_next_order_number(restaurant_id: str) -> str:
+    """Atomic per-restaurant-per-day order number (no duplicates under load).
+
+    Uses a MongoDB counters collection with find_one_and_update($inc) —
+    replaces the old count_documents() approach that raced.
+    """
+    today = datetime.now(RESTAURANT_TZ).strftime("%Y%m%d")
+    key = f"{restaurant_id}:{today}"
+    doc = await db.counters.find_one_and_update(
+        {"_id": key},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True
+    )
+    return f"{today}{doc['seq']:04d}"
+
+
+def _validate_order_transition(old_status: str, new_status: str):
+    """Enforce the order lifecycle: received → preparing → ready → completed.
+
+    Cancelled is allowed from any non-completed state. Invalid jumps and
+    backwards moves are rejected so an order can never skip payment or
+    "un-complete" itself.
+    """
+    ALLOWED = {
+        "received": {"preparing", "cancelled"},
+        "preparing": {"ready", "cancelled"},
+        "ready": {"completed", "cancelled"},
+        "completed": set(),
+        "cancelled": set(),
+    }
+    if old_status == new_status:
+        return  # idempotent no-op
+    if new_status not in ALLOWED.get(old_status, set()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status change: cannot go from '{old_status}' to '{new_status}'"
+        )
+
 async def record_wallet_transaction(restaurant_id: str, txn_type: str, amount: float, payment_method: str, reference_id: str = None, day_session_id: str = None):
     txn = {
         "id": str(uuid.uuid4()),
@@ -916,7 +1009,7 @@ async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Res
 
 # ============== AUTH ROUTES ==============
 
-@api_router.post("/auth/register", response_model=RegisterResponse)
+@api_router.post("/auth/register")
 async def register(user_data: UserCreate):
     if not _check_rate_limit(f"register:{user_data.email}", 5):
         raise HTTPException(status_code=429, detail="Too many registration attempts. Please try again later.")
@@ -925,8 +1018,7 @@ async def register(user_data: UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user_id = str(uuid.uuid4())
-    verification_token = str(uuid.uuid4())
-    verification_expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    needs_email_verification = EMAIL_VERIFICATION_REQUIRED and EMAIL_CONFIGURED
 
     user = {
         "id": user_id,
@@ -939,21 +1031,32 @@ async def register(user_data: UserCreate):
         "restaurant_id": None,
         "branch_id": None,
         "onboarding_complete": False,
-        "is_verified": False,
-        "verification_token": verification_token,
-        "verification_token_expires": verification_expires,
+        "is_verified": not needs_email_verification,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    if needs_email_verification:
+        user["verification_token"] = str(uuid.uuid4())
+        user["verification_token_expires"] = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+
     await db.users.insert_one(user)
     await log_action("auth", "user_registered", user_id=user_id)
 
-    # Send verification link email in background (fire-and-forget — never blocks the response)
-    asyncio.create_task(send_verification_email(user_data.email, user_data.name, verification_token))
+    if needs_email_verification:
+        # SaaS mode: send verification link in background (never blocks the response)
+        asyncio.create_task(send_verification_email(user_data.email, user_data.name, user["verification_token"]))
+        return RegisterResponse(
+            message="Registration successful! We've sent a verification link to your email. "
+                    "Please verify your email to activate your account, then log in.",
+            email=user_data.email
+        )
 
-    return RegisterResponse(
-        message="Registration successful! We've sent a verification link to your email. "
-                "Please verify your email to activate your account, then log in.",
-        email=user_data.email
+    # Dev/self-host mode: account auto-verified — log the user straight in
+    token = create_token(user_id, user["role"], None)
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user=UserResponse(id=user_id, email=user["email"], name=user["name"], role=user["role"],
+                          restaurant_id=None, branch_id=None, created_at=user["created_at"])
     )
 
 @api_router.post("/auth/verify-email", response_model=TokenResponse)
@@ -1199,8 +1302,10 @@ async def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Email verification required before login (verification link sent at registration)
-    if not user.get("is_verified", False):
+    # Enforce email verification ONLY when the SaaS email flow is enabled.
+    # Dev/self-host default: accounts are auto-verified, so existing unverified
+    # rows are never locked out of login.
+    if EMAIL_VERIFICATION_REQUIRED and EMAIL_CONFIGURED and not user.get("is_verified", False):
         raise HTTPException(
             status_code=403,
             detail="Email not verified yet. We've sent a verification link to your email — "
@@ -1250,6 +1355,7 @@ async def onboard_restaurant(data: RestaurantOnboarding, user: dict = Depends(ge
         "address": data.address,
         "city": data.city,
         "pincode": data.pincode,
+        "tax_rate": data.tax_rate,
         "is_active": False,
         "subscription_status": "pending",
         "subscription_expires": None,
@@ -1582,12 +1688,37 @@ async def open_day(opening_cash: float = 0, user: dict = Depends(get_current_use
     return DaySessionResponse(**{k: v for k, v in session.items() if k not in ["_id", "opened_by"]})
 
 @api_router.post("/day-session/close", response_model=DaySessionResponse)
-async def close_day(closing_cash: float = 0, user: dict = Depends(get_current_user)):
+async def close_day(closing_cash: float = 0, force: bool = False, user: dict = Depends(get_current_user)):
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
     session = await db.day_sessions.find_one({"restaurant_id": user["restaurant_id"], "status": "open"}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=400, detail="No open day session")
+
+    # Guard: don't close the day while orders are still running or unpaid —
+    # those sales would silently vanish from the day report. force=true overrides
+    # deliberately (e.g. emergency close).
+    if not force:
+        open_orders = await db.orders.count_documents({
+            "day_session_id": session["id"],
+            "status": {"$nin": ["completed", "cancelled"]}
+        })
+        unpaid_orders = await db.orders.count_documents({
+            "day_session_id": session["id"],
+            "payment_status": {"$ne": "paid"},
+            "status": {"$ne": "cancelled"}
+        })
+        if open_orders or unpaid_orders:
+            parts = []
+            if open_orders:
+                parts.append(f"{open_orders} running order(s)")
+            if unpaid_orders:
+                parts.append(f"{unpaid_orders} unpaid order(s)")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot close the day: {', '.join(parts)} still open. Complete or cancel them first, or close with force."
+            )
+
     orders = await db.orders.find({"day_session_id": session["id"], "payment_status": "paid"}, {"_id": 0}).to_list(1000)
     total_sales = sum(o["total_amount"] for o in orders)
     cash_sales = sum(o["total_amount"] for o in orders if o["payment_method"] == "cash")
@@ -1631,17 +1762,27 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
     if not session:
         raise HTTPException(status_code=400, detail="Day not open. Please open the day first.")
 
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    count = await db.orders.count_documents({"restaurant_id": user["restaurant_id"], "order_number": {"$regex": f"^{today}"}})
-    order_number = f"{today}{count + 1:04d}"
+    restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    tax_rate = float(restaurant.get("tax_rate", 5.0)) if restaurant else 5.0
+
+    if not data.items:
+        raise HTTPException(status_code=400, detail="Order must contain at least one item")
+    if data.discount_amount < 0:
+        raise HTTPException(status_code=400, detail="Discount cannot be negative")
+
+    order_number = await _get_next_order_number(user["restaurant_id"])
 
     order_items = []
     subtotal = 0
     for item_data in data.items:
-        menu_item = await db.menu_items.find_one({"id": item_data.menu_item_id}, {"_id": 0})
+        menu_item = await db.menu_items.find_one({"id": item_data.menu_item_id, "restaurant_id": user["restaurant_id"]}, {"_id": 0})
         if not menu_item:
-            raise HTTPException(status_code=404, detail=f"Menu item {item_data.menu_item_id} not found")
-        item_total = menu_item["price"] * item_data.quantity
+            raise HTTPException(status_code=404, detail=f"Menu item '{item_data.menu_item_id}' not found")
+        if not menu_item.get("is_available", True):
+            raise HTTPException(status_code=400, detail=f"'{menu_item['name']}' is currently unavailable")
+        if item_data.quantity <= 0:
+            raise HTTPException(status_code=400, detail=f"Quantity for '{menu_item['name']}' must be at least 1")
+        item_total = round(menu_item["price"] * item_data.quantity, 2)
         subtotal += item_total
         order_items.append({
             "menu_item_id": item_data.menu_item_id,
@@ -1652,11 +1793,36 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
             "total": item_total
         })
 
-    tax_rate = 0.05
-    tax_amount = round(subtotal * tax_rate, 2)
+    if data.discount_amount > subtotal:
+        raise HTTPException(status_code=400, detail=f"Discount (₹{data.discount_amount}) cannot exceed the order subtotal (₹{subtotal})")
+
+    tax_amount = round(subtotal * tax_rate / 100, 2)
     total_amount = round(subtotal + tax_amount - data.discount_amount, 2)
 
+    # Validate payment data up-front so a bad payment never creates a broken order
     is_pending_payment = data.payment_method == "pending"
+    payment_splits_data = []
+    actual_method = data.payment_method
+    change_amt = data.change_amount or 0
+    if not is_pending_payment:
+        if data.payment_splits:
+            if len(data.payment_splits) > 1:
+                split_sum = round(sum(s.amount for s in data.payment_splits), 2)
+                if abs(split_sum - total_amount) > 1.0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Split payments (₹{split_sum}) must add up to the order total (₹{total_amount})"
+                    )
+                for split in data.payment_splits:
+                    if split.amount <= 0:
+                        raise HTTPException(status_code=400, detail="Split amounts must be positive")
+                    payment_splits_data.append({"method": split.method, "amount": split.amount})
+                actual_method = "split"
+            else:
+                actual_method = data.payment_splits[0].method
+                payment_splits_data = [{"method": actual_method, "amount": round(total_amount, 2)}]
+        if data.payment_method == "cash" and change_amt > 0 and change_amt >= total_amount and not data.payment_splits:
+            raise HTTPException(status_code=400, detail="Change amount cannot be greater than or equal to cash tendered total — check the amount paid")
     order_id = str(uuid.uuid4())
     order = {
         "id": order_id,
@@ -1673,7 +1839,7 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         "tax_amount": tax_amount,
         "discount_amount": data.discount_amount,
         "total_amount": total_amount,
-        "payment_method": data.payment_method,
+        "payment_method": actual_method if not is_pending_payment else data.payment_method,
         "payment_status": "pending" if is_pending_payment else "paid",
         "status": "received",
         "platform": data.platform,
@@ -1692,29 +1858,27 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
     await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
 
     if not is_pending_payment:
-        # Handle split payments or single payment
-        payment_splits_data = []
-        change_amt = data.change_amount or 0
-        if data.payment_splits:
-            for split in data.payment_splits:
-                payment_splits_data.append({"method": split.method, "amount": split.amount})
-                await record_wallet_transaction(user["restaurant_id"], "sale", split.amount, split.method, order_id, session["id"])
-            # Update order with splits info
-            actual_method = "split" if len(data.payment_splits) > 1 else data.payment_splits[0].method
+        # Record wallet entries for validated payment(s)
+        if len(payment_splits_data) > 1:
+            for split in payment_splits_data:
+                await record_wallet_transaction(user["restaurant_id"], "sale", split["amount"], split["method"], order_id, session["id"])
+        else:
+            await record_wallet_transaction(user["restaurant_id"], "sale", total_amount, actual_method, order_id, session["id"])
+
+        # Persist split/change details on the order
+        if payment_splits_data:
             await db.orders.update_one(
                 {"id": order_id},
-                {"$set": {"payment_method": actual_method, "payment_splits": payment_splits_data, "change_amount": change_amt}}
+                {"$set": {"payment_splits": payment_splits_data, "change_amount": change_amt}}
             )
-            order["payment_method"] = actual_method
             order["payment_splits"] = payment_splits_data
             order["change_amount"] = change_amt
-        else:
-            await record_wallet_transaction(user["restaurant_id"], "sale", total_amount, data.payment_method, order_id, session["id"])
+
         try:
             settings = await db.notification_settings.find_one({"restaurant_id": user["restaurant_id"]})
             if not settings or settings.get("sms_enabled", True):
-                restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
-                asyncio.create_task(send_order_notification(order, restaurant))
+                restaurant_for_notify = restaurant or await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+                asyncio.create_task(send_order_notification(order, restaurant_for_notify))
         except Exception as e:
             logger.error(f"Notification trigger error: {e}")
 
@@ -1763,7 +1927,32 @@ async def update_order_status(order_id: str, data: OrderUpdate, user: dict = Dep
     order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    # Enforce lifecycle: received → preparing → ready → completed (cancel only before completion)
+    _validate_order_transition(order["status"], data.status)
+
+    # Cannot complete an unpaid order — payment must go through /pay first
+    if data.status == "completed" and order.get("payment_status") != "paid":
+        raise HTTPException(status_code=400, detail="Order must be paid before it can be completed")
+
     await db.orders.update_one({"id": order_id}, {"$set": {"status": data.status}})
+
+    # Cancel: release table + restore inventory + log
+    if data.status == "cancelled":
+        if order["order_type"] == "dine_in" and order.get("table_number"):
+            await db.tables.update_one(
+                {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"], "current_order_id": order_id},
+                {"$set": {"status": "available", "current_order_id": None}}
+            )
+        if order.get("payment_status") == "paid":
+            # Refund wallet entry so day reports stay correct
+            await record_wallet_transaction(
+                user["restaurant_id"], "refund", order["total_amount"],
+                order.get("payment_method", "cash"), order_id, order.get("day_session_id")
+            )
+        _restock_inventory(user["restaurant_id"], order.get("items", []))
+        await log_action("order", "order_cancelled", user_id=user["id"],
+                         restaurant_id=user["restaurant_id"], details=f"Order {order['order_number']} cancelled")
 
     if data.status == "completed" and order["order_type"] == "dine_in" and order.get("table_number"):
         await db.tables.update_one(
@@ -1784,14 +1973,29 @@ async def add_items_to_order(order_id: str, data: OrderAddItems, user: dict = De
     if order["status"] in ["completed", "cancelled"]:
         raise HTTPException(status_code=400, detail="Cannot add items to completed/cancelled order")
 
+    if order.get("payment_status") == "paid":
+        raise HTTPException(status_code=400, detail="Cannot add items to a paid order")
+
+    session = await db.day_sessions.find_one({"id": order.get("day_session_id"), "status": "open"}, {"_id": 0})
+    if not session:
+        raise HTTPException(status_code=400, detail="Day session is closed — cannot add items")
+
+    if not data.items:
+        raise HTTPException(status_code=400, detail="No items provided")
+
+    restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    tax_rate = float(restaurant.get("tax_rate", 5.0)) if restaurant else 5.0
+
     new_items = []
-    additional_subtotal = 0
     for item_data in data.items:
-        menu_item = await db.menu_items.find_one({"id": item_data.menu_item_id}, {"_id": 0})
+        menu_item = await db.menu_items.find_one({"id": item_data.menu_item_id, "restaurant_id": user["restaurant_id"]}, {"_id": 0})
         if not menu_item:
-            continue
-        item_total = menu_item["price"] * item_data.quantity
-        additional_subtotal += item_total
+            raise HTTPException(status_code=404, detail=f"Menu item '{item_data.menu_item_id}' not found")
+        if not menu_item.get("is_available", True):
+            raise HTTPException(status_code=400, detail=f"'{menu_item['name']}' is currently unavailable")
+        if item_data.quantity <= 0:
+            raise HTTPException(status_code=400, detail=f"Quantity for '{menu_item['name']}' must be at least 1")
+        item_total = round(menu_item["price"] * item_data.quantity, 2)
         new_items.append({
             "menu_item_id": item_data.menu_item_id,
             "name": menu_item["name"],
@@ -1802,8 +2006,10 @@ async def add_items_to_order(order_id: str, data: OrderAddItems, user: dict = De
         })
 
     all_items = order["items"] + new_items
-    new_subtotal = sum(i["total"] for i in all_items)
-    tax_amount = round(new_subtotal * 0.05, 2)
+    new_subtotal = round(sum(i["total"] for i in all_items), 2)
+    if order["discount_amount"] > new_subtotal:
+        raise HTTPException(status_code=400, detail="Discount exceeds the new order subtotal")
+    tax_amount = round(new_subtotal * tax_rate / 100, 2)
     total_amount = round(new_subtotal + tax_amount - order["discount_amount"], 2)
 
     await db.orders.update_one(
@@ -1826,21 +2032,35 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
     if order["payment_status"] == "paid":
         raise HTTPException(status_code=400, detail="Order already paid")
 
-    # Determine payment method and splits
+    # Determine payment method and splits — validated before any wallet writes
     payment_method = data.payment_method or "cash"
     payment_splits = []
     change_amount = data.change_amount or 0
 
     if data.payment_splits:
-        # Split payment: record each split separately
-        for split in data.payment_splits:
-            payment_splits.append({"method": split.method, "amount": split.amount})
+        if len(data.payment_splits) > 1:
+            split_sum = round(sum(s.amount for s in data.payment_splits), 2)
+            if abs(split_sum - order["total_amount"]) > 1.0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Split payments (₹{split_sum}) must add up to the order total (₹{order['total_amount']})"
+                )
+            for split in data.payment_splits:
+                if split.amount <= 0:
+                    raise HTTPException(status_code=400, detail="Split amounts must be positive")
+                payment_splits.append({"method": split.method, "amount": split.amount})
+                await record_wallet_transaction(
+                    user["restaurant_id"], "sale", split.amount,
+                    split.method, order_id, order.get("day_session_id")
+                )
+            payment_method = "split"
+        else:
+            payment_method = data.payment_splits[0].method
+            payment_splits = [{"method": payment_method, "amount": round(order["total_amount"], 2)}]
             await record_wallet_transaction(
-                user["restaurant_id"], "sale", split.amount,
-                split.method, order_id, order.get("day_session_id")
+                user["restaurant_id"], "sale", order["total_amount"],
+                payment_method, order_id, order.get("day_session_id")
             )
-        # Use first split method as primary (or 'split')
-        payment_method = "split" if len(data.payment_splits) > 1 else data.payment_splits[0].method
     else:
         # Legacy single payment
         await record_wallet_transaction(
@@ -1898,6 +2118,17 @@ async def update_kds_order_status(order_id: str, new_status: str, user: dict = D
     valid = ["preparing", "ready", "served"]
     if new_status not in valid:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid}")
+
+    order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # KDS may not skip backwards or revive completed/cancelled orders.
+    # 'served' maps to the completed state's post-payment display, so allow it
+    # only from 'ready' via the same lifecycle rules.
+    target = "ready" if new_status == "served" else new_status
+    _validate_order_transition(order["status"], target)
+
     await db.orders.update_one(
         {"id": order_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"status": new_status}}
@@ -2131,17 +2362,18 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
 
-    now = datetime.now(timezone.utc)
+    now_local = datetime.now(RESTAURANT_TZ)
     if date:
         try:
-            selected = datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
+            # The chosen calendar day in restaurant-local time (00:00 IST → UTC window)
+            selected_local = datetime.fromisoformat(date).replace(tzinfo=RESTAURANT_TZ)
         except:
-            selected = now
-        day_start = selected.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day_start + timedelta(days=1)
+            selected_local = now_local
+        day_start = selected_local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        day_end = (selected_local.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).astimezone(timezone.utc)
     else:
-        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = now
+        day_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        day_end = now_local.astimezone(timezone.utc)
 
     week_start = day_start - timedelta(days=7)
     month_start = day_start - timedelta(days=30)
@@ -2152,10 +2384,34 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
 
     all_orders = await db.orders.find(order_query, {"_id": 0}).to_list(10000)
 
-    day_orders = [o for o in all_orders if day_start.isoformat() <= o["created_at"] < day_end.isoformat()] if date else [o for o in all_orders if o["created_at"] >= day_start.isoformat()]
-    daily_sales = sum(o["total_amount"] for o in day_orders)
-    weekly_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= week_start.isoformat())
-    monthly_sales = sum(o["total_amount"] for o in all_orders if o["created_at"] >= month_start.isoformat())
+    # Compare as datetimes (created_at is a UTC isoformat string) — string
+    # comparisons against zone-aware isoformat strings break when offsets differ
+    def _parse_created(o):
+        try:
+            return datetime.fromisoformat(o["created_at"])
+        except Exception:
+            return None
+
+    day_orders = []
+    weekly_sales = 0.0
+    monthly_sales = 0.0
+    daily_sales = 0.0
+    for o in all_orders:
+        created = _parse_created(o)
+        if not created:
+            continue
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if day_start <= created < day_end:
+            day_orders.append(o)
+            daily_sales += o["total_amount"]
+        if created >= week_start:
+            weekly_sales += o["total_amount"]
+        if created >= month_start:
+            monthly_sales += o["total_amount"]
+    daily_sales = round(daily_sales, 2)
+    weekly_sales = round(weekly_sales, 2)
+    monthly_sales = round(monthly_sales, 2)
 
     item_counts = {}
     for order in day_orders:
@@ -2169,12 +2425,17 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
         ot = order.get("order_type", "unknown")
         order_types[ot] = order_types.get(ot, 0) + 1
 
+    # Peak hours bucketed in restaurant-local time (IST), not UTC — otherwise
+    # every chart shifts by 5h30m and "3 PM rush" shows at 9 AM.
     hourly = {}
     for order in day_orders:
         try:
-            hour = datetime.fromisoformat(order["created_at"]).hour
+            created = datetime.fromisoformat(order["created_at"])
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            hour = created.astimezone(RESTAURANT_TZ).hour
             hourly[hour] = hourly.get(hour, 0) + 1
-        except:
+        except Exception:
             pass
     hourly_orders = [{"hour": h, "orders": c} for h, c in sorted(hourly.items())]
 

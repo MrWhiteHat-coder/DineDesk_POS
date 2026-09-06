@@ -118,13 +118,25 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await authAPI.register({ name, email, password, phone: formattedPhone });
-      // Registration succeeded — email verification link sent. Email must be
-      // verified before login/onboarding, so show the check-email screen.
-      setStep('check-email');
-      toast.success('Account created! We sent a verification link to your email.');
+      const res = await authAPI.register({ name, email, password, phone: formattedPhone });
+      const data = res.data || {};
+      if (data.access_token && data.user) {
+        // Auto-login mode (email verification not required) — straight to onboarding
+        sessionStorage.setItem('token', data.access_token);
+        sessionStorage.setItem('user', JSON.stringify(data.user));
+        toast.success(`Welcome to DineDesk, ${data.user.name}! 🎉`);
+        navigate('/onboarding');
+      } else {
+        // Verification mode — email link sent, show check-email screen
+        setStep('check-email');
+        toast.success('Account created! We sent a verification link to your email.');
+      }
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Registration failed');
+      const detail = err.response?.data?.detail || 'Registration failed';
+      toast.error(detail);
+      if (typeof detail === 'string' && detail.toLowerCase().includes('already registered')) {
+        setTimeout(() => navigate('/login'), 1800);
+      }
     } finally {
       setLoading(false);
     }

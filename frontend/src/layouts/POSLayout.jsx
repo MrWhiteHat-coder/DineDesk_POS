@@ -154,14 +154,25 @@ export default function POSLayout() {
     finally { setLoading(false); }
   };
 
-  const handleCloseDay = async () => {
+  const handleCloseDay = async (force = false) => {
     setLoading(true);
     try {
-      const res = await daySessionAPI.close(parseFloat(closingCash) || 0);
+      const res = await daySessionAPI.closeForce(parseFloat(closingCash) || 0, force);
       setCurrentSession(null); setIsDayOpen(false); setShowDayCloseModal(false); setClosingCash('');
       toast.success(`Day closed! Total sales: ₹${res.data.total_sales.toFixed(2)}`);
       setReportSessionId(currentSession?.id); setShowDayReport(true);
-    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to close day'); }
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Failed to close day';
+      // Backend blocks close when orders are still running/unpaid — offer a force close
+      if (typeof detail === 'string' && detail.includes('Cannot close the day')) {
+        if (window.confirm(`${detail}\n\nClose the day anyway? Unpaid orders will be left out of today's report.`)) {
+          setLoading(false);
+          return handleCloseDay(true);
+        }
+      } else {
+        toast.error(detail);
+      }
+    }
     finally { setLoading(false); }
   };
 

@@ -390,7 +390,7 @@ export default function POSDashboard() {
             {lowStockItems.length > 0 ? (
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100"><div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-red-500" /><span className="text-sm font-medium text-red-700">Out of Stock</span></div><span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{lowStockItems.length}</span></div>
-                {lowStockItems.slice(0, 3).map(item => (<div key={item.id} className="flex items-center justify-between px-1"><span className="text-sm text-slate-700">{item.name}</span><span className="text-[10px] text-amber-600 font-medium">Stock: {item.current_stock} {item.unit}</span></div>))}
+                {lowStockItems.slice(0, 3).map(item => (<div key={item.id} className="flex items-center justify-between px-1"><span className="text-sm text-slate-700">{item.name}</span><span className="text-[10px] text-amber-600 font-medium">Stock: {item.quantity} {item.unit}</span></div>))}
               </div>
             ) : (
               <div className="text-center py-4"><div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-2"><Package className="w-7 h-7 text-emerald-500" /></div><p className="text-sm text-emerald-600 font-medium">All items in stock!</p></div>

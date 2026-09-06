@@ -69,12 +69,19 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     const response = await authAPI.register({ name, email, password });
-    const { access_token, user: userData } = response.data;
-    
-    sessionStorage.setItem('token', access_token);
+    const data = response.data || {};
+
+    // Verification mode: backend returns {message, email} — no session yet.
+    // Caller (RegisterPage) shows the check-email screen.
+    if (!data.access_token || !data.user) {
+      return null;
+    }
+
+    // Auto-login mode: session starts immediately.
+    const userData = data.user;
+    sessionStorage.setItem('token', data.access_token);
     sessionStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
-    
     return userData;
   };
 

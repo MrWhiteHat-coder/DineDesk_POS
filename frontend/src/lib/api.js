@@ -91,6 +91,7 @@ export const orderAPI = {
 export const daySessionAPI = {
   open: (cash) => api.post(`/day-session/open?opening_cash=${cash}`),
   close: (cash) => api.post(`/day-session/close?closing_cash=${cash}`),
+  closeForce: (cash, force = false) => api.post(`/day-session/close?closing_cash=${cash}&force=${force}`),
   getCurrent: () => api.get('/day-session/current'),
   getHistory: () => api.get('/day-session/history'),
 };
