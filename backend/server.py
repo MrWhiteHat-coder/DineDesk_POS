@@ -41,10 +41,11 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 MAX_UPLOAD_SIZE_MB = int(os.environ.get('MAX_UPLOAD_SIZE_MB', '10'))
 MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
-# JWT Configuration — fallback for backward compatibility
-JWT_SECRET = os.environ.get('JWT_SECRET', 'QWMIL2JmJeZufUwkW_ZPNsW9EXcUoI4DvaO-BZxjDeBuS1ayF_6iYvbIPN7A2yIH')
-if JWT_SECRET == '':
-    JWT_SECRET = 'QWMIL2JmJeZufUwkW_ZPNsW9EXcUoI4DvaO-BZxjDeBuS1ayF_6iYvbIPN7A2yIH'
+# JWT Configuration — secret must come from the environment only.
+# No hardcoded fallback: a committed secret is a compromised secret.
+JWT_SECRET = os.environ.get('JWT_SECRET', '')
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is required — generate one with: python -c \"import secrets; print(secrets.token_hex(32))\"")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
 

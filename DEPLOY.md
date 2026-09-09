@@ -101,7 +101,7 @@ Actual services this repo currently runs on:
 ```
 MONGO_URL = mongodb+srv://<db_user>:<db_password>@dinedesk.nynxzwe.mongodb.net/DineDesk?retryWrites=true&w=majority&appName=DineDesk
 DB_NAME = DineDesk
-JWT_SECRET = QWMIL2JmJeZufUwkW_ZPNsW9EXcUoI4DvaO-BZxjDeBuS1ayF_6iYvbIPN7A2yIH   (same as server.py fallback)
+JWT_SECRET = (generate a fresh 64-char hex: python -c "import secrets; print(secrets.token_hex(32))")
 CORS_ORIGINS = https://revontechnologies.in,https://www.revontechnologies.in
 FRONTEND_URL = https://revontechnologies.in
 SENDGRID_API_KEY = SG.<your-key>          (never commit the real key)
