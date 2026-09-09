@@ -145,13 +145,16 @@ code {
     }
 
     /* DineDesk Brand Utilities (monochrome, theme-aware) */
-    .dd-gradient-blue {
+    .dd-gradient-blue,
+    .bg-dd-gradient-blue {
         background: linear-gradient(135deg, #111827 0%, #374151 100%);
     }
-    .dd-gradient-saffron {
+    .dd-gradient-saffron,
+    .bg-dd-gradient-saffron {
         background: linear-gradient(135deg, #1F2937 0%, #4B5563 100%);
     }
-    .dd-gradient-hero {
+    .dd-gradient-hero,
+    .bg-dd-gradient-hero {
         background: linear-gradient(135deg, #0A0A0A 0%, #111827 55%, #1F2937 100%);
     }
     .dd-card {
@@ -593,6 +596,16 @@ html.dark .text-gray-600,
 html.dark .text-gray-500 { color: #9CA3AF !important; }
 html.dark .text-gray-400 { color: #6B7280 !important; }
 
+/* Segmented controls (billing toggle, tab pills): gray-100 track + white
+   active segment invert to night surfaces with a light active chip. */
+html.dark .bg-gray-100.rounded-pill {
+    background-color: #1C2128 !important;
+}
+html.dark .bg-gray-100.rounded-pill > button.bg-white {
+    background-color: #F3F4F6 !important;
+    color: #0F1115 !important;
+}
+
 html.dark .text-slate-900,
 html.dark .text-slate-800 { color: #F3F4F6 !important; }
 html.dark .text-slate-700 { color: #D1D5DB !important; }
@@ -611,6 +624,16 @@ html.dark .border-slate-300 { border-color: #2E343D !important; }
 html.dark .border-gray-100 { border-color: #22272F !important; }
 html.dark .border-gray-200 { border-color: #262B33 !important; }
 html.dark .border-gray-300 { border-color: #2E343D !important; }
+
+/* Segmented control / pill chips: a white element nested in a gray-100
+   container (billing toggle, filter pills) should LIFT to a mid-gray in
+   Night Shift instead of sinking to the card color. */
+html.dark .bg-gray-100 .bg-white {
+    background-color: #2A313A !important;
+}
+html.dark .bg-gray-100 .bg-white.shadow-sm {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+}
 
 html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #22272F; }
 html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #262B33; }

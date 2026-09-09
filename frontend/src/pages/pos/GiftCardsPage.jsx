@@ -170,7 +170,7 @@ export default function GiftCardsPage() {
           </Card>
         ) : (
           filtered.map(card => (
-            <div key={card.id} className="flex items-center gap-4 p-4 bg-white rounded-card border border-dd-border hover:shadow-card-hover transition-all">
+            <div key={card.id} className="flex items-center gap-4 p-4 bg-white rounded-card border border-gray-200 hover:shadow-card-hover transition-all">
               <div className="w-12 h-12 bg-dd-gradient-hero rounded-card flex items-center justify-center flex-shrink-0">
                 <Gift className="w-6 h-6 text-white" />
               </div>

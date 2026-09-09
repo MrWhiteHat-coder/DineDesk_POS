@@ -129,7 +129,7 @@ export default function StorePage() {
           const price = billing === 'monthly' ? addon.monthly_price : Math.round(addon.annual_price / 12);
 
           return (
-            <Card key={addon.id} className={`relative transition-all hover:shadow-card-hover ${isActive ? 'border-gray-900 ring-1 ring-gray-900/20' : 'border-dd-border'}`}>
+            <Card key={addon.id} className={`relative transition-all hover:shadow-card-hover ${isActive ? 'border-gray-900 ring-1 ring-gray-900/20' : 'border-gray-200'}`}>
               {isActive && (
                 <div className="absolute -top-2 right-3 bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-pill flex items-center gap-1">
                   <Check className="w-3 h-3" /> Active
@@ -179,7 +179,7 @@ export default function StorePage() {
       </div>
 
       {/* Base Features (always included) */}
-      <Card className="border-dd-border">
+      <Card className="border-gray-200">
         <CardContent className="p-5">
           <h3 className="font-heading font-bold text-gray-900 mb-3 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-gray-700" /> Always Included (Base Plan)

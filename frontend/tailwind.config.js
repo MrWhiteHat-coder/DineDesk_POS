@@ -30,39 +30,41 @@ module.exports = {
           'warning': '#F59E0B',
           'error': '#DC2626',
         },
-        // Semantic aliases
-        primary: {
-          DEFAULT: '#111827',
-          foreground: '#FFFFFF',
-          light: '#1F2937',
-          dark: '#0A0F1A',
-        },
-        accent: {
-          DEFAULT: '#111827',
-          foreground: '#FFFFFF',
-          light: '#1F2937',
-          dark: '#0A0F1A',
-        },
-        surface: {
-          DEFAULT: '#FFFFFF',
-          card: '#FFFFFF',
-          dark: '#0A0A0A',
-          muted: '#F9FAFB',
-        },
-        border: '#E5E7EB',
-        // Card/system
+        // shadcn semantic tokens — wired to CSS vars so components (Card,
+        // Dialog, Dropdown, Switch, Badge, Button...) adapt to Night Shift.
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         card: {
-          DEFAULT: '#FFFFFF',
-          foreground: '#111111',
+          DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        primary: {
+          DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         muted: {
-          DEFAULT: '#F3F4F6',
-          foreground: '#6B7280',
+          DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         destructive: {
-          DEFAULT: '#DC2626',
-          foreground: '#FFFFFF',
+          DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
+          foreground: 'hsl(var(--destructive-foreground))',
         },
+        border: 'hsl(var(--border) / <alpha-value>)',
+        input: 'hsl(var(--input) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)',
       },
       borderRadius: {
         'card': '12px',
@@ -76,6 +78,11 @@ module.exports = {
         'card-hover': '0 4px 12px rgba(0,0,0,0.12)',
         'elevated': '0 4px 12px rgba(0,0,0,0.12)',
         'ink': '0 4px 12px rgba(17,24,39,0.25)',
+        // Dark-mode shims: opaque shadows over #0F1115 canvas (default
+        // rgba shadows wash out on dark backgrounds)
+        'card-dark': '0 1px 3px rgba(0,0,0,0.45)',
+        'card-hover-dark': '0 4px 12px rgba(0,0,0,0.5)',
+        'elevated-dark': '0 4px 12px rgba(0,0,0,0.5)',
       },
       keyframes: {
         'accordion-down': {

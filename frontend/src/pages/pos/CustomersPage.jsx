@@ -171,7 +171,7 @@ export default function CustomersPage() {
             return (
               <div
                 key={customer.id}
-                className="flex items-center gap-4 p-4 bg-white rounded-card border border-dd-border hover:shadow-card-hover transition-all cursor-pointer"
+                className="flex items-center gap-4 p-4 bg-white rounded-card border border-gray-200 hover:shadow-card-hover transition-all cursor-pointer"
                 onClick={() => { setSelectedCustomer(customer); setShowDetail(true); }}
                 data-testid={`customer-row-${customer.id}`}
               >
