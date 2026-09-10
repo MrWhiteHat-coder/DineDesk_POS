@@ -7,7 +7,7 @@ import { daySessionAPI } from '../lib/api';
 import { toast } from 'sonner';
 import DayCloseReport from '../components/pos/DayCloseReport';
 import {
-  LayoutDashboard,
+  Home,
   ShoppingCart,
   UtensilsCrossed,
   SquareStack,
@@ -34,6 +34,9 @@ import {
   Lock,
   Moon,
   Sun,
+  Search,
+  Package,
+  Monitor,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -53,7 +56,7 @@ import {
 
 /* ───────── nav config ───────── */
 const allNavItems = [
-  { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true, feature: 'dashboard' },
+  { to: '/pos', icon: Home, label: 'Dashboard', exact: true, feature: 'dashboard' },
   { to: '/pos/orders', icon: ShoppingCart, label: 'Create Order', feature: 'menu_order' },
   { to: '/pos/quick-pos', icon: Zap, label: 'Quick POS', feature: 'menu_order' },
   { to: '/pos/analytics', icon: BarChart3, label: 'Analytics', feature: 'analytics' },
@@ -79,9 +82,22 @@ const manageDishItems = [
   { to: '/pos/inventory', label: 'Inventory' },
 ];
 
+/* Sidebar primary items (desktop) */
+const sidebarItems = [
+  { to: '/pos', icon: Home, label: 'Home', exact: true, feature: 'dashboard' },
+  { to: '/pos/orders', icon: ShoppingCart, label: 'Orders', feature: 'menu_order' },
+  { to: '/pos/tables', icon: SquareStack, label: 'Tables', feature: 'tables' },
+  { to: '/pos/quick-pos', icon: Monitor, label: 'POS', feature: 'menu_order' },
+  { to: '/pos/kds', icon: ChefHat, label: 'Kitchen', feature: 'kds' },
+  { to: '/pos/inventory', icon: Package, label: 'Inventory', feature: 'inventory' },
+  { to: '/pos/analytics', icon: BarChart3, label: 'Analytics', feature: 'analytics' },
+  { to: '/pos/customers', icon: Users, label: 'Customers', feature: 'staff' },
+  { to: '/pos/staff', icon: Users, label: 'Staff', feature: 'staff' },
+];
+
 /* Bottom bar: 5 core tabs */
 const bottomTabs = [
-  { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { to: '/pos', icon: Home, label: 'Dashboard', exact: true },
   { to: '/pos/orders', icon: ShoppingCart, label: 'Orders' },
   { to: '/pos/kds', icon: ChefHat, label: 'KDS' },
   { to: '/pos/wallet', icon: Wallet, label: 'Wallet' },
@@ -124,6 +140,9 @@ export default function POSLayout() {
 
   /* ── mobile more sheet ── */
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+
+  /* ── sidebar More section (desktop) ── */
+  const [sidebarMoreOpen, setSidebarMoreOpen] = useState(false);
 
   /* ── expandable sections inside More sheet ── */
   const isTableRoute = ['/pos/tables', '/pos/order-management'].some(p => location.pathname.startsWith(p));
@@ -191,237 +210,296 @@ export default function POSLayout() {
 
   /* ── "More" items (filtered by role) ── */
   const moreNavItems = allNavItems.filter(item => hasAccess(item.feature));
+  const sidebarMoreItems = moreNavItems.filter(item => !sidebarItems.some(s => s.to === item.to));
 
-  const currentTime = new Date().toLocaleString('en-IN', {
-    weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
-  });
+  /* ── header time + daypart session ── */
+  const now = new Date();
+  const dateLabel = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const hour = now.getHours();
+  const sessionName = hour < 11 ? 'Morning' : hour < 16 ? 'Lunch' : hour < 21 ? 'Evening' : 'Night';
+  const timeLabel = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   /* ═══════════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════════ */
   return (
-    <div className="min-h-screen bg-white flex flex-col" data-testid="pos-layout">
+    <div className="h-screen flex overflow-hidden bg-[#F4F5F2] dark:bg-[#0E1013]" data-testid="pos-layout">
 
-      {/* ──────────── TOP BAR ──────────── */}
-      <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 flex-shrink-0 z-30">
-
-        {/* LEFT: Logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
-            <UtensilsCrossed className="w-4.5 h-4.5 text-white" />
+      {/* ──────────── LEFT SIDEBAR (desktop, always dark — brand signature) ──────────── */}
+      <aside className="hidden lg:flex w-[190px] xl:w-[212px] flex-col bg-[#0B0D10] flex-shrink-0 overflow-y-auto">
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-4 pt-5 pb-4 flex-shrink-0">
+          <div className="w-9 h-9 bg-white/[0.07] border border-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
-          <h1 className="font-heading font-bold text-gray-900 text-sm leading-tight hidden sm:block">DineDesk</h1>
+          <div className="min-w-0">
+            <p className="text-white font-heading font-bold text-[15px] leading-tight">DineDesk</p>
+            <p className="text-white/35 text-[9px] leading-tight">by Trident Ventures</p>
+          </div>
         </div>
 
-        {/* CENTER: Desktop horizontal nav — 5 core items + More dropdown */}
-        <nav className="hidden md:flex items-center gap-1">
-          {/* 5 core items always visible */}
-          {[
-            { to: '/pos', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-            { to: '/pos/orders', icon: ShoppingCart, label: 'Create Order' },
-            { to: '/pos/quick-pos', icon: Zap, label: 'Quick POS' },
-            { to: '/pos/kds', icon: ChefHat, label: 'KDS' },
-            { to: '/pos/wallet', icon: Wallet, label: 'Wallet' },
-          ].map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.exact}
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-black text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`
-              }
-            >
-              <item.icon className="w-4 h-4" />
-              <span className="hidden lg:inline">{item.label}</span>
-            </NavLink>
-          ))}
+        {/* Primary nav */}
+        <nav className="flex-1 px-2.5 space-y-0.5">
+          {sidebarItems
+            .filter(item => hasAccess(item.feature))
+            .map((item) => {
+              // subscription lock applies only where a matching addon exists;
+              // role-gating is handled by hasAccess above.
+              const locked = ['inventory', 'customers', 'analytics'].includes(item.feature) && !isUnlocked(item.feature);
+              const target = locked ? '/pos/store' : item.to;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={target}
+                  end={item.exact}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
+                      isActive && !locked
+                        ? 'bg-[#2E9E5B] text-white shadow-sm'
+                        : locked
+                          ? 'text-white/35 hover:bg-white/[0.05]'
+                          : 'text-white/55 hover:text-white hover:bg-white/[0.06]'
+                    }`
+                  }
+                  title={item.label}
+                >
+                  {locked ? <Lock className="w-4 h-4 flex-shrink-0" /> : <item.icon className="w-4 h-4 flex-shrink-0" />}
+                  <span className="truncate">{item.label}</span>
+                  {locked && <span className="ml-auto text-[8px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">PRO</span>}
+                </NavLink>
+              );
+            })}
 
-          {/* More dropdown — everything else */}
-          <div className="relative group">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all">
-              <MoreHorizontal className="w-4 h-4" />
-              <span className="hidden lg:inline">More</span>
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-            <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[70vh] overflow-y-auto">
-              {/* Regular nav items (excluding the 5 core ones) */}
-              {allNavItems
-                .filter(item => hasAccess(item.feature))
-                .filter(item => !['/pos', '/pos/orders', '/pos/quick-pos', '/pos/kds', '/pos/wallet'].includes(item.to))
-                .map(sub => {
-                  const unlocked = isUnlocked(sub.feature);
-                  return (
-                    <NavLink
-                      key={sub.to}
-                      to={unlocked ? sub.to : '/pos/store'}
-                      className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive && unlocked ? 'text-black font-medium bg-gray-100' : unlocked ? 'text-gray-600 hover:bg-gray-50' : 'text-gray-400 hover:bg-gray-50'}`}
-                    >
-                      {unlocked ? <sub.icon className="w-4 h-4" /> : <Lock className="w-4 h-4 text-amber-500" />}
-                      <span>{sub.label}</span>
-                      {!unlocked && <span className="ml-auto text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold">PRO</span>}
+          {/* More — expandable advanced modules */}
+          {sidebarMoreItems.length > 0 && (
+            <div className="pt-1">
+              <button
+                onClick={() => setSidebarMoreOpen(v => !v)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${sidebarMoreOpen ? 'text-white bg-white/[0.06]' : 'text-white/55 hover:text-white hover:bg-white/[0.06]'}`}
+              >
+                <MoreHorizontal className="w-4 h-4 flex-shrink-0" />
+                <span>More</span>
+                {sidebarMoreOpen ? <ChevronUp className="w-3.5 h-3.5 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 ml-auto" />}
+              </button>
+              {sidebarMoreOpen && (
+                <div className="ml-3 pl-3 border-l border-white/[0.08] space-y-0.5 mt-0.5">
+                  {sidebarMoreItems.map(sub => {
+                    const unlocked = isUnlocked(sub.feature);
+                    return (
+                      <NavLink
+                        key={sub.to}
+                        to={unlocked ? sub.to : '/pos/store'}
+                        className={({ isActive }) => `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all ${isActive && unlocked ? 'text-white bg-white/[0.07]' : unlocked ? 'text-white/50 hover:text-white hover:bg-white/[0.05]' : 'text-white/35 hover:bg-white/[0.04]'}`}
+                      >
+                        {unlocked ? <sub.icon className="w-3.5 h-3.5 flex-shrink-0" /> : <Lock className="w-3.5 h-3.5 text-amber-400/80 flex-shrink-0" />}
+                        <span className="truncate">{sub.label}</span>
+                        {!unlocked && <span className="ml-auto text-[8px] bg-amber-400/20 text-amber-300 px-1 py-0.5 rounded-full font-bold flex-shrink-0">PRO</span>}
+                      </NavLink>
+                    );
+                  })}
+
+                  {/* Manage Table group */}
+                  {hasAccess('tables') && (
+                    <div>
+                      <button onClick={() => toggleSection('tables')} className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-white/50 hover:text-white transition-all">
+                        <span className="flex items-center gap-2.5"><SquareStack className="w-3.5 h-3.5" />Manage Table</span>
+                        {expandedSections.tables ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                      {expandedSections.tables && manageTableItems.map(sub => (
+                        <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-2.5 py-1 rounded-lg text-xs ml-4 transition-all ${isActive ? 'text-white bg-white/[0.07]' : 'text-white/45 hover:text-white'}`}>
+                          {sub.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Manage Dish group */}
+                  {hasAccess('menu') && (
+                    <div>
+                      <button onClick={() => toggleSection('dishes')} className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-white/50 hover:text-white transition-all">
+                        <span className="flex items-center gap-2.5"><UtensilsCrossed className="w-3.5 h-3.5" />Manage Dish</span>
+                        {expandedSections.dishes ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                      {expandedSections.dishes && manageDishItems.map(sub => (
+                        <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-2.5 py-1 rounded-lg text-xs ml-4 transition-all ${isActive ? 'text-white bg-white/[0.07]' : 'text-white/45 hover:text-white'}`}>
+                          {sub.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Settings */}
+                  {hasAccess('settings') && (
+                    <NavLink to="/pos/settings" className={({ isActive }) => `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all ${isActive ? 'text-white bg-white/[0.07]' : 'text-white/50 hover:text-white hover:bg-white/[0.05]'}`}>
+                      <Settings className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Settings</span>
                     </NavLink>
-                  );
-                })}
-
-              {/* Divider before sections */}
-              <div className="border-t border-gray-100 my-1"></div>
-
-              {/* Manage Table */}
-              {hasAccess('tables') && (
-                <div>
-                  <button
-                    onClick={() => toggleSection('tables')}
-                    className="flex items-center justify-between w-full px-4 py-2 text-[13px] text-gray-600 hover:bg-gray-50 transition-all"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <SquareStack className="w-4 h-4" />
-                      <span>Manage Table</span>
-                    </div>
-                    {expandedSections.tables ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
-                  </button>
-                  {expandedSections.tables && (
-                    <div className="ml-9 space-y-0.5 mb-1">
-                      {manageTableItems.map(sub => (
-                        <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-1.5 rounded-lg text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-500 hover:text-gray-900'}`}>
-                          {sub.label}
-                        </NavLink>
-                      ))}
-                    </div>
                   )}
                 </div>
-              )}
-
-              {/* Manage Dish */}
-              {hasAccess('menu') && (
-                <div>
-                  <button
-                    onClick={() => toggleSection('dishes')}
-                    className="flex items-center justify-between w-full px-4 py-2 text-[13px] text-gray-600 hover:bg-gray-50 transition-all"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <UtensilsCrossed className="w-4 h-4" />
-                      <span>Manage Dish</span>
-                    </div>
-                    {expandedSections.dishes ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
-                  </button>
-                  {expandedSections.dishes && (
-                    <div className="ml-9 space-y-0.5 mb-1">
-                      {manageDishItems.map(sub => (
-                        <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-1.5 rounded-lg text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-500 hover:text-gray-900'}`}>
-                          {sub.label}
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Staff */}
-              {hasAccess('staff') && (
-                <NavLink
-                  to="/pos/staff"
-                  className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Staff</span>
-                </NavLink>
-              )}
-
-              {/* Settings */}
-              {hasAccess('settings') && (
-                <NavLink
-                  to="/pos/settings"
-                  className={({ isActive }) => `flex items-center gap-2.5 px-4 py-2 text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>Settings</span>
-                </NavLink>
               )}
             </div>
-          </div>
+          )}
         </nav>
 
-        {/* RIGHT: Restaurant card (reference style) + Theme + Profile */}
-        <div className="flex items-center gap-2 md:gap-3">
+        {/* Sidebar footer — brand signature */}
+        <div className="px-4 py-4 flex-shrink-0">
+          <p className="font-script text-lg text-[#3FCE85]/70 leading-tight">Good food.<br />Better business.</p>
+        </div>
+      </aside>
+
+      {/* ──────────── RIGHT COLUMN ──────────── */}
+      <div className="flex-1 flex flex-col min-w-0">
+
+        {/* ──────────── TOP BAR (desktop) ──────────── */}
+        <header className="hidden lg:flex h-14 items-center gap-3 px-4 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] flex-shrink-0 z-30">
+
           {/* Restaurant / Day-status card */}
           <button
             onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
-            className="hidden md:flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl pl-1.5 pr-2 py-1 hover:border-gray-400 hover:shadow-sm transition-all flex-shrink-0"
+            className="flex items-center gap-2.5 bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl pl-1.5 pr-2 py-1 hover:border-gray-400 dark:hover:border-white/20 hover:shadow-sm transition-all flex-shrink-0"
             data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
             title={isDayOpen ? 'Close the day' : 'Open the day'}
           >
-            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-base" aria-hidden="true">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-base" aria-hidden="true">
               🍩
             </div>
             <div className="text-left leading-tight">
-              <p className="text-xs font-semibold text-gray-900 truncate max-w-[110px]">{restaurant?.name || 'Restaurant'}</p>
+              <p className="text-xs font-semibold text-gray-900 dark:text-white truncate max-w-[120px]">{restaurant?.name || 'Restaurant'}</p>
               <div className="flex items-center gap-1.5">
-                <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-px rounded-full ${isDayOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-px rounded-full ${isDayOpen ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300' : 'bg-red-100 text-red-600 dark:bg-red-400/15 dark:text-red-300'}`}>
                   <span className={`w-1 h-1 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                   {isDayOpen ? 'Open' : 'Closed'}
                 </span>
-                <span className="text-[10px] text-gray-500 font-medium">
+                <span className="text-[10px] text-gray-500 dark:text-white/45 font-medium">
                   {restaurant?.opening_time && restaurant?.closing_time
                     ? `${restaurant.opening_time} - ${restaurant.closing_time}`
                     : '08:30 - 20:20'}
                 </span>
               </div>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-white/40" />
+          </button>
+
+          {/* Command search (visual affordance — wired to a hint for now) */}
+          <button
+            onClick={() => toast.info('Command search (Ctrl+K) is coming soon.')}
+            className="flex-1 max-w-md flex items-center gap-2.5 h-9 px-3.5 bg-gray-100 dark:bg-white/[0.05] border border-transparent dark:border-white/[0.07] rounded-xl text-sm text-gray-400 dark:text-white/40 hover:border-gray-300 dark:hover:border-white/15 transition-all"
+            title="Search (Ctrl+K)"
+          >
+            <Search className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1 text-left truncate">What do you need today?</span>
+            <kbd className="hidden xl:flex items-center gap-0.5 text-[10px] font-semibold text-gray-400 dark:text-white/35 bg-white dark:bg-white/[0.08] border border-gray-200 dark:border-white/10 rounded-md px-1.5 py-0.5">
+              Ctrl K
+            </kbd>
+          </button>
+
+          {/* Date + daypart session */}
+          <div className="hidden xl:flex items-center gap-2 flex-shrink-0" title={timeLabel}>
+            <CalendarDays className="w-4 h-4 text-gray-400 dark:text-white/40" />
+            <div className="leading-tight">
+              <p className="text-[11px] font-semibold text-gray-700 dark:text-white/80">{dateLabel}</p>
+              <p className="text-[10px] text-gray-400 dark:text-white/40">{sessionName} Session</p>
+            </div>
+          </div>
+
+          {/* Spacer pushes the rest right */}
+          <div className="flex-1" />
+
+          {/* Notifications */}
+          <button
+            onClick={() => navigate('/pos/notifications')}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 dark:text-white/55 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors flex-shrink-0"
+            title="Notifications"
+          >
+            <Bell className="w-[18px] h-[18px]" />
           </button>
 
           {/* Night Shift toggle */}
           <button
             onClick={toggleTheme}
-            className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex-shrink-0"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 dark:text-amber-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors flex-shrink-0"
             data-testid="theme-toggle"
             aria-label={dark ? 'Switch to light mode' : 'Switch to Night Shift'}
             title={dark ? 'Light Mode' : 'Night Shift'}
           >
-            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {dark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
           </button>
 
-          {/* Compact day-status pill (mobile fallback) */}
-          <button
-            onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
-            className={`md:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex-shrink-0 ${
-              isDayOpen
-                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-            }`}
-          >
-            <div className={`w-1.5 h-1.5 rounded-full ${isDayOpen ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="hidden sm:inline">{isDayOpen ? 'Open' : 'Closed'}</span>
-          </button>
-
-          {/* Time (desktop) */}
-          <div className="hidden lg:flex items-center gap-1.5 text-gray-500 text-xs">
-            <CalendarDays className="w-3.5 h-3.5" />
-            <span>{currentTime}</span>
-          </div>
-
-          {/* Profile */}
+          {/* Profile + dropdown */}
           {user && (
-            <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center cursor-pointer" title={user.name}>
-              <span className="text-white font-semibold text-xs">{user.name?.charAt(0).toUpperCase()}</span>
+            <div className="relative group flex-shrink-0">
+              <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
+                <div className="w-8 h-8 bg-gray-900 dark:bg-[#2E9E5B] rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-xs">{user.name?.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="text-left leading-tight hidden xl:block">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-white/40 capitalize">{userRole}</p>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-white/40" />
+              </button>
+              <div className="absolute top-full right-0 mt-1 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-lg py-1.5 w-44 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                {hasAccess('settings') && (
+                  <button onClick={() => navigate('/pos/settings')} className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-all">
+                    <Settings className="w-4 h-4" /> Settings
+                  </button>
+                )}
+                <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 transition-all">
+                  <LogOut className="w-4 h-4" /> Logout
+                </button>
+              </div>
             </div>
           )}
-        </div>
-      </header>
+        </header>
 
-      {/* ──────────── MAIN CONTENT ──────────── */}
-      <main className="flex-1 overflow-auto bg-gray-50/50 pb-16 md:pb-0">
-        <div className="p-3 md:p-5">
-          <Outlet context={{ isDayOpen, currentSession, refreshSession: fetchDaySession }} />
-        </div>
-      </main>
+        {/* ──────────── TOP BAR (mobile / tablet) ──────────── */}
+        <header className="lg:hidden h-14 flex items-center justify-between px-3 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] flex-shrink-0 z-30">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 bg-black dark:bg-white/[0.08] rounded-lg flex items-center justify-center flex-shrink-0">
+              <UtensilsCrossed className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0 leading-tight">
+              <p className="font-heading font-bold text-gray-900 dark:text-white text-xs truncate">{restaurant?.name || 'DineDesk'}</p>
+              <button
+                onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
+                className={`text-[9px] font-bold ${isDayOpen ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
+              >
+                {isDayOpen ? '● Day Open — tap to close' : '● Day Closed — tap to open'}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={toggleTheme}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+              data-testid="theme-toggle"
+              aria-label={dark ? 'Switch to light mode' : 'Switch to Night Shift'}
+            >
+              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setMoreSheetOpen(true)}
+              className="w-8 h-8 rounded-lg bg-black dark:bg-white/[0.08] flex items-center justify-center"
+              aria-label="Open menu"
+            >
+              {user
+                ? <span className="text-white font-semibold text-xs">{user.name?.charAt(0).toUpperCase()}</span>
+                : <Menu className="w-4 h-4 text-white" />}
+            </button>
+          </div>
+        </header>
+
+        {/* ──────────── MAIN CONTENT ──────────── */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-3 md:p-5 pb-24 lg:pb-5">
+            <Outlet context={{ isDayOpen, currentSession, refreshSession: fetchDaySession }} />
+          </div>
+        </main>
+      </div>
 
       {/* ──────────── BOTTOM NAV BAR (mobile only) ──────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40" data-testid="bottom-nav">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#12151B] border-t border-gray-200 dark:border-white/[0.07] z-40" data-testid="bottom-nav">
         <div className="flex items-center justify-around h-16 px-1">
           {bottomTabs.map((item) => {
             const active = isBottomTabActive(item);
@@ -431,13 +509,13 @@ export default function POSLayout() {
                 to={item.to}
                 end={item.exact}
                 className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 transition-all ${
-                  active ? 'text-black' : 'text-gray-400'
+                  active ? 'text-[#217A42] dark:text-[#3FCE85]' : 'text-gray-400 dark:text-white/40'
                 }`}
               >
-                <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-black' : ''}`}>
-                  <item.icon className={`w-5 h-5 ${active ? 'text-white' : ''}`} />
+                <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[#2E9E5B]/10 dark:bg-[#2E9E5B]/20' : ''}`}>
+                  <item.icon className={`w-5 h-5 ${active ? 'text-[#217A42] dark:text-[#3FCE85]' : ''}`} />
                 </div>
-                <span className={`text-[10px] font-medium ${active ? 'text-black' : 'text-gray-400'}`}>
+                <span className={`text-[10px] font-medium ${active ? 'text-[#217A42] dark:text-[#3FCE85]' : 'text-gray-400 dark:text-white/40'}`}>
                   {item.label}
                 </span>
               </NavLink>
@@ -448,13 +526,13 @@ export default function POSLayout() {
           <button
             onClick={() => setMoreSheetOpen(true)}
             className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 transition-all ${
-              moreSheetOpen ? 'text-black' : 'text-gray-400'
+              moreSheetOpen ? 'text-[#217A42] dark:text-[#3FCE85]' : 'text-gray-400 dark:text-white/40'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-all ${moreSheetOpen ? 'bg-black' : ''}`}>
-              <MoreHorizontal className={`w-5 h-5 ${moreSheetOpen ? 'text-white' : ''}`} />
+            <div className={`p-1.5 rounded-xl transition-all ${moreSheetOpen ? 'bg-[#2E9E5B]/10 dark:bg-[#2E9E5B]/20' : ''}`}>
+              <MoreHorizontal className={`w-5 h-5 ${moreSheetOpen ? 'text-[#217A42] dark:text-[#3FCE85]' : ''}`} />
             </div>
-            <span className={`text-[10px] font-medium ${moreSheetOpen ? 'text-black' : 'text-gray-400'}`}>
+            <span className={`text-[10px] font-medium ${moreSheetOpen ? 'text-[#217A42] dark:text-[#3FCE85]' : 'text-gray-400 dark:text-white/40'}`}>
               More
             </span>
           </button>
@@ -463,8 +541,8 @@ export default function POSLayout() {
 
       {/* ──────────── MORE SHEET (mobile) ──────────── */}
       <Sheet open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto bg-white" data-testid="more-sheet">
-          <SheetTitle className="text-base font-heading font-bold text-gray-900 mb-3">Navigation</SheetTitle>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-[#161A20]" data-testid="more-sheet">
+          <SheetTitle className="text-base font-heading font-bold text-gray-900 dark:text-white mb-3">Navigation</SheetTitle>
 
           <div className="space-y-0.5">
             {/* Main nav items */}
@@ -478,16 +556,16 @@ export default function POSLayout() {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-[13px] font-medium ${
                       isActive && unlocked
-                        ? 'bg-black text-white'
+                        ? 'bg-[#2E9E5B] text-white'
                         : unlocked
-                          ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                          : 'text-gray-400 hover:bg-gray-50'
+                          ? 'text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white'
+                          : 'text-gray-400 dark:text-white/35 hover:bg-gray-50 dark:hover:bg-white/[0.04]'
                     }`
                   }
                 >
                   {unlocked ? <item.icon className="w-[18px] h-[18px]" /> : <Lock className="w-[18px] h-[18px] text-amber-500" />}
                   <span>{item.label}</span>
-                  {!unlocked && <span className="ml-auto text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold">PRO</span>}
+                  {!unlocked && <span className="ml-auto text-[9px] bg-amber-100 dark:bg-amber-400/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-semibold">PRO</span>}
                 </NavLink>
               );
             })}
@@ -497,7 +575,7 @@ export default function POSLayout() {
               <div>
                 <button
                   onClick={() => toggleSection('tables')}
-                  className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+                  className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <SquareStack className="w-[18px] h-[18px]" />
@@ -508,7 +586,7 @@ export default function POSLayout() {
                 {expandedSections.tables && (
                   <div className="ml-9 space-y-0.5 mt-0.5">
                     {manageTableItems.map(sub => (
-                      <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-2 rounded-lg text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-500 hover:text-gray-900'}`}>
+                      <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-2 rounded-lg text-[13px] transition-all ${isActive ? 'text-gray-900 dark:text-white font-medium bg-gray-100 dark:bg-white/[0.07]' : 'text-gray-500 dark:text-white/45 hover:text-gray-900 dark:hover:text-white'}`}>
                         {sub.label}
                       </NavLink>
                     ))}
@@ -522,7 +600,7 @@ export default function POSLayout() {
               <div>
                 <button
                   onClick={() => toggleSection('dishes')}
-                  className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+                  className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <UtensilsCrossed className="w-[18px] h-[18px]" />
@@ -533,7 +611,7 @@ export default function POSLayout() {
                 {expandedSections.dishes && (
                   <div className="ml-9 space-y-0.5 mt-0.5">
                     {manageDishItems.map(sub => (
-                      <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-2 rounded-lg text-[13px] transition-all ${isActive ? 'text-black font-medium bg-gray-100' : 'text-gray-500 hover:text-gray-900'}`}>
+                      <NavLink key={sub.to} to={sub.to} className={({ isActive }) => `block px-3 py-2 rounded-lg text-[13px] transition-all ${isActive ? 'text-gray-900 dark:text-white font-medium bg-gray-100 dark:bg-white/[0.07]' : 'text-gray-500 dark:text-white/45 hover:text-gray-900 dark:hover:text-white'}`}>
                         {sub.label}
                       </NavLink>
                     ))}
@@ -548,7 +626,7 @@ export default function POSLayout() {
                 to="/pos/staff"
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-[13px] font-medium ${
-                    isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    isActive ? 'bg-[#2E9E5B] text-white' : 'text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white'
                   }`
                 }
               >
@@ -560,7 +638,7 @@ export default function POSLayout() {
             {/* Night Shift toggle */}
             <button
               onClick={toggleTheme}
-              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
+              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-[13px] font-medium text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white transition-all"
               data-testid="theme-toggle-mobile"
             >
               {dark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
@@ -573,7 +651,7 @@ export default function POSLayout() {
                 to="/pos/settings"
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-[13px] font-medium ${
-                    isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    isActive ? 'bg-[#2E9E5B] text-white' : 'text-gray-600 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white'
                   }`
                 }
               >
@@ -585,7 +663,7 @@ export default function POSLayout() {
             {/* Logout */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-[13px] font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all mt-1 border-t border-gray-100 pt-3"
+              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-[13px] font-medium text-gray-600 dark:text-white/60 hover:bg-red-50 dark:hover:bg-red-400/10 hover:text-red-600 dark:hover:text-red-400 transition-all mt-1 border-t border-gray-100 dark:border-white/[0.06] pt-3"
             >
               <LogOut className="w-[18px] h-[18px]" />
               <span>Logout</span>
@@ -601,12 +679,12 @@ export default function POSLayout() {
         <DialogContent className="rounded-2xl">
           <DialogHeader><DialogTitle className="font-heading text-xl">Open Day</DialogTitle></DialogHeader>
           <div className="py-4">
-            <Label htmlFor="opening-cash" className="text-gray-600">Opening Cash (₹)</Label>
+            <Label htmlFor="opening-cash" className="text-gray-600 dark:text-white/60">Opening Cash (₹)</Label>
             <Input id="opening-cash" type="number" value={openingCash} onChange={(e) => setOpeningCash(e.target.value)} placeholder="Enter opening cash amount" className="mt-2 h-12 rounded-xl" data-testid="opening-cash-input" />
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowDayOpenModal(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleOpenDay} disabled={loading} className="bg-black hover:bg-gray-800 rounded-xl text-white" data-testid="confirm-open-day-btn">
+            <Button onClick={handleOpenDay} disabled={loading} className="bg-gray-900 dark:bg-[#2E9E5B] hover:bg-gray-800 dark:hover:bg-[#288A50] rounded-xl text-white" data-testid="confirm-open-day-btn">
               {loading ? 'Opening...' : 'Open Day'}
             </Button>
           </DialogFooter>
@@ -619,13 +697,13 @@ export default function POSLayout() {
           <DialogHeader><DialogTitle className="font-heading text-xl">Close Day</DialogTitle></DialogHeader>
           <div className="py-4 space-y-4">
             {currentSession && (
-              <div className="bg-gray-50 p-4 rounded-xl space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Opening Cash:</span><span className="font-semibold">₹{currentSession.opening_cash.toFixed(2)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-600">Total Orders:</span><span className="font-semibold">{currentSession.total_orders}</span></div>
+              <div className="bg-gray-50 dark:bg-white/[0.05] p-4 rounded-xl space-y-2">
+                <div className="flex justify-between text-sm"><span className="text-gray-600 dark:text-white/60">Opening Cash:</span><span className="font-semibold text-gray-900 dark:text-white">₹{currentSession.opening_cash.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600 dark:text-white/60">Total Orders:</span><span className="font-semibold text-gray-900 dark:text-white">{currentSession.total_orders}</span></div>
               </div>
             )}
             <div>
-              <Label htmlFor="closing-cash" className="text-gray-600">Closing Cash (₹)</Label>
+              <Label htmlFor="closing-cash" className="text-gray-600 dark:text-white/60">Closing Cash (₹)</Label>
               <Input id="closing-cash" type="number" value={closingCash} onChange={(e) => setClosingCash(e.target.value)} placeholder="Enter closing cash amount" className="mt-2 h-12 rounded-xl" data-testid="closing-cash-input" />
             </div>
           </div>

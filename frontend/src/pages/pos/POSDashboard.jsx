@@ -1,88 +1,52 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI } from '../../lib/api';
+import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI, tableAPI, kdsAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
 import { Skeleton } from '../../components/ui/skeleton';
-import { Switch } from '../../components/ui/switch';
-import { ChefSleeping, ChefCelebrating } from '../../components/illustrations/ChefBot';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '../../components/ui/dialog';
 import {
-  ClipboardList,
-  ShoppingCart,
-  Clock,
-  AlertCircle,
   Printer,
-  Search,
-  Plus,
   ArrowRight,
   TrendingUp,
-  ChevronRight,
   Banknote,
   CreditCard,
   Smartphone,
-  Package, CheckCircle,
-  BarChart3,
+  Clock,
+  CheckCircle,
   UtensilsCrossed,
   Bell,
-  Gauge,
-  MoreVertical,
   MoreHorizontal,
+  Flame,
+  ConciergeBell,
+  CalendarPlus,
+  Receipt,
+  Sparkles,
+  Users,
+  ChevronDown,
+  Maximize2,
+  ArrowRightLeft,
+  AlertTriangle,
+  Package,
+  Timer,
+  CircleDollarSign,
+  Monitor,
+  CalendarDays,
 } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
-} from 'recharts';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#000000', '#374151', '#6B7280', '#9CA3AF'];
+/* ───────── helpers ───────── */
 
 const STATUS_STYLES = {
-  ready: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Ready' },
-  completed: { bg: 'bg-gray-200', text: 'text-gray-700', label: 'Completed' },
-  preparing: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'In Progress' },
-  pending: { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Pending' },
-  cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled' },
+  ready: { bg: 'bg-blue-50 dark:bg-blue-400/10', text: 'text-blue-600 dark:text-blue-300', label: 'Ready' },
+  completed: { bg: 'bg-emerald-50 dark:bg-emerald-400/10', text: 'text-emerald-600 dark:text-emerald-300', label: 'Completed' },
+  preparing: { bg: 'bg-amber-50 dark:bg-amber-400/10', text: 'text-amber-600 dark:text-amber-300', label: 'Preparing' },
+  pending: { bg: 'bg-gray-100 dark:bg-white/[0.07]', text: 'text-gray-600 dark:text-white/60', label: 'Pending' },
+  cancelled: { bg: 'bg-red-50 dark:bg-red-400/10', text: 'text-red-600 dark:text-red-300', label: 'Cancelled' },
 };
-
-// Status -> kitchen progress bar fill (%)
-const STATUS_PROGRESS = {
-  pending: 20,
-  preparing: 60,
-  ready: 85,
-  completed: 100,
-  cancelled: 0,
-};
-
-const TABLE_COLORS = ['bg-black', 'bg-gray-700', 'bg-gray-600', 'bg-gray-800', 'bg-gray-500', 'bg-gray-900'];
-
-function getTableColor(tableNum) {
-  if (!tableNum) return 'bg-slate-500';
-  const hash = String(tableNum).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  return TABLE_COLORS[hash % TABLE_COLORS.length];
-}
-
-function getTableLabel(order) {
-  if (order.table_number) return `T${order.table_number}`;
-  return order.order_type === 'takeaway' ? 'TA' : order.order_type === 'online' ? 'OL' : 'DI';
-}
-
-function getStatusInfo(order) {
-  if (order.status === 'completed' && order.payment_status !== 'paid') {
-    return { ...STATUS_STYLES.completed, sublabel: 'Waiting For Payment' };
-  }
-  const s = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
-  const sublabels = {
-    ready: 'Ready to serve',
-    preparing: 'In the Kitchen',
-    completed: 'Done',
-    pending: 'New order',
-  };
-  return { ...s, sublabel: sublabels[order.status] || '' };
-}
 
 function getOrderTime(order) {
   try {
@@ -92,41 +56,90 @@ function getOrderTime(order) {
   }
 }
 
+function minutesSince(dateStr) {
+  try { return Math.max(0, Math.round((Date.now() - new Date(dateStr).getTime()) / 60000)); }
+  catch { return 0; }
+}
+
+/* Live floor tile colors per table state (reference palette) */
+function tableVisual(table, order) {
+  if (order && order.status === 'ready') {
+    return { ring: 'ring-blue-500/70 bg-blue-50 dark:bg-blue-500/15', dot: 'bg-blue-500', label: 'Ready', chip: 'bg-blue-500' };
+  }
+  if (order && order.payment_status !== 'paid' && order.status === 'completed') {
+    return { ring: 'ring-red-500/70 bg-red-50 dark:bg-red-500/15', dot: 'bg-red-500', label: 'Payment', chip: 'bg-red-500' };
+  }
+  if (order && (order.status === 'pending' || order.status === 'preparing')) {
+    return { ring: 'ring-[#2E9E5B]/70 bg-emerald-50 dark:bg-emerald-500/15', dot: 'bg-[#2E9E5B]', label: order.status === 'preparing' ? 'Preparing' : 'Seated', chip: 'bg-[#2E9E5B]' };
+  }
+  if (table.status === 'reserved') {
+    return { ring: 'ring-blue-400/60 bg-blue-50/60 dark:bg-blue-400/10', dot: 'bg-blue-400', label: 'Reserved', chip: 'bg-blue-400' };
+  }
+  if (table.status === 'occupied') {
+    return { ring: 'ring-[#2E9E5B]/50 bg-emerald-50/70 dark:bg-emerald-500/10', dot: 'bg-[#2E9E5B]', label: 'Dining', chip: 'bg-[#2E9E5B]' };
+  }
+  return { ring: 'ring-gray-300/70 dark:ring-white/15 bg-gray-100 dark:bg-white/[0.05]', dot: 'bg-gray-400 dark:bg-white/30', label: 'Available', chip: 'bg-gray-400 dark:bg-white/30' };
+}
+
+/* Mini sparkline (metric cards) */
+function Spark({ data, color = '#2E9E5B' }) {
+  if (!data || data.length < 2) return null;
+  return (
+    <div className="w-16 h-8 flex-shrink-0" aria-hidden="true">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`spark-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#spark-${color.replace('#', '')})`} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONTROL ROOM DASHBOARD
+   ═══════════════════════════════════════════════════════ */
 export default function POSDashboard() {
-  const { restaurant } = useAuth();
-  const { isDayOpen, currentSession } = useOutletContext();
+  const { user, restaurant } = useAuth();
+  const { isDayOpen } = useOutletContext();
   const navigate = useNavigate();
+
   const [analytics, setAnalytics] = useState(null);
   const [todayOrders, setTodayOrders] = useState([]);
   const [sessionHistory, setSessionHistory] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [orderSearch, setOrderSearch] = useState('');
-  const [paymentSearch, setPaymentSearch] = useState('');
-  const [orderFilter, setOrderFilter] = useState('all');
+
+  const [mapTab, setMapTab] = useState('floor');
+  const [selectedTableId, setSelectedTableId] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [receiptData, setReceiptData] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showOrdersDetail, setShowOrdersDetail] = useState(false);
-  const [rightTab, setRightTab] = useState('payment');
-  const [showOutOfStock, setShowOutOfStock] = useState(false);
-  const [showLowStock, setShowLowStock] = useState(false);
   const receiptRef = useRef(null);
 
   useEffect(() => { fetchData(); }, [isDayOpen]);
 
   const fetchData = async () => {
     try {
-      const [analyticsRes, ordersRes, historyRes, inventoryRes] = await Promise.all([
+      const [analyticsRes, ordersRes, historyRes, inventoryRes, tablesRes] = await Promise.all([
         analyticsAPI.get().catch(() => ({ data: null })),
         orderAPI.getToday().catch(() => ({ data: [] })),
         daySessionAPI.getHistory().catch(() => ({ data: [] })),
         inventoryAPI.getAll(true).catch(() => ({ data: [] })),
+        tableAPI.getAll().catch(() => ({ data: [] })),
       ]);
       setAnalytics(analyticsRes.data);
-      setTodayOrders(ordersRes.data);
-      setSessionHistory(historyRes.data);
+      setTodayOrders(ordersRes.data || []);
+      setSessionHistory(historyRes.data || []);
       setLowStockItems(inventoryRes.data || []);
+      setTables(tablesRes.data || []);
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     } finally {
@@ -134,48 +147,118 @@ export default function POSDashboard() {
     }
   };
 
-  // Computed stats
-  const newOrders = todayOrders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
-  const totalOrders = todayOrders.length;
-  const waitingList = todayOrders.filter(o => o.status === 'ready' || o.status === 'preparing').length;
+  /* ── derived stats ── */
+  const activeOrders = todayOrders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status));
+  const unpaidCompleted = todayOrders.filter(o => o.status === 'completed' && o.payment_status !== 'paid');
+  const preparingOrders = todayOrders.filter(o => o.status === 'preparing' || o.status === 'pending');
+  const readyOrders = todayOrders.filter(o => o.status === 'ready');
+  const delayedOrders = activeOrders.filter(o => minutesSince(o.created_at) > 10 && o.status !== 'ready');
 
-  // Inventory split: quantity === 0 -> out of stock; rest -> low stock
+  const occupiedTables = tables.filter(t => t.status === 'occupied' || (todayOrders.some(o => String(o.table_number) === String(t.table_number) && ['pending', 'preparing', 'ready'].includes(o.status))));
+  const occupancyPct = tables.length > 0 ? Math.round((occupiedTables.length / tables.length) * 100) : 0;
+
   const outOfStockItems = lowStockItems.filter(i => (i.quantity ?? 0) <= 0);
   const lowStockOnly = lowStockItems.filter(i => (i.quantity ?? 0) > 0);
 
-  // Filtered order list
-  const filteredOrders = useMemo(() => {
-    let list = [...todayOrders];
-    if (orderFilter === 'process') list = list.filter(o => o.status === 'pending' || o.status === 'preparing' || o.status === 'ready');
-    if (orderFilter === 'completed') list = list.filter(o => o.status === 'completed');
-    if (orderFilter === 'takeaway') list = list.filter(o => o.order_type === 'takeaway');
-    if (orderFilter === 'dinein') list = list.filter(o => o.order_type === 'dine_in');
-    if (orderSearch.trim()) {
-      const q = orderSearch.toLowerCase();
-      list = list.filter(o =>
-        (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
-        (o.table_number && String(o.table_number).includes(q)) ||
-        (o.order_number && String(o.order_number).toLowerCase().includes(q)) ||
-        (o.id && o.id.toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [todayOrders, orderFilter, orderSearch]);
+  const salesHistory = sessionHistory.slice(0, 7).reverse().map(s => ({ date: s.date, v: s.total_sales }));
+  const ordersHistory = sessionHistory.slice(0, 7).reverse().map(s => ({ date: s.date, v: s.total_orders }));
+  const lastSales = salesHistory[salesHistory.length - 1]?.v ?? 0;
+  const prevSales = salesHistory[salesHistory.length - 2]?.v ?? 0;
+  const salesDelta = prevSales > 0 ? Math.round(((lastSales - prevSales) / prevSales) * 100) : null;
+  const lastOrdersCount = ordersHistory[ordersHistory.length - 1]?.v ?? 0;
+  const prevOrdersCount = ordersHistory[ordersHistory.length - 2]?.v ?? 0;
+  const ordersDelta = prevOrdersCount > 0 ? Math.round(((lastOrdersCount - prevOrdersCount) / prevOrdersCount) * 100) : null;
 
-  // Payment list (unpaid orders)
-  const paymentOrders = useMemo(() => {
-    let list = todayOrders.filter(o => o.payment_status !== 'paid' && o.status !== 'cancelled');
-    if (paymentSearch.trim()) {
-      const q = paymentSearch.toLowerCase();
-      list = list.filter(o =>
-        (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
-        (o.order_number && String(o.order_number).toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [todayOrders, paymentSearch]);
+  const hasData = todayOrders.length > 0 || tables.length > 0 || lastSales > 0;
 
-  const handleViewReceipt = async (order) => {
+  /* Kitchen health line under the greeting */
+  const attentionCount = delayedOrders.length + unpaidCompleted.length + outOfStockItems.length + lowStockOnly.length;
+  const kitchenLine = preparingOrders.length > 0
+    ? `kitchen is cooking ${preparingOrders.length} order${preparingOrders.length > 1 ? 's' : ''}`
+    : readyOrders.length > 0
+      ? `${readyOrders.length} order${readyOrders.length > 1 ? 's' : ''} ready to serve`
+      : 'kitchen running normally';
+
+  /* ── Attention Now items (real data only) ── */
+  const attentionItems = useMemo(() => {
+    const items = [];
+    delayedOrders.slice(0, 2).forEach(o => items.push({
+      key: `delay-${o.id}`,
+      icon: Flame,
+      tone: 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-400/10',
+      title: o.table_number ? `Table ${o.table_number}` : `Order #${o.order_number}`,
+      desc: `Order waiting for ${minutesSince(o.created_at)} min`,
+      action: 'View',
+      testid: 'attention-delayed-order',
+      run: () => openReceipt(o),
+    }));
+    preparingOrders.slice(0, 1).forEach(o => items.push({
+      key: `kot-${o.id}`,
+      icon: ConciergeBell,
+      tone: 'text-amber-500 dark:text-amber-300 bg-amber-50 dark:bg-amber-400/10',
+      title: `Order #${o.order_number}`,
+      desc: 'In the kitchen now',
+      action: 'Mark Ready',
+      testid: 'attention-kot-ready',
+      run: async () => {
+        try {
+          await kdsAPI.updateStatus(o.id, 'ready');
+          toast.success(`Order #${o.order_number} marked ready`);
+          fetchData();
+        } catch { toast.error('Could not update the order'); }
+      },
+    }));
+    unpaidCompleted.slice(0, 1).forEach(o => items.push({
+      key: `pay-${o.id}`,
+      icon: CircleDollarSign,
+      tone: 'text-blue-500 dark:text-blue-300 bg-blue-50 dark:bg-blue-400/10',
+      title: o.table_number ? `Table ${o.table_number}` : `Order #${o.order_number}`,
+      desc: 'Payment pending',
+      action: 'Take Payment',
+      testid: 'attention-payment-pending',
+      run: () => navigate('/pos/order-management'),
+    }));
+    if (outOfStockItems.length > 0) items.push({
+      key: 'oos',
+      icon: Package,
+      tone: 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-400/10',
+      title: outOfStockItems[0].name,
+      desc: outOfStockItems.length > 1 ? `Out of stock + ${outOfStockItems.length - 1} more item${outOfStockItems.length > 2 ? 's' : ''}` : 'Out of stock',
+      action: 'Restock',
+      testid: 'attention-out-of-stock',
+      run: () => navigate('/pos/inventory'),
+    });
+    if (lowStockOnly.length > 0) items.push({
+      key: 'low',
+      icon: AlertTriangle,
+      tone: 'text-amber-500 dark:text-amber-300 bg-amber-50 dark:bg-amber-400/10',
+      title: lowStockOnly[0].name,
+      desc: `Low stock (${lowStockOnly[0].quantity} ${lowStockOnly[0].unit || 'left'})`,
+      action: 'Restock',
+      testid: 'attention-low-stock',
+      run: () => navigate('/pos/inventory'),
+    });
+    return items.slice(0, 5);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayOrders, lowStockItems]);
+
+  /* ── Service Flow (real counts) ── */
+  const avgKitchenMin = preparingOrders.length > 0
+    ? Math.round(preparingOrders.reduce((a, o) => a + minutesSince(o.created_at), 0) / preparingOrders.length)
+    : 0;
+  const avgServeMin = readyOrders.length > 0
+    ? Math.round(readyOrders.reduce((a, o) => a + minutesSince(o.created_at), 0) / readyOrders.length)
+    : 0;
+
+  /* ── table <-> order join ── */
+  const orderForTable = (table) =>
+    todayOrders.find(o => String(o.table_number) === String(table.table_number) && ['pending', 'preparing', 'ready', 'completed'].includes(o.status));
+
+  const selectedTable = tables.find(t => t.id === selectedTableId) || null;
+  const selectedTableOrder = selectedTable ? orderForTable(selectedTable) : null;
+
+  /* ── receipt (preserved logic) ── */
+  const openReceipt = async (order) => {
     setSelectedOrder(order);
     try {
       const rcpt = await receiptAPI.get(order.id);
@@ -187,7 +270,7 @@ export default function POSDashboard() {
   };
 
   const handlePrintReceipt = () => {
-    if (!receiptRef.current) return;
+    if (!receiptRef?.current) return;
     const win = window.open('', '_blank', 'width=320,height=600');
     if (!win) return;
     const style = win.document.createElement('style');
@@ -198,320 +281,366 @@ export default function POSDashboard() {
     win.print();
   };
 
-  const salesChartData = sessionHistory.slice(0, 7).reverse().map(s => ({ date: s.date, sales: s.total_sales, orders: s.total_orders }));
-  const lastSales = salesChartData[salesChartData.length - 1]?.sales || 0;
-  const prevSales = salesChartData[salesChartData.length - 2]?.sales || 0;
-  const salesDelta = prevSales > 0 ? Math.round(((lastSales - prevSales) / prevSales) * 100) : null;
-  const orderTypeData = analytics?.order_type_breakdown
-    ? Object.entries(analytics.order_type_breakdown).map(([name, value]) => ({ name: name.replace('_', ' ').toUpperCase(), value }))
-    : [];
+  /* ── greeting ── */
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = (user?.name || 'Chef').split(' ')[0];
+  const dateLabel = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
+  /* ═════════ SKELETON ═════════ */
   if (loading) {
     return (
       <div className="space-y-5 animate-fade-in" data-testid="pos-dashboard-skeleton">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Skeleton className="h-28 rounded-xl" />
-          <Skeleton className="h-28 rounded-xl" />
-          <Skeleton className="h-28 rounded-xl" />
-          <Skeleton className="h-28 rounded-xl" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-7"><Skeleton className="h-80 rounded-xl" /></div>
-          <div className="lg:col-span-5 space-y-5"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+          <Skeleton className="h-20 w-72 rounded-2xl" />
+          <div className="grid grid-cols-3 gap-3 flex-1 max-w-xl"><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-20 rounded-2xl" /></div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Skeleton className="h-64 rounded-xl lg:col-span-2" />
-          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-96 rounded-2xl lg:col-span-2" />
+          <div className="space-y-4"><Skeleton className="h-44 rounded-2xl" /><Skeleton className="h-72 rounded-2xl" /></div>
         </div>
+        <Skeleton className="h-28 rounded-2xl" />
       </div>
     );
   }
 
+  /* ═════════ RENDER ═════════ */
   return (
-    <div className="space-y-5 animate-fade-in" data-testid="pos-dashboard">
-      {/* Day Status Alert */}
-      {!isDayOpen && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 flex items-center gap-4 animate-fade-in">
-          <ChefSleeping className="w-20 h-20 flex-shrink-0" />
-          <div>
-            <p className="font-heading font-bold text-amber-900 text-lg">Day Not Open</p>
-            <p className="text-sm text-amber-700 mt-0.5">Open the day to start taking orders. Chef is sleeping! 😴</p>
+    <div className="space-y-5 animate-fade-in max-w-[1400px]" data-testid="pos-dashboard">
+
+      {/* ═══ GREETING + METRICS ═══ */}
+      <div className="flex flex-col lg:flex-row lg:items-stretch gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="font-heading-xl text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+            {greeting}, {firstName} <span aria-hidden="true">🌱</span>
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-white/50 mt-1.5 flex items-center gap-2 flex-wrap">
+            <span>
+              {tables.length > 0
+                ? `${occupiedTables.length} table${occupiedTables.length !== 1 ? 's' : ''} active · ${attentionCount} thing${attentionCount !== 1 ? 's' : ''} need attention · ${kitchenLine}`
+                : `${kitchenLine} · add tables from the Tables page to see your floor`}
+            </span>
+            <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${hasData ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-white/45'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${hasData ? 'bg-emerald-500 animate-calm-pulse' : 'bg-gray-400'}`} />
+              {hasData ? 'Live data' : 'No service yet'}
+            </span>
+          </p>
+        </div>
+
+        {/* Metric cards */}
+        <div className="grid grid-cols-3 gap-3 lg:w-[440px] flex-shrink-0">
+          {/* Sales today */}
+          <button
+            onClick={() => navigate('/pos/analytics')}
+            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark transition-all"
+            data-testid="sales-today-card"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center"><Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-300" /></div>
+              <Spark data={salesHistory} />
+            </div>
+            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">₹{(analytics?.daily_sales ?? lastSales ?? 0).toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
+              Sales today
+              {salesDelta !== null && <span className={`font-bold ${salesDelta >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>↑ {salesDelta >= 0 ? '+' : ''}{salesDelta}%</span>}
+            </p>
+          </button>
+
+          {/* Active orders */}
+          <button
+            onClick={() => setShowOrdersDetail(true)}
+            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark transition-all"
+            data-testid="active-orders-card"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center"><Users className="w-4 h-4 text-blue-600 dark:text-blue-300" /></div>
+              <Spark data={ordersHistory} color="#3B82F6" />
+            </div>
+            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">{activeOrders.length}</p>
+            <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
+              Active orders
+              {ordersDelta !== null && <span className={`font-bold ${ordersDelta >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>↑ {ordersDelta >= 0 ? '+' : ''}{ordersDelta}%</span>}
+            </p>
+          </button>
+
+          {/* Tables occupied */}
+          <div
+            className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5"
+            data-testid="tables-occupied-card"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-white/[0.06] flex items-center justify-center"><Monitor className="w-4 h-4 text-gray-500 dark:text-white/50" /></div>
+              <Spark data={ordersHistory} color="#6B7280" />
+            </div>
+            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">{occupiedTables.length} / {tables.length}</p>
+            <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
+              Tables occupied
+              {tables.length > 0 && <span className="font-bold text-emerald-500">{occupancyPct}%</span>}
+            </p>
           </div>
+        </div>
+      </div>
+
+      {/* ═══ DAY CLOSED NOTE (replaces old amber banner — calm, actionable) ═══ */}
+      {!isDayOpen && (
+        <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] border border-amber-200/70 dark:border-amber-400/20 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm">
+          <Timer className="w-5 h-5 text-amber-500 flex-shrink-0" />
+          <p className="text-amber-800 dark:text-amber-200 flex-1 min-w-0">Day is not open yet — open the day from the restaurant card above to start taking orders.</p>
         </div>
       )}
 
-      {/* === ROW 1: Stats Cards === */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* New Orders */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 hover-lift" data-testid="new-orders-card">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-slate-500">New Orders</p>
-            <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center relative">
-              <Bell className="w-5 h-5 text-emerald-600" />
-              {newOrders > 0 && (<span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-bounce-in">{newOrders}</span>)}
-            </div>
-          </div>
-          <p className="font-numbers text-3xl font-bold text-slate-900">{newOrders}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Updated 5s ago</p>
-        </div>
+      {/* ═══ MAP + RIGHT RAIL ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* Total Orders */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 hover-lift cursor-pointer" onClick={() => setShowOrdersDetail(true)} data-testid="todays-orders-card">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-slate-500">Total Orders</p>
-            <div className="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
-            </div>
-          </div>
-          <p className="font-numbers text-3xl font-bold text-slate-900">{totalOrders}</p>
-          <p className="text-[11px] text-blue-500 mt-1 font-medium flex items-center gap-1">View Details <ChevronRight className="w-3 h-3" /></p>
-        </div>
-
-        {/* Active Orders */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 hover-lift" data-testid="active-orders-card">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-slate-500">Active Orders</p>
-            <div className="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
-              <Gauge className="w-5 h-5 text-amber-600" />
-            </div>
-          </div>
-          <p className="font-numbers text-3xl font-bold text-slate-900">{waitingList}</p>
-          <p className="text-[11px] text-slate-400 mt-1">To Kitchen</p>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 p-5 flex flex-col justify-center gap-2.5" data-testid="quick-actions-card">
-          <p className="text-sm font-medium text-slate-500 mb-1">Quick Actions</p>
-          <button onClick={() => navigate('/pos/orders')} className="w-full py-2.5 rounded-xl border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
-            <Plus className="w-3.5 h-3.5" /> CREATE NEW ORDER
-          </button>
-          <button onClick={() => navigate('/pos/tables')} className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
-            <Plus className="w-3.5 h-3.5" /> RESERVATION
-          </button>
-        </div>
-      </div>
-
-      {/* === ROW 2: Order List + Right Rail === */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Order List Panel */}
-        <Card className="lg:col-span-7 border-slate-200/60 bg-white rounded-2xl" data-testid="order-list-panel">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-heading font-bold text-slate-900 text-base">Order List</h3>
-              <button className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors" aria-label="Order list options">
-                <MoreHorizontal className="w-4.5 h-4.5" />
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-3">
-              <Input
-                placeholder="Search a Order"
-                value={orderSearch}
-                onChange={e => setOrderSearch(e.target.value)}
-                className="pl-3 pr-9 h-9 rounded-xl bg-slate-50 border-slate-200 text-sm"
-                data-testid="order-search-input"
-              />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            </div>
-
-            {/* Filter Pills */}
-            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
-              {[
-                { key: 'all', label: 'All', icon: ClipboardList },
-                { key: 'process', label: 'On Process', icon: Clock },
-                { key: 'completed', label: 'Completed', icon: CheckCircle },
-                { key: 'takeaway', label: 'Takeaway', icon: Package },
-                { key: 'dinein', label: 'Dine-In', icon: UtensilsCrossed },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setOrderFilter(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
-                    orderFilter === tab.key
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-                  }`}
-                  data-testid={`order-filter-${tab.key}`}
-                >
-                  <tab.icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Order Card Grid (2-col like reference) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[420px] overflow-y-auto pr-1">
-              {filteredOrders.length === 0 ? (
-                <p className="text-slate-400 text-sm text-center py-6 col-span-full">No orders found</p>
-              ) : (
-                filteredOrders.map(order => {
-                  const status = getStatusInfo(order);
-                  const label = getTableLabel(order);
-                  const color = getTableColor(order.table_number || order.order_type);
-                  const progress = STATUS_PROGRESS[order.status] ?? 20;
-                  return (
-                    <div
-                      key={order.id}
-                      className="relative border border-slate-200/70 rounded-2xl p-3 hover:border-slate-400 hover:shadow-card transition-all cursor-pointer bg-white"
-                      onClick={() => handleViewReceipt(order)}
-                      data-testid={`order-row-${order.id}`}
+        {/* ── LIVE SERVICE MAP ── */}
+        <Card className="lg:col-span-2 bg-white dark:bg-[#12151B] border-gray-200 dark:border-white/[0.07] rounded-2xl" data-testid="live-service-map">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+              <div>
+                <h2 className="font-heading font-bold text-gray-900 dark:text-white text-lg leading-tight">Live Service Map</h2>
+                <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">Your restaurant. In real time.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Tabs */}
+                <div className="flex bg-gray-100 dark:bg-white/[0.06] rounded-xl p-1">
+                  {[
+                    { key: 'floor', label: 'Floor' },
+                    { key: 'orders', label: 'Orders' },
+                    { key: 'kitchen', label: 'Kitchen' },
+                  ].map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => { setMapTab(t.key); setSelectedTableId(null); }}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${mapTab === t.key ? 'bg-[#2E9E5B] text-white shadow-sm' : 'text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white'}`}
+                      data-testid={`map-tab-${t.key}`}
                     >
-                      {/* Kebab */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleViewReceipt(order); }}
-                        className="absolute top-2.5 right-2.5 w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                        aria-label="Order actions"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-
-                      {/* Title row */}
-                      <div className="flex items-center gap-2 mb-2 pr-6">
-                        <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-white font-bold text-[11px]">{label}</span>
-                        </div>
-                        <span className="font-semibold text-sm text-slate-900 truncate">
-                          {order.customer_name || `Order ${order.order_number}`}
-                        </span>
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="relative h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2.5">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${order.status === 'cancelled' ? 'bg-red-400' : order.status === 'completed' ? 'bg-emerald-500' : 'bg-slate-900'}`}
-                          style={{ width: `${progress}%` }}
-                        />
-                        <span className="absolute right-1.5 -top-0.5 font-numbers text-[9px] text-slate-500">{progress}</span>
-                      </div>
-
-                      {/* Meta row */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`w-5 h-5 ${color} rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0`}>
-                            {(order.customer_name || 'G').slice(0, 2).toUpperCase()}
-                          </span>
-                          <span className="text-[11px] text-slate-500 truncate">
-                            Customer {order.customer_name ? order.customer_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className="text-[10px] text-slate-400">Order Time: {getOrderTime(order)}</span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${status.bg} ${status.text}`}>{status.label}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+
+            {/* FLOOR */}
+            {mapTab === 'floor' && (
+              tables.length === 0 ? (
+                <div className="py-14 text-center" data-testid="floor-empty">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-3"><Monitor className="w-7 h-7 text-gray-400 dark:text-white/30" /></div>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No tables yet</p>
+                  <p className="text-xs text-gray-400 dark:text-white/40 mt-1 mb-4">Add your tables to see the live floor here.</p>
+                  <button onClick={() => navigate('/pos/tables')} className="px-4 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all">Go to Tables</button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5" data-testid="floor-grid">
+                    {tables.map((table) => {
+                      const order = orderForTable(table);
+                      const vis = tableVisual(table, order);
+                      const mins = order ? minutesSince(order.created_at) : null;
+                      const isSelected = selectedTableId === table.id;
+                      return (
+                        <button
+                          key={table.id}
+                          onClick={() => setSelectedTableId(isSelected ? null : table.id)}
+                          className={`relative rounded-2xl p-2.5 ring-1 ${vis.ring} text-left transition-all hover:scale-[1.03] ${isSelected ? 'ring-2 ring-gray-900 dark:ring-white scale-[1.03] shadow-lg' : ''}`}
+                          data-testid={`floor-table-${table.table_number}`}
+                        >
+                          <p className="font-numbers font-bold text-sm text-gray-900 dark:text-white leading-none">T{String(table.table_number).padStart(2, '0')}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-white/40 leading-none mt-1.5">{table.capacity} seats</p>
+                          <div className="flex items-center gap-1.5 mt-2.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${vis.chip}`} />
+                            <span className="text-[10px] font-bold text-gray-700 dark:text-white/70 leading-none">{vis.label}</span>
+                          </div>
+                          {mins !== null && ['pending', 'preparing', 'ready'].includes(order.status) && (
+                            <p className="font-numbers text-[10px] text-gray-500 dark:text-white/45 leading-none mt-1">{mins} min</p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Kitchen queue strip */}
+                  {(preparingOrders.length > 0 || readyOrders.length > 0) && (
+                    <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1" data-testid="kitchen-queue">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-white/35 uppercase tracking-wider flex-shrink-0">Kitchen →</span>
+                      {[...preparingOrders, ...readyOrders].slice(0, 5).map(o => {
+                        const st = STATUS_STYLES[o.status] || STATUS_STYLES.pending;
+                        return (
+                          <button key={o.id} onClick={() => openReceipt(o)} className={`flex items-center gap-2 flex-shrink-0 px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/[0.07] ${st.bg} hover:shadow-sm transition-all`}>
+                            <span className="font-numbers text-xs font-bold text-gray-900 dark:text-white">#{o.order_number}</span>
+                            <span className={`text-[9px] font-bold ${st.text}`}>{st.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Table popover */}
+                  {selectedTable && (
+                    <div className="mt-4 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 animate-fade-in" data-testid="table-detail">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <p className="font-heading font-bold text-gray-900 dark:text-white">Table {String(selectedTable.table_number).padStart(2, '0')}</p>
+                          {(() => {
+                            const vis = tableVisual(selectedTable, selectedTableOrder);
+                            return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${vis.ring} text-gray-700 dark:text-white/80`}>{vis.label}</span>;
+                          })()}
+                        </div>
+                        {selectedTableOrder && ['pending', 'preparing', 'ready'].includes(selectedTableOrder.status) && (
+                          <p className="font-numbers text-sm font-bold text-amber-600 dark:text-amber-300">{minutesSince(selectedTableOrder.created_at)} min</p>
+                        )}
+                      </div>
+
+                      {selectedTableOrder ? (
+                        <>
+                          <div className="flex items-center gap-2 mb-2.5 text-xs text-gray-500 dark:text-white/45">
+                            <span>Up to {selectedTable.capacity} guests</span>
+                            {selectedTableOrder.order_type === 'dine_in' && <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-white/[0.08] rounded-md font-semibold text-gray-600 dark:text-white/60">Dine-In</span>}
+                            <span>· {getOrderTime(selectedTableOrder)}</span>
+                          </div>
+                          <div className="space-y-1 mb-3">
+                            {(selectedTableOrder.items || []).slice(0, 4).map((item, i) => (
+                              <div key={`${item.name}-${i}`} className="flex items-center justify-between text-xs">
+                                <span className="text-gray-700 dark:text-white/70"><span className="font-semibold">{item.quantity} ×</span> {item.name}</span>
+                                <span className="font-numbers text-gray-900 dark:text-white/80">₹{item.total?.toFixed(0)}</span>
+                              </div>
+                            ))}
+                            {(selectedTableOrder.items || []).length === 0 && <p className="text-xs text-gray-400 dark:text-white/35">No item details on this order.</p>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-numbers text-base font-bold text-gray-900 dark:text-white mr-auto">₹{selectedTableOrder.total_amount?.toFixed(0)}</p>
+                            <button onClick={() => navigate('/pos/orders')} className="px-3.5 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all" data-testid="table-open-order">Open Order</button>
+                            <button onClick={() => openReceipt(selectedTableOrder)} className="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/15 text-gray-700 dark:text-white/70 text-xs font-bold hover:bg-white dark:hover:bg-white/[0.06] transition-all">View Bill</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-500 dark:text-white/45 flex-1">This table is free right now.</p>
+                          <button onClick={() => navigate('/pos/orders')} className="px-3.5 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all">New Order Here</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+
+            {/* ORDERS */}
+            {mapTab === 'orders' && (
+              todayOrders.length === 0 ? (
+                <div className="py-14 text-center" data-testid="orders-tab-empty">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-3"><Receipt className="w-7 h-7 text-gray-400 dark:text-white/30" /></div>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No orders yet</p>
+                  <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Your first order today will appear here.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-[340px] overflow-y-auto pr-1" data-testid="orders-tab-grid">
+                  {todayOrders.map(order => {
+                    const st = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
+                    return (
+                      <button key={order.id} onClick={() => openReceipt(order)} className={`text-left rounded-2xl border border-gray-200 dark:border-white/[0.07] p-3 ${st.bg} hover:shadow-sm transition-all`} data-testid={`order-row-${order.id}`}>
+                        <p className="font-numbers font-bold text-base text-gray-900 dark:text-white leading-none">#{order.order_number}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-white/45 mt-1.5 leading-none">{order.table_number ? `Table ${order.table_number}` : (order.order_type || '').replace('_', ' ')} · {getOrderTime(order)}</p>
+                        <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-2.5 ${st.bg} ${st.text}`}>{st.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {/* KITCHEN */}
+            {mapTab === 'kitchen' && (
+              preparingOrders.length === 0 && readyOrders.length === 0 ? (
+                <div className="py-14 text-center" data-testid="kitchen-tab-empty">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mx-auto mb-3"><CheckCircle className="w-7 h-7 text-emerald-500" /></div>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-white/70">Kitchen all clear</p>
+                  <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Nothing cooking or waiting right now.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5" data-testid="kitchen-tab-grid">
+                  {[...preparingOrders, ...readyOrders].map(order => {
+                    const st = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
+                    const mins = minutesSince(order.created_at);
+                    const late = mins > 10 && order.status !== 'ready';
+                    return (
+                      <button key={order.id} onClick={() => openReceipt(order)} className={`text-left rounded-2xl border p-3.5 transition-all hover:shadow-sm ${late ? 'border-red-300 dark:border-red-400/40 bg-red-50 dark:bg-red-400/10' : 'border-gray-200 dark:border-white/[0.07] bg-gray-50 dark:bg-white/[0.04]'}`}>
+                        <div className="flex items-center justify-between">
+                          <p className="font-numbers font-bold text-lg text-gray-900 dark:text-white leading-none">#{order.order_number}</p>
+                          <span className={`font-numbers text-xs font-bold ${late ? 'text-red-500' : 'text-gray-500 dark:text-white/45'}`}>{mins} min</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 dark:text-white/45 mt-1.5">{order.table_number ? `Table ${order.table_number}` : (order.order_type || '').replace('_', ' ')} · {(order.items || []).length} items</p>
+                        <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 ${st.bg} ${st.text}`}>{st.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )
+            )}
           </CardContent>
         </Card>
 
-        {/* RIGHT: Stacked Panels */}
-        <div className="lg:col-span-5 space-y-5">
+        {/* ── RIGHT RAIL ── */}
+        <div className="space-y-4">
 
-          {/* Payments & Popular Items */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="payments-popular-panel">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-bold text-slate-900 text-base">Payments &amp; Popular Items</h3>
-            </div>
-            {/* Tab row like reference: Payment | Popular Dishes | View All */}
-            <div className="flex items-center gap-4 border-b border-slate-100 mb-4">
-              <button
-                onClick={() => setRightTab('payment')}
-                className={`pb-2 text-xs font-semibold border-b-2 -mb-px transition-colors ${rightTab === 'payment' ? 'text-slate-900 border-slate-900' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
-              >
-                Payment
+          {/* Quick Capture */}
+          <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4" data-testid="quick-actions-card">
+            <h3 className="font-heading font-bold text-gray-900 dark:text-white text-base mb-3">Quick Capture</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => navigate('/pos/orders')} className="col-span-2 flex items-center gap-3 p-3 rounded-xl bg-[#2E9E5B] text-white hover:brightness-105 active:scale-[0.98] transition-all" data-testid="quick-new-order">
+                <span className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0"><Monitor className="w-5 h-5" /></span>
+                <span className="text-sm font-bold">New Order</span>
               </button>
-              <button
-                onClick={() => setRightTab('popular')}
-                className={`pb-2 text-xs font-semibold border-b-2 -mb-px transition-colors ${rightTab === 'popular' ? 'text-slate-900 border-slate-900' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
-              >
-                Popular Dishes
+              <button onClick={() => navigate('/pos/tables')} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] transition-all" data-testid="quick-reservation">
+                <CalendarPlus className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
+                <span className="text-[11px] font-bold text-gray-700 dark:text-white/70">Reservation</span>
               </button>
-              <button onClick={() => navigate('/pos/analytics')} className="ml-auto pb-2 text-[11px] text-slate-500 font-semibold hover:text-black transition-colors">View All</button>
+              <button onClick={() => toast.info('Expense tracking arrives with the Wallet upgrade.')} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] transition-all" data-testid="quick-expense">
+                <Receipt className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
+                <span className="text-[11px] font-bold text-gray-700 dark:text-white/70">Expense</span>
+              </button>
+              <button onClick={() => navigate('/pos/kds')} className="col-span-2 flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] transition-all" data-testid="quick-kot">
+                <UtensilsCrossed className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
+                <span className="text-[13px] font-bold text-gray-700 dark:text-white/70">KOT · Kitchen tickets</span>
+              </button>
             </div>
-            {rightTab === 'payment' ? (
-              paymentOrders.length === 0 ? (
-                <div className="text-center py-6"><div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><Banknote className="w-8 h-8 text-emerald-500" /></div><p className="text-sm text-slate-500 font-medium">No pending payments</p></div>
-              ) : (
-                <div className="space-y-2 max-h-[180px] overflow-y-auto">
-                  {paymentOrders.map(order => (
-                    <div key={order.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center"><span className="text-xs font-bold text-slate-600">{getTableLabel(order)}</span></div>
-                        <div><p className="text-sm font-semibold text-slate-900">{order.customer_name || 'Guest'}</p><p className="text-[10px] text-slate-400">#{order.order_number}</p></div>
-                      </div>
-                      <button onClick={(e) => { e.stopPropagation(); handleViewReceipt(order); }} className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all active:scale-[0.97]">Pay <ArrowRight className="w-3 h-3" /></button>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              analytics?.top_items && analytics.top_items.length > 0 ? (
-                <div className="space-y-2.5">
-                  {analytics.top_items.slice(0, 4).map((item, idx) => (
-                    <div key={item.name} className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-slate-400 w-5">{idx + 1}</span>
-                      <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0"><UtensilsCrossed className="w-4 h-4 text-orange-500" /></div>
-                      <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-slate-900 truncate">{item.name}</p><p className="text-[10px] text-slate-400">{item.count} orders</p></div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-slate-400 text-sm text-center py-4">No sales data yet</p>
-            )}
           </div>
 
-          {/* Inventory */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="inventory-panel">
-            <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Inventory</h3>
-            {/* Out of Stock row */}
-            <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <AlertCircle className={`w-4 h-4 ${outOfStockItems.length > 0 ? 'text-red-500' : 'text-slate-300'}`} />
-                <span className="text-sm font-medium text-slate-700">Out of Stock</span>
-              </div>
-              <Switch
-                checked={showOutOfStock}
-                onCheckedChange={setShowOutOfStock}
-                aria-label="Toggle out of stock list"
-              />
+          {/* Attention Now */}
+          <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4" data-testid="attention-panel">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
+                Attention Now
+                {attentionItems.length > 0 && (
+                  <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{attentionItems.length}</span>
+                )}
+              </h3>
+              <button onClick={() => navigate('/pos/notifications')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
             </div>
-            {showOutOfStock && outOfStockItems.length > 0 && (
-              <div className="py-1.5">
-                {outOfStockItems.slice(0, 3).map(item => (
-                  <div key={item.id} className="flex items-center justify-between px-1 py-1">
-                    <span className="text-sm text-slate-700">{item.name}</span>
-                    <span className="text-[10px] text-red-500 font-medium">0 {item.unit}</span>
-                  </div>
-                ))}
+
+            {attentionItems.length === 0 ? (
+              <div className="py-8 text-center" data-testid="attention-empty">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mx-auto mb-2.5"><CheckCircle className="w-6 h-6 text-emerald-500" /></div>
+                <p className="text-sm font-semibold text-gray-700 dark:text-white/70">All calm</p>
+                <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">Nothing needs your attention right now.</p>
               </div>
-            )}
-            {/* All items in stock illustration */}
-            {lowStockItems.length === 0 ? (
-              <div className="text-center py-4"><div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-2"><Package className="w-7 h-7 text-emerald-500" /></div><p className="text-sm text-emerald-600 font-medium">All items in stock!</p></div>
             ) : (
-              <div className="text-center py-3"><div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-2"><CheckCircle className="w-6 h-6 text-emerald-500" /></div><p className="text-sm text-emerald-600 font-medium">{lowStockItems.length} items need attention</p></div>
-            )}
-            {/* Low Stock row */}
-            <div className="flex items-center justify-between py-2.5 border-t border-slate-100">
-              <div className="flex items-center gap-2">
-                <TrendingUp className={`w-4 h-4 ${lowStockOnly.length > 0 ? 'text-amber-500' : 'text-slate-300'}`} />
-                <span className="text-sm font-medium text-slate-700">Low Stock</span>
-              </div>
-              <Switch
-                checked={showLowStock}
-                onCheckedChange={setShowLowStock}
-                aria-label="Toggle low stock list"
-              />
-            </div>
-            {showLowStock && lowStockOnly.length > 0 && (
-              <div className="pt-1.5">
-                {lowStockOnly.slice(0, 3).map(item => (
-                  <div key={item.id} className="flex items-center justify-between px-1 py-1">
-                    <span className="text-sm text-slate-700">{item.name}</span>
-                    <span className="text-[10px] text-amber-600 font-medium">Stock: {item.quantity} {item.unit}</span>
+              <div className="space-y-1">
+                {attentionItems.map(item => (
+                  <div key={item.key} className="flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors" data-testid={item.testid}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${item.tone}`}>
+                      <item.icon className="w-5 h-5" strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-gray-900 dark:text-white truncate">{item.title}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-white/45 truncate">{item.desc}</p>
+                    </div>
+                    <button
+                      onClick={item.run}
+                      className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-200 dark:border-white/15 text-gray-700 dark:text-white/75 hover:bg-[#2E9E5B] hover:text-white hover:border-[#2E9E5B] transition-all active:scale-[0.97]"
+                    >
+                      {item.action}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -520,118 +649,126 @@ export default function POSDashboard() {
         </div>
       </div>
 
-      {/* === ROW 3: Charts side by side === */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Sales Trend */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="sales-trend-panel">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-heading font-bold text-slate-900 text-base">Sales Trend (Last 7 Days)</h3>
-            <button className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors" aria-label="Sales trend options">
-              <MoreHorizontal className="w-4.5 h-4.5" />
-            </button>
+      {/* ═══ TODAY'S SERVICE FLOW ═══ */}
+      <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="service-flow-panel">
+        <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+          <div>
+            <h2 className="font-heading font-bold text-gray-900 dark:text-white text-lg leading-tight">Today's Service Flow</h2>
+            <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">From orders to happy guests.</p>
           </div>
-          <div className="flex items-center gap-4 mb-2">
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-2 h-2 rounded-full bg-emerald-500"></span>Revenue</span>
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium"><span className="w-2 h-2 rounded-full bg-slate-900"></span>Dine-In</span>
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-white/50 border border-gray-200 dark:border-white/[0.08] rounded-lg px-2.5 py-1.5">
+            <CalendarDays className="w-3.5 h-3.5" /> Today
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 items-stretch">
+          {/* Orders Placed */}
+          <div className="bg-gray-50 dark:bg-white/[0.04] rounded-2xl p-3.5" data-testid="flow-placed">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-gray-200 dark:border-white/[0.08] flex items-center justify-center mb-2.5"><Receipt className="w-4 h-4 text-gray-500 dark:text-white/50" /></div>
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Orders Placed</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{todayOrders.length}</span>
+              {ordersDelta !== null && <span className={`text-[10px] font-bold ${ordersDelta >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>↑ {ordersDelta >= 0 ? '+' : ''}{ordersDelta}%</span>}
+            </p>
           </div>
-          <div className="relative h-40">
-            {/* Floating total-sales card (reference style) */}
-            <div className="hidden sm:block absolute top-1 right-1 z-10 bg-white border border-slate-200 rounded-xl shadow-md px-3 py-1.5 text-right">
-              <p className="text-[9px] text-slate-400 font-medium leading-none">{salesDelta !== null ? `${salesDelta >= 0 ? '+' : ''}${salesDelta}% vs last period` : 'Total'}</p>
-              <p className="font-numbers text-base font-bold text-slate-900 leading-tight">₹{(analytics?.daily_sales || 0).toFixed(0)}</p>
-              <p className="text-[9px] text-slate-400 leading-none">Total Sales · last period</p>
-            </div>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesChartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                <defs><linearGradient id="colorSalesMini" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.2} /><stop offset="95%" stopColor="#059669" stopOpacity={0} /></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} width={50} />
-                <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '11px' }} />
-                <Area type="monotone" dataKey="sales" stroke="#059669" strokeWidth={2} fillOpacity={1} fill="url(#colorSalesMini)" />
-              </AreaChart>
-            </ResponsiveContainer>
+
+          <div className="hidden md:flex items-center justify-center text-gray-300 dark:text-white/20"><ArrowRight className="w-5 h-5" /></div>
+
+          {/* In Kitchen */}
+          <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] rounded-2xl p-3.5" data-testid="flow-kitchen">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-amber-200/60 dark:border-amber-400/20 flex items-center justify-center mb-2.5"><Flame className="w-4 h-4 text-amber-500" /></div>
+            <p className="text-[11px] font-semibold text-gray-600 dark:text-white/50">In Kitchen</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{preparingOrders.length}</span>
+              {preparingOrders.length > 0 && <span className="text-[10px] font-semibold text-gray-500 dark:text-white/45">Avg {avgKitchenMin} min</span>}
+            </p>
+          </div>
+
+          <div className="hidden md:flex items-center justify-center text-gray-300 dark:text-white/20"><ArrowRight className="w-5 h-5" /></div>
+
+          {/* Serving at Tables */}
+          <div className="bg-blue-50/70 dark:bg-blue-400/[0.07] rounded-2xl p-3.5" data-testid="flow-serving">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-blue-200/60 dark:border-blue-400/20 flex items-center justify-center mb-2.5"><ConciergeBell className="w-4 h-4 text-blue-500" /></div>
+            <p className="text-[11px] font-semibold text-gray-600 dark:text-white/50">Ready to Serve</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{readyOrders.length}</span>
+              {readyOrders.length > 0 && <span className="text-[10px] font-semibold text-gray-500 dark:text-white/45">Avg {avgServeMin} min</span>}
+            </p>
+          </div>
+
+          <div className="hidden md:flex items-center justify-center text-gray-300 dark:text-white/20"><ArrowRight className="w-5 h-5" /></div>
+
+          {/* Payments */}
+          <div className="bg-gray-50 dark:bg-white/[0.04] rounded-2xl p-3.5" data-testid="flow-payments">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-gray-200 dark:border-white/[0.08] flex items-center justify-center mb-2.5"><CreditCard className="w-4 h-4 text-gray-500 dark:text-white/50" /></div>
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Payments</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{unpaidCompleted.length}</span>
+              <span className="text-[10px] font-semibold text-gray-500 dark:text-white/45">pending</span>
+            </p>
           </div>
         </div>
 
-        {/* Order Types */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/60 p-5" data-testid="order-types-panel">
-          <h3 className="font-heading font-bold text-slate-900 text-base mb-3">Order Types</h3>
-          {orderTypeData.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-10">No order data yet</p>
-          ) : (
-            <>
-              <div className="w-36 h-36 mx-auto mb-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart><Pie data={orderTypeData} cx="50%" cy="50%" innerRadius={38} outerRadius={58} paddingAngle={5} dataKey="value">{orderTypeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><Tooltip /></PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                {orderTypeData.map((entry, index) => (<div key={entry.name} className="flex items-center justify-between"><div className="flex items-center gap-2 min-w-0"><div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} /><span className="text-xs text-slate-600 font-medium truncate">{entry.name}</span></div><span className="text-xs font-bold text-slate-900">{entry.value}</span></div>))}
-              </div>
-            </>
-          )}
+        {/* Flow verdict — honest, computed from real state */}
+        <div className={`mt-3 rounded-xl px-4 py-2.5 flex items-center gap-2 text-xs font-semibold ${delayedOrders.length > 0
+          ? 'bg-red-50 dark:bg-red-400/10 text-red-600 dark:text-red-300'
+          : 'bg-emerald-50 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-300'}`}
+          data-testid="flow-verdict"
+        >
+          {delayedOrders.length > 0
+            ? <><AlertTriangle className="w-4 h-4 flex-shrink-0" />{delayedOrders.length} order{delayedOrders.length > 1 ? 's' : ''} waiting over 10 minutes — check Attention Now.</>
+            : <><TrendingUp className="w-4 h-4 flex-shrink-0" />Smooth flow{todayOrders.length > 0 ? '' : ' — ready for the first order'}.</>}
         </div>
       </div>
 
-      {/* === MODALS === */}
-
-      {/* Today's Orders Detail Modal */}
+      {/* ═══ TODAY'S ORDERS DETAIL (metric card click) ═══ */}
       <Dialog open={showOrdersDetail} onOpenChange={setShowOrdersDetail}>
         <DialogContent className="rounded-2xl max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="orders-detail-modal">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" /> Today's Orders ({todayOrders.length})
+              <Receipt className="w-5 h-5" /> Today's Orders ({todayOrders.length})
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 mt-2">
             {todayOrders.length === 0 ? (
-              <p className="text-slate-400 text-center py-8">No orders today yet.</p>
+              <p className="text-gray-400 dark:text-white/40 text-center py-8">No orders today yet.</p>
             ) : (
               todayOrders.map((order) => {
-                const pmIcon = order.payment_method === 'cash' ? Banknote : order.payment_method === 'card' ? CreditCard : order.payment_method === 'upi' ? Smartphone : Clock;
-                const PmIcon = pmIcon;
+                const PmIcon = order.payment_method === 'cash' ? Banknote : order.payment_method === 'card' ? CreditCard : order.payment_method === 'upi' ? Smartphone : Clock;
+                const st = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
                 return (
-                  <div key={order.id} className="bg-slate-50 rounded-xl border border-slate-200/60 p-4" data-testid={`order-detail-${order.id}`}>
+                  <div key={order.id} className="bg-gray-50 dark:bg-white/[0.04] rounded-xl border border-gray-200 dark:border-white/[0.07] p-4" data-testid={`order-detail-${order.id}`}>
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-numbers text-sm font-bold text-slate-900">#{order.order_number}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            order.order_type === 'dine_in' ? 'bg-blue-100 text-blue-700'
-                            : order.order_type === 'takeaway' ? 'bg-green-100 text-green-700'
-                            : 'bg-purple-100 text-purple-700'
-                          }`}>{order.order_type.replace('_', ' ')}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            order.status === 'completed' ? 'bg-green-100 text-green-700'
-                            : order.status === 'preparing' ? 'bg-amber-100 text-amber-700'
-                            : order.payment_status === 'paid' ? 'bg-green-100 text-green-700'
-                            : 'bg-slate-200 text-slate-600'
-                          }`}>{order.payment_status === 'paid' ? 'Paid' : order.status}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-numbers text-sm font-bold text-gray-900 dark:text-white">#{order.order_number}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${st.bg} ${st.text}`}>{st.label}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-gray-200 text-gray-600 dark:bg-white/[0.08] dark:text-white/60'}`}>{order.payment_status === 'paid' ? 'Paid' : 'Unpaid'}</span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-white/45">
                           <PmIcon className="w-3 h-3" />
                           <span className="capitalize">{order.payment_method || 'pending'}</span>
                           {order.table_number && <span>· Table {order.table_number}</span>}
-                          <span>· {new Date(order.created_at).toLocaleTimeString()}</span>
+                          <span>· {getOrderTime(order)}</span>
                         </div>
                       </div>
-                      <p className="text-lg font-bold font-numbers text-slate-900">₹{order.total_amount.toFixed(2)}</p>
+                      <p className="text-lg font-bold font-numbers text-gray-900 dark:text-white">₹{order.total_amount?.toFixed(2)}</p>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 mb-3">
                       {(order.items || []).map((item, idx) => (
-                        <div key={`${item.name}-${item.quantity}-${idx}`} className="bg-white rounded-lg px-2.5 py-1.5 text-xs border border-slate-100">
-                          <span className="font-semibold text-slate-800">{item.quantity}x</span>{' '}
-                          <span className="text-slate-600">{item.name}</span>
-                          <span className="text-slate-400 ml-1">₹{item.total?.toFixed(0)}</span>
+                        <div key={`${item.name}-${item.quantity}-${idx}`} className="bg-white dark:bg-white/[0.05] rounded-lg px-2.5 py-1.5 text-xs border border-gray-100 dark:border-white/[0.06]">
+                          <span className="font-semibold text-gray-800 dark:text-white/85">{item.quantity}x</span>{' '}
+                          <span className="text-gray-600 dark:text-white/60">{item.name}</span>
+                          <span className="text-gray-400 dark:text-white/35 ml-1">₹{item.total?.toFixed(0)}</span>
                         </div>
                       ))}
                     </div>
                     <button
-                      onClick={() => handleViewReceipt(order)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-semibold hover:bg-gray-800 transition-colors"
+                      onClick={() => openReceipt(order)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-[#2E9E5B] text-white text-xs font-semibold hover:bg-gray-800 dark:hover:bg-[#288A50] transition-colors"
                       data-testid={`view-receipt-${order.id}`}
                     >
-                      <Printer className="w-3.5 h-3.5" /> Print Bill
+                      <Printer className="w-3.5 h-3.5" /> View / Print Bill
                     </button>
                   </div>
                 );
@@ -641,7 +778,7 @@ export default function POSDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Receipt Print Modal */}
+      {/* ═══ RECEIPT MODAL (logic preserved) ═══ */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
         <DialogContent className="rounded-2xl max-w-xs bg-white" data-testid="dashboard-receipt-modal">
           <DialogHeader>
@@ -651,12 +788,12 @@ export default function POSDashboard() {
           </DialogHeader>
           {receiptData && (
             <div ref={receiptRef}>
-              <div className="text-center border-b border-dashed border-slate-300 pb-2 mb-2">
-                <h2 className="font-bold text-base">{receiptData.restaurant.name}</h2>
-                <p className="text-[10px] text-slate-500">{receiptData.restaurant.address}, {receiptData.restaurant.city}</p>
-                <p className="text-[10px] text-slate-500">{receiptData.restaurant.phone}</p>
+              <div className="text-center border-b border-dashed border-gray-300 pb-2 mb-2">
+                <h2 className="font-bold text-base text-gray-900">{receiptData.restaurant.name}</h2>
+                <p className="text-[10px] text-gray-500">{receiptData.restaurant.address}, {receiptData.restaurant.city}</p>
+                <p className="text-[10px] text-gray-500">{receiptData.restaurant.phone}</p>
               </div>
-              <div className="text-[11px] mb-2">
+              <div className="text-[11px] mb-2 text-gray-800">
                 <div className="flex justify-between"><span>Order #</span><span className="font-numbers">{receiptData.order.order_number}</span></div>
                 <div className="flex justify-between"><span>Type</span><span className="capitalize">{receiptData.order.order_type?.replace('_', ' ')}</span></div>
                 <div className="flex justify-between"><span>Payment</span><span className="capitalize">{receiptData.order.payment_method}</span></div>
@@ -665,8 +802,8 @@ export default function POSDashboard() {
                   <div className="flex justify-between"><span>Table</span><span>{receiptData.order.table_number}</span></div>
                 )}
               </div>
-              <hr className="border-dashed border-slate-300 my-1" />
-              <div className="space-y-1 text-[11px]">
+              <hr className="border-dashed border-gray-300 my-1" />
+              <div className="space-y-1 text-[11px] text-gray-800">
                 {(receiptData.order.items || []).map((item, i) => (
                   <div key={i} className="flex justify-between">
                     <span>{item.quantity}x {item.name}</span>
@@ -674,18 +811,18 @@ export default function POSDashboard() {
                   </div>
                 ))}
               </div>
-              <hr className="border-dashed border-slate-300 my-1" />
-              <div className="text-[11px] space-y-0.5">
+              <hr className="border-dashed border-gray-300 my-1" />
+              <div className="text-[11px] space-y-0.5 text-gray-800">
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{receiptData.order.subtotal?.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>Tax</span><span>₹{receiptData.order.tax_amount?.toFixed(2)}</span></div>
                 {receiptData.order.discount_amount > 0 && (
                   <div className="flex justify-between"><span>Discount</span><span>-₹{receiptData.order.discount_amount?.toFixed(2)}</span></div>
                 )}
-                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-slate-300">
+                <div className="flex justify-between font-bold text-sm pt-1 border-t border-dashed border-gray-300">
                   <span>Total</span><span className="font-numbers">₹{receiptData.order.total_amount?.toFixed(2)}</span>
                 </div>
               </div>
-              <p className="text-center text-[9px] text-slate-400 mt-3">Thank you for dining with us!</p>
+              <p className="text-center text-[9px] text-gray-400 mt-3">Thank you for dining with us!</p>
             </div>
           )}
           <button
