@@ -107,7 +107,7 @@ describe('LoginPage — email sign-in preserved', () => {
     authAPI.login.mockResolvedValue(tokenResponse({ user: user({ role: 'admin', restaurant_id: null }) }));
     const { container } = await renderLoginPage();
 
-    await typeText(findByTestId(container, 'login-email-input'), 'admin@foodflow.com');
+    await typeText(findByTestId(container, 'login-email-input'), 'demo@dinedesk.in');
     await typeText(findByTestId(container, 'login-password-input'), 'admin123');
     await submitForm(container.querySelector('form'));
     await flushAsync();

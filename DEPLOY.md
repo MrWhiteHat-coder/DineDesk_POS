@@ -62,7 +62,7 @@ Database (MongoDB)   → MongoDB Atlas (free M0)
    MONGO_URL = mongodb+srv://dinedesk:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/DineDesk?retryWrites=true&w=majority
    DB_NAME = DineDesk
    JWT_SECRET = (generate a random 64-char string — run: python -c "import secrets; print(secrets.token_hex(32))")
-   ADMIN_EMAIL = admin@foodflow.com
+   ADMIN_EMAIL = admin@dinedesk.in
    ADMIN_PASSWORD = (your admin password)
    CORS_ORIGINS = https://YOUR-VERCEL-APP.vercel.app,http://localhost:3000
    FRONTEND_URL = https://YOUR-VERCEL-APP.vercel.app

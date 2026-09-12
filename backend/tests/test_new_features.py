@@ -47,7 +47,7 @@ class TestAuth:
     def test_login_admin_user(self):
         """Login as admin"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "admin@foodflow.com",
+            "email": "demo@dinedesk.in",
             "password": "admin123"
         })
         assert response.status_code == 200, f"Admin login failed: {response.text}"

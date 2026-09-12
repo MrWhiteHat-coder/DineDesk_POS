@@ -57,7 +57,7 @@ export default function SubscriptionPage() {
       const restaurantRes = await restaurantAPI.getMy();
       updateRestaurant(restaurantRes.data);
 
-      toast.success('Subscription activated! Welcome to OrderNest POS!');
+      toast.success('Subscription activated! Welcome to DineDesk POS!');
       navigate('/pos');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Payment failed');

@@ -10,7 +10,7 @@ import logoUrl from '../../assets/dinedesk-logo.png';
 import {
   Mail, Lock, Eye, EyeOff, ArrowRight, Monitor, ConciergeBell, UtensilsCrossed,
   Package, BarChart3, ShieldCheck, Headphones, Rocket, QrCode, Globe, ChevronRight,
-  AlertTriangle, RefreshCw,
+  AlertTriangle, RefreshCw, Sparkles,
 } from 'lucide-react';
 
 /* Feature tiles — icons drawn in DineDesk green, matching the reference */
@@ -339,6 +339,17 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
+
+              {/* Demo credentials — one-tap fill for product walkthroughs */}
+              <button
+                type="button"
+                onClick={() => { setEmail('demo@dinedesk.in'); setPassword('123456'); }}
+                className="w-full h-9 rounded-lg border border-dashed border-[#2E9E5B]/40 bg-[#2E9E5B]/[0.06] dark:border-[#3FCE85]/40 dark:bg-[#3FCE85]/[0.08] text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:bg-[#2E9E5B]/[0.12] dark:hover:bg-[#3FCE85]/[0.14] active:scale-[0.99] transition-all flex items-center justify-center gap-1.5"
+                title="Fill demo credentials"
+              >
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                Try the demo — demo@dinedesk.in
+              </button>
 
               {/* Green CTA */}
               <button

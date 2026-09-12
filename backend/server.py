@@ -92,8 +92,12 @@ SENDGRID_FROM_NAME = os.environ.get('SENDGRID_FROM_NAME', SENDER_NAME)
 EMAIL_CONFIGURED = bool(SENDGRID_API_KEY or (GMAIL_USER and GMAIL_APP_PASSWORD))
 
 # Admin bootstrap credentials — from env only
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@foodflow.com')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@dinedesk.in')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
+
+# Public demo tenant for product walkthroughs (email + password + full access)
+DEMO_EMAIL = os.environ.get('DEMO_EMAIL', 'demo@dinedesk.in')
+DEMO_PASSWORD = os.environ.get('DEMO_PASSWORD', '123456')
 
 # Lifespan context manager
 @asynccontextmanager
@@ -119,6 +123,147 @@ async def lifespan(app_instance: FastAPI):
         else:
             logger.warning("ADMIN_PASSWORD not set — skipping admin bootstrap")
 
+        # --- Demo account seed ---
+        # A ready-to-explore tenant (demo@dinedesk.in / 123456) with a
+        # fully active subscription and every Store add-on enabled, so
+        # reviewers see the complete product instead of empty screens.
+        try:
+            demo = await db.users.find_one({"email": DEMO_EMAIL})
+            if not demo:
+                demo_user = {
+                    "id": str(uuid.uuid4()),
+                    "email": DEMO_EMAIL,
+                    "password": hash_password(DEMO_PASSWORD),
+                    "name": "Demo Owner",
+                    "role": "owner",
+                    "restaurant_id": None,  # filled below
+                    "branch_id": None,
+                    "is_verified": True,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+
+                demo_restaurant = {
+                    "id": str(uuid.uuid4()),
+                    "owner_id": demo_user["id"],
+                    "name": "DineDesk Demo Kitchen",
+                    "restaurant_type": "casual_dining",
+                    "num_tables": 8,
+                    "avg_daily_orders": 60,
+                    "uses_delivery": True,
+                    "delivery_platforms": ["swiggy", "zomato"],
+                    "contact_phone": "+91 98403 93658",
+                    "contact_email": DEMO_EMAIL,
+                    "address": "12 Anna Salai",
+                    "city": "Chennai",
+                    "pincode": "600002",
+                    "tax_rate": 5.0,
+                    "is_active": True,
+                    "subscription_status": "active",
+                    "subscription_expires": None,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                demo_user["restaurant_id"] = demo_restaurant["id"]
+                await db.restaurants.insert_one(demo_restaurant)
+
+                # Tables matching num_tables
+                for i in range(1, demo_restaurant["num_tables"] + 1):
+                    await db.tables.insert_one({
+                        "id": str(uuid.uuid4()),
+                        "restaurant_id": demo_restaurant["id"],
+                        "table_number": i,
+                        "capacity": 4,
+                        "status": "available",
+                        "current_order_id": None,
+                    })
+
+                # Menu: 4 categories × 3-4 items with recipes wired to
+                # demo inventory, so automatic deduction is visible.
+                demo_inventory = [
+                    {"id": str(uuid.uuid4()), "name": "Idli/Dosa Batter", "unit": "kg", "quantity": 25.0, "min_quantity": 5.0, "cost_per_unit": 60.0},
+                    {"id": str(uuid.uuid4()), "name": "Sambar Dal", "unit": "kg", "quantity": 12.0, "min_quantity": 3.0, "cost_per_unit": 90.0},
+                    {"id": str(uuid.uuid4()), "name": "Filter Coffee Powder", "unit": "kg", "quantity": 4.0, "min_quantity": 1.0, "cost_per_unit": 450.0},
+                    {"id": str(uuid.uuid4()), "name": "Cooking Oil", "unit": "L", "quantity": 18.0, "min_quantity": 4.0, "cost_per_unit": 130.0},
+                    {"id": str(uuid.uuid4()), "name": "Basmati Rice", "unit": "kg", "quantity": 30.0, "min_quantity": 6.0, "cost_per_unit": 95.0},
+                ]
+                for item in demo_inventory:
+                    await db.inventory.insert_one({**item, "restaurant_id": demo_restaurant["id"], "supplier": "Demo Supplier", "created_at": datetime.now(timezone.utc).isoformat()})
+                inv = {i["name"]: i["id"] for i in demo_inventory}
+
+                def recipe(*pairs):
+                    return [
+                        {
+                            "inventory_item_id": inv[name],
+                            "inventory_item_name": name,
+                            "quantity_needed": qty,
+                            "unit": unit,
+                        }
+                        for name, qty, unit in pairs
+                    ]
+
+                demo_categories = [
+                    ("Starters", 1, [
+                        ("Medu Vada", 60, True, recipe(("Idli/Dosa Batter", 0.15, "kg"), ("Cooking Oil", 0.1, "L"))),
+                        ("Sambar Rice", 90, True, recipe(("Sambar Dal", 0.2, "kg"), ("Basmati Rice", 0.25, "kg"))),
+                    ]),
+                    ("Main Course", 2, [
+                        ("Idli Combo (3 pc)", 80, True, recipe(("Idli/Dosa Batter", 0.3, "kg"), ("Sambar Dal", 0.15, "kg"))),
+                        ("Ghee Roast Dosa", 110, True, recipe(("Idli/Dosa Batter", 0.25, "kg"), ("Cooking Oil", 0.05, "L"))),
+                        ("Curd Rice", 70, True, recipe(("Basmati Rice", 0.2, "kg"))),
+                    ]),
+                    ("Beverages", 3, [
+                        ("Filter Coffee", 30, True, recipe(("Filter Coffee Powder", 0.02, "kg"))),
+                        ("Masala Chai", 25, True, recipe(("Filter Coffee Powder", 0.015, "kg"))),
+                    ]),
+                ]
+                now = datetime.now(timezone.utc).isoformat()
+                for cat_name, sort_order, items in demo_categories:
+                    cat_id = str(uuid.uuid4())
+                    await db.menu_categories.insert_one({
+                        "id": cat_id,
+                        "restaurant_id": demo_restaurant["id"],
+                        "name": cat_name,
+                        "description": None,
+                        "sort_order": sort_order,
+                        "is_active": True,
+                        "created_at": now,
+                    })
+                    for item_name, price, is_veg, item_recipe in items:
+                        await db.menu_items.insert_one({
+                            "id": str(uuid.uuid4()),
+                            "restaurant_id": demo_restaurant["id"],
+                            "category_id": cat_id,
+                            "name": item_name,
+                            "description": None,
+                            "price": float(price),
+                            "image_url": None,
+                            "is_vegetarian": is_veg,
+                            "is_available": True,
+                            "preparation_time": 12,
+                            "recipe": item_recipe,
+                            "created_at": now,
+                        })
+
+                # Subscription: every Store add-on active + starter plan
+                await db.restaurant_subscriptions.insert_one({
+                    "restaurant_id": demo_restaurant["id"],
+                    "active_addons": [a["id"] for a in STORE_ADDONS],
+                    "plan": "starter",
+                    "updated_at": now,
+                })
+
+                await db.users.insert_one(demo_user)
+                logger.info(f"Demo account seeded: {DEMO_EMAIL} (restaurant: {demo_restaurant['name']})")
+            else:
+                # Top up the add-on list if new modules shipped since seed
+                sub = await db.restaurant_subscriptions.find_one({"restaurant_id": demo.get("restaurant_id")})
+                if sub and set(a["id"] for a in STORE_ADDONS) - set(sub.get("active_addons", [])):
+                    await db.restaurant_subscriptions.update_one(
+                        {"restaurant_id": sub["restaurant_id"]},
+                        {"$set": {"active_addons": [a["id"] for a in STORE_ADDONS]}},
+                    )
+        except Exception as e:
+            logger.warning(f"Demo seed skipped: {e}")
+
         await db.users.create_index("email", unique=True)
         await db.restaurants.create_index("owner_id")
         await db.orders.create_index([("restaurant_id", 1), ("created_at", -1)])
@@ -135,7 +280,7 @@ async def lifespan(app_instance: FastAPI):
     logger.info("MongoDB connection closed")
 
 # Create the main app
-app = FastAPI(title="FoodFlow POS API", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="DineDesk POS API", version="3.0.0", lifespan=lifespan)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -3137,7 +3282,7 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
 
     pdf.set_font("Helvetica", "I", 9)
     pdf.set_text_color(148, 163, 184)
-    pdf.cell(0, 8, f"Generated by OrderNest POS on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", align="C")
+    pdf.cell(0, 8, f"Generated by DineDesk POS on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", align="C")
 
     pdf_bytes = pdf.output()
     return Response(
@@ -3681,7 +3826,7 @@ async def get_feedback(status: Optional[str] = None, user: dict = Depends(get_cu
 
 @api_router.get("/")
 async def root():
-    return {"message": "OrderNest POS API", "version": "2.0.0"}
+    return {"message": "DineDesk POS API", "version": "3.0.0"}
 
 @api_router.get("/health")
 async def health():

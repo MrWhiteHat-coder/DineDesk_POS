@@ -1,5 +1,5 @@
 """
-Backend API Tests for FoodFlow POS Platform
+Backend API Tests for DineDesk POS Platform
 Tests the redesigned POS interface backend APIs including:
 - Authentication (login with demo credentials)
 - Day Session (open/close)
@@ -22,7 +22,7 @@ DEMO_USER = {
 }
 
 ADMIN_USER = {
-    "email": "admin@foodflow.com",
+    "email": "demo@dinedesk.in",
     "password": "admin123"
 }
 
