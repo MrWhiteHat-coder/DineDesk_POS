@@ -148,7 +148,7 @@ export default function StorePage() {
 
   return (
     <div ref={rootRef} className="lp min-h-screen antialiased selection:bg-[var(--lp-green-a25)]">
-      <LandingNav />
+      <LandingNav hashPrefix="/" />
 
       <main>
         {/* Hero */}
@@ -272,7 +272,7 @@ export default function StorePage() {
         </section>
       </main>
 
-      <Footer />
+      <Footer hashPrefix="/" />
     </div>
   );
 }

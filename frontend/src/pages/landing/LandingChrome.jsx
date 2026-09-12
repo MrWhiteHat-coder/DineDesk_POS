@@ -225,10 +225,10 @@ export function LandingNav({ hashPrefix = '' }) {
 
 /* ─────────────────── Footer ─────────────────── */
 
-function FooterLink({ href, children }) {
+function FooterLink({ href, children, hashPrefix = '' }) {
   const cls =
     'text-sm text-[var(--lp-on-dark-soft)] hover:text-[var(--lp-on-dark)] transition-colors py-1.5 inline-flex items-center gap-1';
-  if (href.startsWith('/') ) {
+  if (href.startsWith('/')) {
     return (
       <Link to={href} className={cls}>
         {children}
@@ -236,13 +236,13 @@ function FooterLink({ href, children }) {
     );
   }
   return (
-    <a href={href} className={cls}>
+    <a href={`${hashPrefix}${href}`} className={cls}>
       {children}
     </a>
   );
 }
 
-export function Footer() {
+export function Footer({ hashPrefix = '' }) {
   const year = new Date().getFullYear();
   return (
     <footer className="bg-[var(--lp-surface)] border-t border-[var(--lp-surface-line)]">
@@ -271,10 +271,10 @@ export function Footer() {
               Product
             </p>
             <ul className="mt-4 space-y-1">
-              <li><FooterLink href="#product">POS</FooterLink></li>
-              <li><FooterLink href="#plans">Plans</FooterLink></li>
+              <li><FooterLink hashPrefix={hashPrefix} href="#product">POS</FooterLink></li>
+              <li><FooterLink hashPrefix={hashPrefix} href="#plans">Plans</FooterLink></li>
               <li><FooterLink href="/store">DineDesk Store</FooterLink></li>
-              <li><FooterLink href="#enterprise">Enterprise</FooterLink></li>
+              <li><FooterLink hashPrefix={hashPrefix} href="#enterprise">Enterprise</FooterLink></li>
             </ul>
           </nav>
 
@@ -284,8 +284,8 @@ export function Footer() {
               Company
             </p>
             <ul className="mt-4 space-y-1">
-              <li><FooterLink href="#why">About</FooterLink></li>
-              <li><FooterLink href="#contact">Contact</FooterLink></li>
+              <li><FooterLink hashPrefix={hashPrefix} href="#why">About</FooterLink></li>
+              <li><FooterLink hashPrefix={hashPrefix} href="#contact">Contact</FooterLink></li>
               <li>
                 <FooterLink href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Support request')}`}>
                   Support

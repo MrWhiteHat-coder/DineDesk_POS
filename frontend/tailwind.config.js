@@ -7,6 +7,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        xs: '400px',
+      },
       fontFamily: {
         'heading': ['Manrope', 'sans-serif'],
         'heading-xl': ['Manrope', 'sans-serif'],

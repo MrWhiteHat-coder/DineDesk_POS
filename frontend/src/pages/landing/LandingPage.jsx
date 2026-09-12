@@ -370,7 +370,7 @@ function FeatureItem({ children, dark = false }) {
 
 function Pricing() {
   return (
-    <section id="plans" className="py-16 sm:py-20 lg:py-24" aria-labelledby="plans-heading">
+    <section id="plans" className="py-16 sm:py-20 lg:py-24 scroll-mt-20" aria-labelledby="plans-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="Plans"
@@ -556,7 +556,7 @@ const STORE_CATEGORIES = [
 
 function StoreSection() {
   return (
-    <section id="store" className="py-16 sm:py-20 lg:py-24" aria-labelledby="store-heading">
+    <section id="store" className="py-16 sm:py-20 lg:py-24 scroll-mt-20" aria-labelledby="store-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="DineDesk Store"
@@ -636,7 +636,7 @@ const WHY_PRINCIPLES = [
 
 function WhySection() {
   return (
-    <section className="py-16 sm:py-20 lg:py-24" aria-labelledby="why-heading">
+    <section id="why" className="py-16 sm:py-20 lg:py-24 scroll-mt-20" aria-labelledby="why-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="Why DineDesk"
