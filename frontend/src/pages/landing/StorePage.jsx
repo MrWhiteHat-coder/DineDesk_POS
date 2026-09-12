@@ -8,6 +8,7 @@ import {
   LandingNav, Footer, SectionHeading, useScrollReveal,
   CONTACT_EMAIL, STORE_MAILTO,
 } from './LandingChrome';
+import usePageMeta from '../../lib/usePageMeta';
 
 /* ────────────────────────────────────────────────────────────────
    DineDesk Store — public catalogue page (/store).
@@ -145,6 +146,10 @@ function ModuleCard({ cat }) {
 
 export default function StorePage() {
   const rootRef = useScrollReveal();
+  usePageMeta({
+    title: 'DineDesk Store — Add Modules When Your Restaurant Is Ready',
+    description: 'Optional DineDesk Store modules: KDS, inventory, table management, QR ordering, CRM, loyalty, analytics, multi-branch and integrations. Add power only when you need it.',
+  });
 
   return (
     <div ref={rootRef} className="lp min-h-screen antialiased selection:bg-[var(--lp-green-a25)]">

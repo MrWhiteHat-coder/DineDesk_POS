@@ -1,14 +1,101 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#111827" />
-        <meta name="description" content="DineDesk — Restaurant POS + CRM + Loyalty. Absorbs chaos. Serves calm." />
+        <meta name="theme-color" content="#0F2417" />
+
+        <!-- Primary SEO -->
+        <title>DineDesk — Restaurant POS & Billing Software India | Start Small, Grow Without Limits</title>
+        <meta name="description" content="DineDesk is an affordable restaurant POS and billing software for Indian restaurants, cafés and food carts. Billing, inventory automation, analytics and optional Store modules. Plans from ₹999/month. By Trident Ventures, Chennai." />
+        <meta name="keywords" content="dinedesk, dine desk, restaurant POS India, restaurant billing software, POS billing Chennai, restaurant management software, cafe POS, inventory automation restaurant" />
+        <meta name="robots" content="index, follow" />
+        <meta name="author" content="Trident Ventures" />
+        <link rel="canonical" href="https://www.revontechnologies.in/" />
+
+        <!-- Open Graph (WhatsApp / Facebook / LinkedIn preview) -->
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="DineDesk" />
+        <meta property="og:title" content="DineDesk — Restaurant POS that grows with you" />
+        <meta property="og:description" content="Start small. Grow without limits. Simple billing for your first counter, powerful restaurant operations when you're ready. Plans from ₹999/month." />
+        <meta property="og:url" content="https://www.revontechnologies.in/" />
+        <meta property="og:image" content="https://www.revontechnologies.in/og-image.jpg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="DineDesk — Start small. Grow without limits. Restaurant POS by Trident Ventures." />
+        <meta property="og:locale" content="en_IN" />
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="DineDesk — Restaurant POS that grows with you" />
+        <meta name="twitter:description" content="Start small. Grow without limits. Restaurant POS & billing from ₹999/month. By Trident Ventures." />
+        <meta name="twitter:image" content="https://www.revontechnologies.in/og-image.jpg" />
+
+        <!-- Favicons -->
+        <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="%PUBLIC_URL%/favicon-192.png" />
+        <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+
+        <!-- Structured data: product + organization (honest, real pricing) -->
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "SoftwareApplication",
+              "name": "DineDesk",
+              "applicationCategory": "BusinessApplication",
+              "operatingSystem": "Web",
+              "description": "Restaurant POS and billing software for Indian restaurants, cafés and food businesses. Start small and add Store modules when your business needs them.",
+              "url": "https://www.revontechnologies.in/",
+              "image": "https://www.revontechnologies.in/og-image.jpg",
+              "offers": {
+                "@type": "AggregateOffer",
+                "priceCurrency": "INR",
+                "lowPrice": "999",
+                "highPrice": "3999",
+                "offerCount": "2",
+                "offers": [
+                  { "@type": "Offer", "name": "Basic", "price": "999", "priceCurrency": "INR", "url": "https://www.revontechnologies.in/#plans" },
+                  { "@type": "Offer", "name": "Growth", "price": "3999", "priceCurrency": "INR", "url": "https://www.revontechnologies.in/#plans" }
+                ]
+              },
+              "publisher": { "@id": "https://www.revontechnologies.in/#organization" }
+            },
+            {
+              "@type": "Organization",
+              "@id": "https://www.revontechnologies.in/#organization",
+              "name": "Trident Ventures",
+              "url": "https://www.revontechnologies.in/",
+              "logo": "https://www.revontechnologies.in/apple-touch-icon.png",
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "email": "support@dinedesk.in",
+                "telephone": "+91-98403-93658",
+                "contactType": "sales",
+                "areaServed": "IN",
+                "availableLanguage": ["English", "Tamil", "Hindi"]
+              },
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Chennai",
+                "addressCountry": "IN"
+              }
+            },
+            {
+              "@type": "WebSite",
+              "name": "DineDesk",
+              "url": "https://www.revontechnologies.in/",
+              "publisher": { "@id": "https://www.revontechnologies.in/#organization" }
+            }
+          ]
+        }
+        </script>
+
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
-        <title>DineDesk | Restaurant POS by Trident Ventures</title>
         <script>try{if(localStorage.getItem('dd-theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}</script>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
@@ -18,4 +105,3 @@
         <div id="root"></div>
     </body>
 </html>
-

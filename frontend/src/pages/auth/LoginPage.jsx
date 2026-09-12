@@ -6,6 +6,7 @@ import { authAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
+import usePageMeta from '../../lib/usePageMeta';
 import logoUrl from '../../assets/dinedesk-logo.png';
 import {
   Mail, Lock, Eye, EyeOff, ArrowRight, Monitor, ConciergeBell, UtensilsCrossed,
@@ -41,6 +42,7 @@ function MicrosoftLogo() {
 }
 
 export default function LoginPage() {
+  usePageMeta({ noindex: true });
   const { login, googleLogin } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();

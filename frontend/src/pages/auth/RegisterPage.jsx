@@ -5,6 +5,7 @@ import { authAPI } from '../../lib/api';
 import { useAuth, getPostAuthPath } from '../../contexts/AuthContext';
 import { Input } from '../../components/ui/input';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
+import usePageMeta from '../../lib/usePageMeta';
 import {
   Mail, Lock, ArrowRight, User, Phone, Shield, Zap, Globe, UtensilsCrossed,
   BarChart3, Package, ChevronLeft, RefreshCw, Moon, Sun,
@@ -21,6 +22,10 @@ const features = [
 ];
 
 export default function RegisterPage() {
+  usePageMeta({
+    title: 'Create Your DineDesk Account — Restaurant POS from ₹999/month',
+    noindex: false,
+  });
   // Must come from the build environment (Vercel). No hard-coded fallback:
   // without an explicit client id the shared button shows "not configured".
   const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;

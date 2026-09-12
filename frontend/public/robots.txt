@@ -1,0 +1,12 @@
+# DineDesk (Trident Ventures) — robots.txt
+User-agent: *
+Allow: /
+Disallow: /pos
+Disallow: /admin
+Disallow: /onboarding
+Disallow: /subscription
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /static/
+
+Sitemap: https://www.revontechnologies.in/sitemap.xml

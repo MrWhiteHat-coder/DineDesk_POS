@@ -10,6 +10,7 @@ import {
   LandingNav, Footer, SectionHeading, useScrollReveal,
   CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL,
 } from './LandingChrome';
+import usePageMeta from '../../lib/usePageMeta';
 
 /* ────────────────────────────────────────────────────────────────
    DineDesk public landing page.
@@ -231,6 +232,9 @@ function Hero() {
           <p className="lp-reveal mt-7 flex items-center gap-2 text-sm text-[var(--lp-ink-faint)]">
             <Leaf className="w-4 h-4 text-[var(--lp-green-deep)]" aria-hidden="true" />
             Absorbs chaos. Serves calm.
+          </p>
+          <p className="lp-reveal mt-2 flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--lp-ink-faint)] uppercase">
+            Built in Chennai · Made for restaurants across India
           </p>
         </div>
 
@@ -863,6 +867,10 @@ function FinalCTA() {
 
 export default function LandingPage() {
   const rootRef = useScrollReveal();
+  usePageMeta({
+    title: 'DineDesk — Restaurant POS & Billing Software India | Start Small, Grow Without Limits',
+    description: 'Affordable restaurant POS and billing software for Indian restaurants, cafés and food carts. Billing, inventory automation and optional Store modules from ₹999/month. By Trident Ventures, Chennai.',
+  });
 
   return (
     <div ref={rootRef} className="lp min-h-screen antialiased selection:bg-[var(--lp-green-a25)]">
