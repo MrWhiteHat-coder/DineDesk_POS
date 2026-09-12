@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Caveat:wght@600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -142,6 +142,10 @@ code {
         font-family: 'Barlow Condensed', sans-serif;
         font-variant-numeric: tabular-nums;
         letter-spacing: 0.01em;
+    }
+    /* Handwritten signature accents (login brand panel, card taglines) */
+    .font-script {
+        font-family: 'Caveat', cursive;
     }
 
     /* DineDesk Brand Utilities (monochrome, theme-aware) */
@@ -676,6 +680,226 @@ html.dark .text-green-600, html.dark .text-green-700 { color: #6EE7B7 !important
 html.dark .text-red-600, html.dark .text-red-700 { color: #FCA5A5 !important; }
 html.dark .text-amber-600, html.dark .text-amber-700,
 html.dark .text-yellow-600, html.dark .text-yellow-700 { color: #FCD34D !important; }
+
+/* ═══════════════════════════════════════
+   LANDING PAGE — public marketing surface
+   Green brand language: soft mint canvas,
+   deep dark-green surfaces. Uses the same
+   greens as the auth/POS screens (#2E9E5B
+   family) so Light + Night Shift stay one
+   coherent brand system.
+   ═══════════════════════════════════════ */
+.lp {
+    --lp-bg: #EFF5EF;                    /* soft light green canvas */
+    --lp-ink: #10291B;                   /* dark green-ink typography */
+    --lp-ink-soft: #3D5A4B;              /* secondary text on canvas */
+    --lp-ink-faint: #6B8578;             /* tertiary text on canvas */
+    --lp-green: #2E9E5B;                 /* brand green (light) */
+    --lp-green-deep: #268A4E;            /* brand green hover/heading */
+    --lp-surface: #0F2417;               /* deep dark green card */
+    --lp-surface-2: #14301F;             /* raised dark green surface */
+    --lp-surface-line: rgba(255,255,255,0.09);
+    --lp-on-dark: #F2F7F3;               /* text on dark green */
+    --lp-on-dark-soft: rgba(242,247,243,0.68);
+    --lp-on-dark-faint: rgba(242,247,243,0.42);
+    --lp-card: #FFFFFF;                  /* light card surface */
+    --lp-card-line: rgba(16,41,27,0.09);
+    --lp-green-tint: rgba(46,158,91,0.10);
+    --lp-green-tint-strong: rgba(46,158,91,0.18);
+    --lp-green-a12: rgba(46,158,91,0.12);
+    --lp-green-a15: rgba(46,158,91,0.15);
+    --lp-green-a20: rgba(46,158,91,0.20);
+    --lp-green-a25: rgba(46,158,91,0.25);
+    --lp-green-a30: rgba(46,158,91,0.30);
+    --lp-green-a40: rgba(46,158,91,0.40);
+    --lp-outline: rgba(16,41,27,0.18);   /* quiet button border */
+    --lp-nav-bg: rgba(239,245,239,0.85); /* sticky nav glass */
+    --lp-shadow: 0 1px 2px rgba(16,41,27,0.05), 0 10px 30px -12px rgba(16,41,27,0.14);
+    --lp-shadow-hover: 0 2px 4px rgba(16,41,27,0.06), 0 18px 44px -14px rgba(16,41,27,0.20);
+    background-color: var(--lp-bg);
+    color: var(--lp-ink);
+}
+html.dark .lp {
+    --lp-bg: #0A0D0B;                    /* deep charcoal (green undertone) */
+    --lp-ink: #F2F7F3;                   /* primary text on charcoal */
+    --lp-ink-soft: rgba(242,247,243,0.66);
+    --lp-ink-faint: rgba(242,247,243,0.42);
+    --lp-green: #3FCE85;                 /* brand green (dark) */
+    --lp-green-deep: #63D99C;            /* hover green on dark */
+    --lp-surface: #10241A;               /* dark green elevated surface */
+    --lp-surface-2: #163024;             /* raised dark green surface */
+    --lp-surface-line: rgba(63,206,133,0.13);
+    --lp-on-dark: #F2F7F3;
+    --lp-on-dark-soft: rgba(242,247,243,0.68);
+    --lp-on-dark-faint: rgba(242,247,243,0.44);
+    --lp-card: #111512;                  /* charcoal-green card */
+    --lp-card-line: rgba(242,247,243,0.09);
+    --lp-green-tint: rgba(63,206,133,0.10);
+    --lp-green-tint-strong: rgba(63,206,133,0.18);
+    --lp-green-a12: rgba(63,206,133,0.12);
+    --lp-green-a15: rgba(63,206,133,0.15);
+    --lp-green-a20: rgba(63,206,133,0.20);
+    --lp-green-a25: rgba(63,206,133,0.25);
+    --lp-green-a30: rgba(63,206,133,0.30);
+    --lp-green-a40: rgba(63,206,133,0.40);
+    --lp-outline: rgba(242,247,243,0.16);
+    --lp-nav-bg: rgba(10,13,11,0.82);
+    --lp-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 30px -12px rgba(0,0,0,0.5);
+    --lp-shadow-hover: 0 2px 4px rgba(0,0,0,0.45), 0 18px 44px -14px rgba(0,0,0,0.6);
+    background-color: var(--lp-bg);
+    color: var(--lp-ink);
+}
+
+/* Landing buttons — green primary, quiet outline (48px touch targets) */
+.lp-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl px-6 transition-all duration-150;
+    min-height: 48px;
+    background: linear-gradient(135deg, var(--lp-green) 0%, var(--lp-green-deep) 100%);
+    color: #FFFFFF;
+    box-shadow: 0 8px 20px -8px var(--lp-green-tint-strong), 0 2px 6px -2px rgba(16,41,27,0.25);
+}
+html.dark .lp-btn-primary {
+    color: #06130C;
+    background: var(--lp-green);
+}
+.lp-btn-primary:hover {
+    background: linear-gradient(135deg, var(--lp-green-deep) 0%, var(--lp-green-deep) 100%);
+    transform: translateY(-1px);
+}
+html.dark .lp-btn-primary:hover {
+    background: var(--lp-green-deep);
+}
+html.dark .lp-btn-primary:active, .lp-btn-primary:active { transform: translateY(0) scale(0.98); }
+
+.lp-btn-outline {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl px-6 transition-all duration-150;
+    min-height: 48px;
+    border: 1.5px solid var(--lp-outline);
+    color: var(--lp-ink);
+    background: var(--lp-card);
+}
+.lp-btn-outline:hover {
+    border-color: var(--lp-green);
+    color: var(--lp-green-deep);
+    transform: translateY(-1px);
+}
+html.dark .lp-btn-outline:hover { color: var(--lp-green); }
+
+.lp-btn-ghost-dark {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl px-6 transition-all duration-150;
+    min-height: 48px;
+    background: rgba(255,255,255,0.07);
+    color: #FFFFFF;
+    border: 1.5px solid rgba(255,255,255,0.14);
+}
+.lp-btn-ghost-dark:hover {
+    background: rgba(255,255,255,0.12);
+    transform: translateY(-1px);
+}
+
+/* Green eyebrow chip used across landing sections */
+.lp-eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full text-[11px] font-bold tracking-[0.18em] uppercase;
+    color: var(--lp-green-deep);
+    background: var(--lp-green-tint);
+    border: 1px solid var(--lp-green-tint-strong);
+    padding: 6px 14px;
+}
+html.dark .lp-eyebrow { color: var(--lp-green); }
+
+/* Scroll-reveal (IntersectionObserver adds .is-visible) */
+.lp-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Stagger applies only while revealing — never to later hover transitions */
+.lp-reveal:not(.is-visible) {
+    transition-delay: var(--reveal-delay, 0ms);
+}
+.lp-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Sticky nav states */
+.lp-nav-scrolled {
+    background: var(--lp-nav-bg);
+    backdrop-filter: blur(12px) saturate(1.15);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    border-bottom: 1px solid var(--lp-card-line);
+}
+.lp-mobile-sheet {
+    background: var(--lp-nav-bg);
+    backdrop-filter: blur(16px) saturate(1.15);
+    -webkit-backdrop-filter: blur(16px) saturate(1.15);
+    border-bottom: 1px solid var(--lp-card-line);
+    box-shadow: var(--lp-shadow);
+}
+
+/* Theme toggle (48px touch target) */
+.lp-theme-toggle {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--lp-ink-soft);
+    background: var(--lp-card);
+    border: 1.5px solid var(--lp-card-line);
+    transition: color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.lp-theme-toggle:hover {
+    color: var(--lp-green-deep);
+    border-color: var(--lp-green-a40);
+}
+html.dark .lp-theme-toggle:hover { color: var(--lp-green); }
+
+/* Skip-to-content link (visible on keyboard focus) */
+.lp-skip {
+    position: absolute;
+    left: -9999px;
+}
+.lp-skip:focus {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 20px;
+    border-radius: 12px;
+    background: var(--lp-green);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+html.dark .lp-skip:focus { color: #06130C; }
+
+/* Keep anchored sections clear of the sticky nav */
+.lp [id] { scroll-margin-top: 84px; }
+
+/* Solid green pill badge (Growth plan) */
+.lp-badge-green {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background: var(--lp-green);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px -4px var(--lp-green-a40);
+}
+html.dark .lp-badge-green { color: #06130C; }
+@media (prefers-reduced-motion: reduce) {
+    .lp-reveal { opacity: 1; transform: none; transition: none; }
+}
 
 /* Menu card shine effect on hover */
 @media (hover: hover) {
