@@ -186,7 +186,7 @@ async def lifespan(app_instance: FastAPI):
                     {"id": str(uuid.uuid4()), "name": "Basmati Rice", "unit": "kg", "quantity": 30.0, "min_quantity": 6.0, "cost_per_unit": 95.0},
                 ]
                 for item in demo_inventory:
-                    await db.inventory.insert_one({**item, "restaurant_id": demo_restaurant["id"], "supplier": "Demo Supplier", "created_at": datetime.now(timezone.utc).isoformat()})
+                    await db.inventory.insert_one({**item, "restaurant_id": demo_restaurant["id"], "is_low_stock": item["quantity"] <= item["min_quantity"], "supplier": "Demo Supplier", "created_at": datetime.now(timezone.utc).isoformat()})
                 inv = {i["name"]: i["id"] for i in demo_inventory}
 
                 def recipe(*pairs):
@@ -260,6 +260,13 @@ async def lifespan(app_instance: FastAPI):
                     await db.restaurant_subscriptions.update_one(
                         {"restaurant_id": sub["restaurant_id"]},
                         {"$set": {"active_addons": [a["id"] for a in STORE_ADDONS]}},
+                    )
+                # Repair seeded inventory rows created before is_low_stock
+                # existed (the response model requires the flag).
+                if demo.get("restaurant_id"):
+                    await db.inventory.update_many(
+                        {"restaurant_id": demo["restaurant_id"], "is_low_stock": {"$exists": False}},
+                        [{"$set": {"is_low_stock": {"$lte": ["$quantity", "$min_quantity"]}}}],
                     )
         except Exception as e:
             logger.warning(f"Demo seed skipped: {e}")
