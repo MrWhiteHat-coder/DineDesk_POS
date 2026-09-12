@@ -253,10 +253,11 @@ function HeroPreview() {
       <div className="relative rounded-3xl bg-[var(--lp-surface)] border border-[var(--lp-surface-line)] shadow-[var(--lp-shadow-hover)] overflow-hidden">
         {/* window chrome */}
         <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-[var(--lp-surface-line)]">
+          {/* macOS traffic lights: close · minimize · maximize */}
           <span className="flex gap-1.5" aria-hidden="true">
-            <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
-            <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
-            <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57] ring-1 ring-black/10" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E] ring-1 ring-black/10" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#28C840] ring-1 ring-black/10" />
           </span>
           <span className="text-[11px] sm:text-xs font-semibold text-[var(--lp-on-dark-soft)] truncate">
             DineDesk — Control Room
