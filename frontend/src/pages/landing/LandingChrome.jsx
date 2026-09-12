@@ -300,20 +300,8 @@ export function Footer({ hashPrefix = '' }) {
               Legal
             </p>
             <ul className="mt-4 space-y-1">
-              <li>
-                <FooterLink
-                  href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Privacy Policy request')}`}
-                >
-                  Privacy Policy
-                </FooterLink>
-              </li>
-              <li>
-                <FooterLink
-                  href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Terms of Service request')}`}
-                >
-                  Terms
-                </FooterLink>
-              </li>
+              <li><FooterLink href="/privacy">Privacy Policy</FooterLink></li>
+              <li><FooterLink href="/terms">Terms</FooterLink></li>
             </ul>
           </nav>
 
