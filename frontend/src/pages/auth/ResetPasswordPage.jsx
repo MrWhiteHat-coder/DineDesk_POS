@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-gray-500 mb-6">This password reset link is missing or invalid. Please request a new one.</p>
           <Link
             to="/forgot-password"
-            className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            className="w-full h-11 rounded-xl bg-gradient-to-r from-[#2E9E5B] to-[#268A4E] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors hover:brightness-105"
           >
             Request New Link
           </Link>
@@ -94,7 +94,7 @@ export default function ResetPasswordPage() {
               <p className="text-sm text-gray-500 mb-6">Your password has been updated. You can now sign in with your new password.</p>
               <button
                 onClick={() => navigate('/login')}
-                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-[#2E9E5B] to-[#268A4E] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors hover:brightness-105"
               >
                 Sign In <ArrowRight className="w-4 h-4" />
               </button>
@@ -137,7 +137,7 @@ export default function ResetPasswordPage() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[#2E9E5B] to-[#268A4E] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors hover:brightness-105 disabled:opacity-60"
                   disabled={loading}
                 >
                   {loading ? (

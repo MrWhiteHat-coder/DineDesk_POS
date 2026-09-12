@@ -10,7 +10,7 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'tnum' on, 'lnum' on;
-    background-color: #FAFAFA;
+    background-color: #F4F7F3;
 }
 
 code {
@@ -113,10 +113,10 @@ code {
     }
     body {
         @apply text-[#111111];
-        background-color: #FAFAFA;
+        background-color: #F4F7F3;
     }
     html.dark body {
-        background-color: #0F1115;
+        background-color: #0D100E;
         color: #F3F4F6;
     }
     h1, h2, h3, h4, h5, h6 {
@@ -159,7 +159,7 @@ code {
     }
     .dd-gradient-hero,
     .bg-dd-gradient-hero {
-        background: linear-gradient(135deg, #0A0A0A 0%, #111827 55%, #1F2937 100%);
+        background: linear-gradient(135deg, #0F2417 0%, #16382A 55%, #1C4632 100%);
     }
     .dd-card {
         background: var(--dd-bg);
@@ -242,7 +242,7 @@ html.dark .dd-badge-error { color: #FCA5A5; }
 }
 
 ::-webkit-scrollbar-track {
-    background: #f5f5f5;
+    background: #EEF3EC;
     border-radius: 3px;
 }
 
@@ -884,9 +884,10 @@ html.dark .lp-skip:focus { color: #06130C; }
    nav logo to the white variant so it stays visible on charcoal. The
    footer passes .lp-logo-white explicitly (its surface is tinted in both
    themes). filter: brightness works because the source artwork is a
-   dark-green mark on transparency. */
+   dark-green mark on transparency. Rules are global so POS/admin shells
+   can reuse them without the .lp wrapper. */
 .lp-logo-nav { filter: none; }
-html.dark .lp .lp-logo-nav { filter: brightness(0) invert(1); }
+html.dark .lp-logo-nav { filter: brightness(0) invert(1); }
 .lp-logo-white { filter: brightness(0) invert(1); }
 
 /* Solid green pill badge (Growth plan) */

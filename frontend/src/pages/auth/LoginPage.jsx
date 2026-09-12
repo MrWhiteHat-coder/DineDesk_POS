@@ -6,6 +6,7 @@ import { authAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
+import logoUrl from '../../assets/dinedesk-logo.png';
 import {
   Mail, Lock, Eye, EyeOff, ArrowRight, Monitor, ConciergeBell, UtensilsCrossed,
   Package, BarChart3, ShieldCheck, Headphones, Rocket, QrCode, Globe, ChevronRight,
@@ -135,9 +136,7 @@ export default function LoginPage() {
         {/* Logo row */}
         <div className="relative z-10 flex items-center gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gray-900 dark:bg-white/[0.08] border border-gray-900 dark:border-white/10 flex items-center justify-center">
-              <UtensilsCrossed className="w-6 h-6 text-white dark:text-white" />
-            </div>
+            <img src={logoUrl} alt="DineDesk" className="lp-logo-nav h-11 w-auto" loading="eager" />
             <div>
               <span className="text-2xl font-heading font-bold tracking-tight">DineDesk</span>
               <p className="text-[11px] text-gray-500 dark:text-white/40 -mt-0.5">by Trident Ventures</p>
@@ -257,11 +256,9 @@ export default function LoginPage() {
               " Same team<br />Stronger everyday "
             </p>
 
-            {/* Logo tile */}
+            {/* Logo */}
             <div className="flex justify-center mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-gray-900 dark:bg-gradient-to-br dark:from-white/[0.14] dark:to-white/[0.05] border border-gray-900 dark:border-white/15 flex items-center justify-center shadow-md">
-                <UtensilsCrossed className="w-7 h-7 text-white dark:text-[#3FCE85]" />
-              </div>
+              <img src={logoUrl} alt="DineDesk" className="lp-logo-nav h-12 w-auto" loading="eager" />
             </div>
 
             <div className="text-center mb-6">

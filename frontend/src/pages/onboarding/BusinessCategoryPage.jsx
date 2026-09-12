@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { UtensilsCrossed, Shirt, ShoppingCart, ArrowRight, Lock } from 'lucide-react';
+import logoUrl from '../../assets/dinedesk-logo.png';
 
 const businessCategories = [
   {
@@ -44,11 +45,9 @@ export default function BusinessCategoryPage() {
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-black rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
-            <UtensilsCrossed className="w-8 h-8 text-white" />
-          </div>
+          <img src={logoUrl} alt="DineDesk" className="lp-logo-nav h-14 w-auto mx-auto mb-4" loading="eager" />
           <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
-            Welcome to OrderNest POS
+            Welcome to DineDesk
           </h1>
           <p className="text-slate-500 text-lg">Select your business category to get started</p>
         </div>

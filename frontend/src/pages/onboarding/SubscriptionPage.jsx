@@ -5,6 +5,7 @@ import { subscriptionAPI, restaurantAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import logoUrl from '../../assets/dinedesk-logo.png';
 import {
   UtensilsCrossed,
   Check,
@@ -70,9 +71,7 @@ export default function SubscriptionPage() {
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-black rounded-2xl mb-4 shadow-lg shadow-slate-800/20">
-            <UtensilsCrossed className="w-7 h-7 text-white" />
-          </div>
+          <img src={logoUrl} alt="DineDesk" className="lp-logo-nav h-12 w-auto mx-auto mb-4" loading="eager" />
           <h1 className="font-heading text-2xl font-bold text-slate-900 mb-2">
             Activate Your POS
           </h1>

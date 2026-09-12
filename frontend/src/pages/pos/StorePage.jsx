@@ -88,10 +88,10 @@ export default function StorePage() {
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
             <ShoppingCart className="w-5 h-5 text-gray-200" />
-            <span className="text-sm text-blue-200 font-medium">DineDesk Store</span>
+            <span className="text-sm text-[#A9E8C6] font-medium">DineDesk Store</span>
           </div>
           <h1 className="text-3xl font-heading font-bold mb-2">Grow Your Restaurant</h1>
-          <p className="text-blue-200 max-w-lg text-sm">
+          <p className="text-[#A9E8C6] max-w-lg text-sm">
             Add powerful features to your POS. Start with the base plan and unlock add-ons as you grow.
             All add-ons can be activated instantly with prorated billing.
           </p>

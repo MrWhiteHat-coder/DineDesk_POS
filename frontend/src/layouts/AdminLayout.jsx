@@ -12,11 +12,11 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Shield,
   Moon,
   Sun,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import logoUrl from '../assets/dinedesk-logo.png';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
@@ -39,28 +39,25 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#F4F7F3] flex">
       {/* Sidebar */}
       <aside
-        className={`bg-slate-900 flex flex-col transition-all duration-300 ${
+        className={`bg-[#0F2417] flex flex-col transition-all duration-300 ${
           collapsed ? 'w-20' : 'w-64'
         }`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-black">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-heading font-bold text-white">Admin Panel</span>
+              <img src={logoUrl} alt="DineDesk Admin" className="lp-logo-white h-8 w-auto" loading="eager" />
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className="text-slate-400 hover:text-white hover:bg-black"
+            className="text-slate-400 hover:text-white hover:bg-white/10"
             data-testid="admin-sidebar-toggle"
           >
             {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -77,8 +74,8 @@ export default function AdminLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-3 mb-1 rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-black text-white'
-                    : 'text-slate-400 hover:bg-black hover:text-white'
+                    ? 'bg-[#2E9E5B] text-white'
+                    : 'text-white/50 hover:bg-white/[0.07] hover:text-white'
                 }`
               }
               data-testid={`admin-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -90,10 +87,10 @@ export default function AdminLayout() {
         </nav>
 
         {/* Logout */}
-        <div className="p-2 border-t border-black">
+        <div className="p-2 border-t border-white/10">
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-3 px-3 py-3 w-full rounded-lg text-slate-400 hover:bg-black hover:text-white transition-all"
+            className="flex items-center gap-3 px-3 py-3 w-full rounded-lg text-white/50 hover:bg-white/[0.07] hover:text-white transition-all"
             data-testid="admin-theme-toggle"
           >
             {dark ? <Sun className="w-5 h-5 flex-shrink-0" /> : <Moon className="w-5 h-5 flex-shrink-0" />}
@@ -113,17 +110,17 @@ export default function AdminLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
+        <header className="h-16 bg-white dark:bg-[#161A20] border-b border-slate-200 dark:border-white/[0.07] flex items-center justify-between px-6">
           <div>
-            <h1 className="font-heading font-semibold text-lg text-slate-900">
+            <h1 className="font-heading font-semibold text-lg text-slate-900 dark:text-white">
               DineDesk Platform Admin
             </h1>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                <span className="text-slate-800 font-semibold text-sm">
+              <div className="w-8 h-8 bg-[#0F2417] dark:bg-[#2E9E5B] rounded-full flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
               </div>

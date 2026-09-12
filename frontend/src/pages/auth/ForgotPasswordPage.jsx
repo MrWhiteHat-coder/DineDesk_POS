@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
               </p>
               <Link
                 to="/login"
-                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-[#2E9E5B] to-[#268A4E] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors hover:brightness-105"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to Sign In
               </Link>
@@ -88,7 +88,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[#2E9E5B] to-[#268A4E] text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors hover:brightness-105 disabled:opacity-60"
                   disabled={loading}
                 >
                   {loading ? (

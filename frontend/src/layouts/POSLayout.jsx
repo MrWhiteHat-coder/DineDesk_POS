@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
 import { useTheme } from '../contexts/ThemeContext';
+import logoUrl from '../assets/dinedesk-logo.png';
 import { daySessionAPI } from '../lib/api';
 import { toast } from 'sonner';
 import DayCloseReport from '../components/pos/DayCloseReport';
@@ -222,20 +223,14 @@ export default function POSLayout() {
   /* ═══════════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════════ */
-  return (
-    <div className="h-screen flex overflow-hidden bg-[#F4F5F2] dark:bg-[#0E1013]" data-testid="pos-layout">
+  return (      <div className="h-screen flex overflow-hidden bg-[#F4F7F3] dark:bg-[#0D100E]" data-testid="pos-layout">
 
       {/* ──────────── LEFT SIDEBAR (desktop, always dark — brand signature) ──────────── */}
-      <aside className="hidden lg:flex w-[190px] xl:w-[212px] flex-col bg-[#0B0D10] flex-shrink-0 overflow-y-auto">
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 pt-5 pb-4 flex-shrink-0">
-          <div className="w-9 h-9 bg-white/[0.07] border border-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-white font-heading font-bold text-[15px] leading-tight">DineDesk</p>
-            <p className="text-white/35 text-[9px] leading-tight">by Trident Ventures</p>
-          </div>
+      <aside className="hidden lg:flex w-[190px] xl:w-[212px] flex-col bg-[#0F2417] flex-shrink-0 overflow-y-auto">
+        {/* Logo — official brand lockup */}
+        <div className="flex flex-col items-start gap-1 px-4 pt-5 pb-4 flex-shrink-0">
+          <img src={logoUrl} alt="DineDesk" className="lp-logo-white h-8 w-auto" loading="eager" />
+          <p className="text-white/35 text-[9px] leading-tight pl-0.5">by Trident Ventures</p>
         </div>
 
         {/* Primary nav */}
@@ -343,7 +338,7 @@ export default function POSLayout() {
 
         {/* Sidebar footer — brand signature */}
         <div className="px-4 py-4 flex-shrink-0">
-          <p className="font-script text-lg text-[#3FCE85]/70 leading-tight">Good food.<br />Better business.</p>
+          <p className="font-script text-lg text-[#3FCE85]/70 leading-tight">Absorbs chaos.<br />Serves calm.</p>
         </div>
       </aside>
 
@@ -429,7 +424,7 @@ export default function POSLayout() {
           {user && (
             <div className="relative group flex-shrink-0">
               <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
-                <div className="w-8 h-8 bg-gray-900 dark:bg-[#2E9E5B] rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-[#0F2417] dark:bg-[#2E9E5B] rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-xs">{user.name?.charAt(0).toUpperCase()}</span>
                 </div>
                 <div className="text-left leading-tight hidden xl:block">
@@ -455,9 +450,7 @@ export default function POSLayout() {
         {/* ──────────── TOP BAR (mobile / tablet) ──────────── */}
         <header className="lg:hidden h-14 flex items-center justify-between px-3 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] flex-shrink-0 z-30">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 bg-black dark:bg-white/[0.08] rounded-lg flex items-center justify-center flex-shrink-0">
-              <UtensilsCrossed className="w-4 h-4 text-white" />
-            </div>
+            <img src={logoUrl} alt="DineDesk" className="lp-logo-white h-7 w-auto flex-shrink-0" loading="eager" />
             <div className="min-w-0 leading-tight">
               <p className="font-heading font-bold text-gray-900 dark:text-white text-xs truncate">{restaurant?.name || 'DineDesk'}</p>
               <button
@@ -480,7 +473,7 @@ export default function POSLayout() {
             </button>
             <button
               onClick={() => setMoreSheetOpen(true)}
-              className="w-8 h-8 rounded-lg bg-black dark:bg-white/[0.08] flex items-center justify-center"
+              className="w-8 h-8 rounded-lg bg-[#0F2417] dark:bg-white/[0.08] flex items-center justify-center"
               aria-label="Open menu"
             >
               {user
@@ -684,7 +677,7 @@ export default function POSLayout() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowDayOpenModal(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleOpenDay} disabled={loading} className="bg-gray-900 dark:bg-[#2E9E5B] hover:bg-gray-800 dark:hover:bg-[#288A50] rounded-xl text-white" data-testid="confirm-open-day-btn">
+            <Button onClick={handleOpenDay} disabled={loading} className="bg-[#0F2417] dark:bg-[#2E9E5B] hover:bg-[#14301F] dark:hover:bg-[#288A50] rounded-xl text-white" data-testid="confirm-open-day-btn">
               {loading ? 'Opening...' : 'Open Day'}
             </Button>
           </DialogFooter>
