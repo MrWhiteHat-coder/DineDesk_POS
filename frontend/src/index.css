@@ -880,6 +880,15 @@ html.dark .lp-skip:focus { color: #06130C; }
 /* Keep anchored sections clear of the sticky nav */
 .lp [id] { scroll-margin-top: 84px; }
 
+/* Brand logo: dark-green artwork on light surfaces; Night Shift flips the
+   nav logo to the white variant so it stays visible on charcoal. The
+   footer passes .lp-logo-white explicitly (its surface is tinted in both
+   themes). filter: brightness works because the source artwork is a
+   dark-green mark on transparency. */
+.lp-logo-nav { filter: none; }
+html.dark .lp .lp-logo-nav { filter: brightness(0) invert(1); }
+.lp-logo-white { filter: brightness(0) invert(1); }
+
 /* Solid green pill badge (Growth plan) */
 .lp-badge-green {
     display: inline-flex;

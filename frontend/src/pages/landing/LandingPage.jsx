@@ -60,19 +60,18 @@ function useScrollReveal() {
 
 /* ─────────────────── Shared bits ─────────────────── */
 
-function LogoMark({ size = 'md' }) {
-  /* Official brand lockup on a white chip — keeps the dark-green mark
-     legible on the mint nav (light), charcoal nav (Night Shift) and the
-     deep-green footer surface in both themes. */
-  const chip = size === 'lg' ? 'px-3 py-2 rounded-2xl' : 'px-2.5 py-1.5 rounded-xl';
-  const img = size === 'lg' ? 'h-9' : 'h-7';
+function LogoMark({ size = 'md', onDark = false }) {
+  /* Bare brand lockup. `onDark` renders the white variant for tinted
+     surfaces (footer in both themes); the nav variant flips to white in
+     Night Shift via CSS. */
+  const img = size === 'lg' ? 'h-10' : 'h-7';
   return (
-    <span
-      className={`${chip} bg-[#FFFFFF] shadow-[var(--lp-shadow)] flex items-center justify-center flex-shrink-0`}
-      aria-hidden="true"
-    >
-      <img src={logoUrl} alt="" className={`${img} w-auto`} loading="eager" />
-    </span>
+    <img
+      src={logoUrl}
+      alt=""
+      className={`lp-logo ${onDark ? 'lp-logo-white' : 'lp-logo-nav'} ${img} w-auto`}
+      loading="eager"
+    />
   );
 }
 
@@ -143,9 +142,9 @@ function LandingNav() {
         className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px]"
         aria-label="Main"
       >
-        <Link to="/" className="flex items-end gap-2.5 min-w-0" aria-label="DineDesk home">
+        <Link to="/" className="flex flex-col items-end gap-1 min-w-0" aria-label="DineDesk home">
           <LogoMark />
-          <span className="text-[10px] text-[var(--lp-ink-faint)] pb-0.5 leading-none whitespace-nowrap">
+          <span className="text-[10px] text-[var(--lp-ink-faint)] leading-none pr-0.5 whitespace-nowrap">
             by Trident Ventures
           </span>
         </Link>
@@ -1087,8 +1086,11 @@ function Footer() {
         <div className="grid gap-10 sm:gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
           {/* brand */}
           <div>
-            <Link to="/" className="inline-flex" aria-label="DineDesk home">
-              <LogoMark size="lg" />
+            <Link to="/" className="inline-flex flex-col items-end gap-1.5" aria-label="DineDesk home">
+              <LogoMark size="lg" onDark />
+              <span className="text-[11px] text-[var(--lp-on-dark-faint)] leading-none pr-0.5 whitespace-nowrap">
+                by Trident Ventures
+              </span>
             </Link>
             <p className="font-script text-xl text-[var(--lp-green)] mt-4 leading-tight">
               Absorbs chaos. Serves calm.
