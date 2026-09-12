@@ -7,8 +7,10 @@ import { Input } from '../../components/ui/input';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import {
   Mail, Lock, ArrowRight, User, Phone, Shield, Zap, Globe, UtensilsCrossed,
-  BarChart3, Package, ChevronLeft, RefreshCw,
+  BarChart3, Package, ChevronLeft, RefreshCw, Moon, Sun,
 } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+import logoUrl from '../../assets/dinedesk-logo.png';
 
 const features = [
   { icon: Zap, title: 'Fast POS Billing', desc: 'Process restaurant orders quickly with an intuitive POS interface.' },
@@ -33,6 +35,7 @@ export default function RegisterPage() {
   const [resending, setResending] = useState(false);
 
   const navigate = useNavigate();
+  const { dark, toggle } = useTheme();
   // Busy only while the Google credential is actually being exchanged with the
   // backend. A cancelled popup never sets it, so no indefinite spinner.
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -195,91 +198,119 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" data-testid="register-page">
-      {/* LEFT */}
-      <div className="relative lg:w-[60%] bg-black text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/[0.03] rounded-full -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/[0.03] rounded-full translate-y-1/3 -translate-x-1/4" />
-        <div className="relative z-10 max-w-xl mx-auto lg:mx-0">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-11 h-11 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10">
-              <UtensilsCrossed className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight">DineDesk</span>
+    <div className="lp min-h-screen flex flex-col lg:flex-row antialiased" data-testid="register-page">
+      {/* LEFT — brand panel (desktop) */}
+      <div className="relative hidden lg:flex lg:w-[55%] bg-[var(--lp-surface)] text-[var(--lp-on-dark)] p-10 xl:p-14 flex-col justify-center overflow-hidden">
+        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] bg-[var(--lp-green-a12)] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[var(--lp-green-a15)] rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+        <div className="relative z-10 max-w-xl">
+          <div className="flex flex-col items-start gap-1.5 mb-8">
+            <img src={logoUrl} alt="DineDesk" className="lp-logo-white h-10 w-auto" loading="eager" />
+            <span className="text-[11px] text-[var(--lp-on-dark-faint)]">by Trident Ventures</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-4">
-            Smart Restaurant POS Built for Speed and Simplicity
+          <h1 className="font-heading-xl text-3xl sm:text-4xl xl:text-[2.9rem] font-extrabold leading-[1.1] tracking-tight mb-4">
+            Smart Restaurant POS
+            <br />
+            Built for <span className="text-[var(--lp-green)]">Speed and Simplicity</span>
           </h1>
-          <p className="text-white/60 text-base sm:text-lg leading-relaxed mb-10 max-w-lg">
+          <p className="text-[var(--lp-on-dark-soft)] text-base xl:text-lg leading-relaxed mb-10 max-w-lg">
             DineDesk helps restaurants manage orders, menus, inventory, and online deliveries from one powerful dashboard.
           </p>
           <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 gap-3">
             {features.map((f) => (
-              <div key={f.title} className="flex items-start gap-3 bg-white/[0.05] backdrop-blur-sm rounded-xl p-3.5 border border-white/[0.08] hover:bg-white/[0.08] transition-colors">
-                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <f.icon className="w-[18px] h-[18px] text-white" />
+              <div key={f.title} className="flex items-start gap-3 bg-[var(--lp-green-a12)] rounded-2xl p-3.5 border border-[var(--lp-green-a30)] hover:bg-[var(--lp-green-a20)] transition-colors">
+                <div className="w-9 h-9 rounded-xl bg-[var(--lp-green-a20)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <f.icon className="w-[18px] h-[18px] text-[var(--lp-green)]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold mb-0.5">{f.title}</h3>
-                  <p className="text-[12px] text-white/50 leading-snug">{f.desc}</p>
+                  <p className="text-[12px] text-[var(--lp-on-dark-soft)] leading-snug">{f.desc}</p>
                 </div>
               </div>
             ))}
           </div>
+          <p className="font-script text-xl text-[var(--lp-green)] mt-10">Absorbs chaos. Serves calm.</p>
         </div>
       </div>
 
-      {/* RIGHT */}
-      <div className="lg:w-[40%] bg-white flex items-center justify-center p-6 sm:p-10 lg:p-12">
+      {/* RIGHT — form panel on the mint canvas */}
+      <div className="flex-1 lg:w-[45%] bg-[var(--lp-bg)] flex flex-col relative">
+        {/* Mobile brand row */}
+        <div className="lg:hidden flex items-center justify-between px-4 sm:px-6 pt-4 flex-shrink-0">
+          <div className="flex flex-col items-end gap-0.5">
+            <img src={logoUrl} alt="DineDesk" className="lp-logo lp-logo-nav h-6 w-auto" loading="eager" />
+            <span className="text-[9px] text-[var(--lp-ink-faint)] leading-none pr-0.5">by Trident Ventures</span>
+          </div>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to Night Shift'}
+            className="w-11 h-11 rounded-xl border border-[var(--lp-card-line)] bg-[var(--lp-card)] inline-flex items-center justify-center text-[var(--lp-ink-soft)] hover:text-[var(--lp-green-deep)] transition-colors"
+          >
+            {dark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+          </button>
+        </div>
+        {/* Desktop theme toggle */}
+        <div className="hidden lg:flex justify-end px-8 xl:px-12 pt-6 flex-shrink-0">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to Night Shift'}
+            className="w-11 h-11 rounded-xl border border-[var(--lp-card-line)] bg-[var(--lp-card)] inline-flex items-center justify-center text-[var(--lp-ink-soft)] hover:text-[var(--lp-green-deep)] transition-colors"
+          >
+            {dark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:px-12 lg:pb-12">
         <div className="w-full max-w-sm">
 
           {/* STEP: Check Email */}
           {step === 'check-email' && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8 text-center">
-              <div className="w-14 h-14 rounded-full bg-black flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-7 h-7 text-white" />
+            <div className="lp-reveal is-visible rounded-3xl bg-[var(--lp-card)] border border-[var(--lp-card-line)] shadow-[var(--lp-shadow)] p-7 sm:p-8 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-[var(--lp-green-a15)] flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-7 h-7 text-[var(--lp-green-deep)]" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Check your email</h2>
-              <p className="text-sm text-gray-500 mb-6">
-                We sent a verification link to <span className="font-semibold text-gray-700">{email}</span>. Click it to activate your account, then sign in.
+              <h2 className="font-heading text-xl font-bold text-[var(--lp-ink)] mb-2">Check your email</h2>
+              <p className="text-sm text-[var(--lp-ink-soft)] mb-6">
+                We sent a verification link to <span className="font-semibold text-[var(--lp-ink)]">{email}</span>. Click it to activate your account, then sign in.
               </p>
 
               <button
                 onClick={handleResend}
                 disabled={resending}
-                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm hover:border-black hover:text-black transition-colors disabled:opacity-60 mb-3"
+                className="w-full h-12 rounded-xl border-[1.5px] border-[var(--lp-outline)] text-[var(--lp-ink)] font-semibold text-sm hover:border-[var(--lp-green-a40)] hover:text-[var(--lp-green-deep)] transition-colors disabled:opacity-60 mb-3"
               >
                 {resending ? 'Sending...' : 'Resend Email'}
               </button>
 
               <Link
                 to="/login"
-                className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                className="lp-btn-primary w-full"
               >
                 Go to Sign In <ArrowRight className="w-4 h-4" />
               </Link>
 
-              <p className="text-xs text-gray-400 mt-4">Link expires in 24 hours</p>
+              <p className="text-xs text-[var(--lp-ink-faint)] mt-4">Link expires in 24 hours</p>
             </div>
           )}
 
           {/* STEP: OTP Verification */}
           {step === 'otp' && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
+            <div className="lp-reveal is-visible rounded-3xl bg-[var(--lp-card)] border border-[var(--lp-card-line)] shadow-[var(--lp-shadow)] p-7 sm:p-8">
               <button
                 onClick={() => setStep('register')}
-                className="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm mb-5 transition-colors"
+                className="flex items-center gap-1 text-[var(--lp-ink-faint)] hover:text-[var(--lp-ink)] text-sm mb-5 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
 
               <div className="text-center mb-6">
-                <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-7 h-7 text-green-600" />
+                <div className="w-14 h-14 rounded-2xl bg-[var(--lp-green-a15)] flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-7 h-7 text-[var(--lp-green-deep)]" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Verify your phone</h2>
-                <p className="text-sm text-gray-500">
-                  Enter the 6-digit code sent to <span className="font-semibold text-gray-700">{phone}</span>
+                <h2 className="font-heading text-xl font-bold text-[var(--lp-ink)] mb-1">Verify your phone</h2>
+                <p className="text-sm text-[var(--lp-ink-soft)]">
+                  Enter the 6-digit code sent to <span className="font-semibold text-[var(--lp-ink)]">{phone}</span>
                 </p>
               </div>
 
@@ -295,27 +326,27 @@ export default function RegisterPage() {
                     value={digit}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-200 rounded-xl focus:border-black focus:ring-0 outline-none transition-colors bg-gray-50"
+                    className="w-12 h-14 text-center text-xl font-bold font-numbers border-[1.5px] border-[var(--lp-outline)] rounded-xl focus:border-[var(--lp-green)] focus:ring-0 outline-none transition-colors bg-[var(--lp-bg)] text-[var(--lp-ink)]"
                     disabled={otpVerifying}
                   />
                 ))}
               </div>
 
               {otpVerifying && (
-                <p className="text-center text-sm text-gray-500 mb-4">Verifying...</p>
+                <p className="text-center text-sm text-[var(--lp-ink-soft)] mb-4">Verifying...</p>
               )}
 
               {/* Resend OTP */}
               <div className="text-center">
                 {otpTimer > 0 ? (
-                  <p className="text-sm text-gray-400">
-                    Resend OTP in <span className="font-semibold text-gray-600">{otpTimer}s</span>
+                  <p className="text-sm text-[var(--lp-ink-faint)]">
+                    Resend OTP in <span className="font-semibold text-[var(--lp-ink)]">{otpTimer}s</span>
                   </p>
                 ) : (
                   <button
                     onClick={() => sendOTP(formatPhone(phone))}
                     disabled={otpSending}
-                    className="inline-flex items-center gap-1.5 text-sm text-black font-semibold hover:underline disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-sm text-[var(--lp-green-deep)] font-semibold hover:underline disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${otpSending ? 'animate-spin' : ''}`} />
                     Resend OTP
@@ -323,11 +354,11 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              <p className="text-xs text-gray-400 text-center mt-4">Didn't receive the code? Check your spam folder or try again.</p>
+              <p className="text-xs text-[var(--lp-ink-faint)] text-center mt-4">Didn't receive the code? Check your spam folder or try again.</p>
 
               <Link
                 to="/login"
-                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors mt-4"
+                className="w-full h-12 rounded-xl border-[1.5px] border-[var(--lp-outline)] text-[var(--lp-ink)] font-semibold text-sm flex items-center justify-center gap-2 hover:border-[var(--lp-green-a40)] hover:text-[var(--lp-green-deep)] transition-colors mt-4"
               >
                 Skip for now — I'll verify later
               </Link>
@@ -336,79 +367,79 @@ export default function RegisterPage() {
 
           {/* STEP: Register Form */}
           {step === 'register' && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-7 sm:p-8">
+            <div className="lp-reveal is-visible rounded-3xl bg-[var(--lp-card)] border border-[var(--lp-card-line)] shadow-[var(--lp-shadow)] p-7 sm:p-8">
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Create Your Account</h2>
-                <p className="text-sm text-gray-500">Start managing your restaurant today.</p>
+                <h2 className="font-heading text-xl font-bold text-[var(--lp-ink)] mb-1">Create Your Account</h2>
+                <p className="text-sm text-[var(--lp-ink-soft)]">Start managing your restaurant today.</p>
               </div>
               <form onSubmit={handleRegister} className="space-y-3.5">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Restaurant Owner Name</label>
+                  <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Restaurant Owner Name</label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--lp-ink-faint)]" />
                     <Input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe"
-                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      className="pl-10 h-11 rounded-xl bg-[var(--lp-bg)] border-[var(--lp-card-line)] text-sm text-[var(--lp-ink)] focus-visible:ring-[var(--lp-green-a40)] focus-visible:border-[var(--lp-green)]"
                       required />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Email</label>
+                  <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--lp-ink-faint)]" />
                     <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      className="pl-10 h-11 rounded-xl bg-[var(--lp-bg)] border-[var(--lp-card-line)] text-sm text-[var(--lp-ink)] focus-visible:ring-[var(--lp-green-a40)] focus-visible:border-[var(--lp-green)]"
                       required />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Phone Number</label>
+                  <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Phone Number</label>
                   <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--lp-ink-faint)]" />
                     <Input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+91 98765 43210"
-                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      className="pl-10 h-11 rounded-xl bg-[var(--lp-bg)] border-[var(--lp-card-line)] text-sm text-[var(--lp-ink)] focus-visible:ring-[var(--lp-green-a40)] focus-visible:border-[var(--lp-green)]"
                       required
                     />
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1">Include country code (e.g. +91 for India)</p>
+                  <p className="text-[11px] text-[var(--lp-ink-faint)] mt-1">Include country code (e.g. +91 for India)</p>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Password</label>
+                  <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--lp-ink-faint)]" />
                     <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters"
-                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      className="pl-10 h-11 rounded-xl bg-[var(--lp-bg)] border-[var(--lp-card-line)] text-sm text-[var(--lp-ink)] focus-visible:ring-[var(--lp-green-a40)] focus-visible:border-[var(--lp-green)]"
                       required />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Confirm Password</label>
+                  <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Confirm Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--lp-ink-faint)]" />
                     <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat your password"
-                      className="pl-10 h-11 rounded-xl bg-gray-50 border-gray-200 text-sm focus-visible:ring-black focus-visible:border-black"
+                      className="pl-10 h-11 rounded-xl bg-[var(--lp-bg)] border-[var(--lp-card-line)] text-sm text-[var(--lp-ink)] focus-visible:ring-[var(--lp-green-a40)] focus-visible:border-[var(--lp-green)]"
                       required />
                   </div>
                 </div>
                 <button
                   type="submit"
-                  className="w-full h-11 rounded-xl bg-black hover:bg-gray-800 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-1"
+                  className="lp-btn-primary w-full mt-1"
                   disabled={loading}
                 >
                   {loading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>Create Account <ArrowRight className="w-4 h-4" /></>
                   )}
                 </button>
               </form>
               <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-[11px] text-gray-400 font-medium uppercase">or</span>
-                <div className="flex-1 h-px bg-gray-200" />
+                <div className="flex-1 h-px bg-[var(--lp-card-line)]" />
+                <span className="text-[11px] text-[var(--lp-ink-faint)] font-medium uppercase">or</span>
+                <div className="flex-1 h-px bg-[var(--lp-card-line)]" />
               </div>
 
               {/* Google Sign-Up — shared official button (no One Tap / hidden-container clicks) */}
@@ -420,23 +451,24 @@ export default function RegisterPage() {
               />
               {googleBusy && (
                 <div className="flex items-center justify-center gap-2 mt-2" data-testid="google-busy">
-                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                  <span className="text-xs text-gray-500">Creating your account with Google…</span>
+                  <div className="w-4 h-4 border-2 border-[var(--lp-card-line)] border-t-[var(--lp-ink-faint)] rounded-full animate-spin" />
+                  <span className="text-xs text-[var(--lp-ink-soft)]">Creating your account with Google…</span>
                 </div>
               )}
 
               <Link
                 to="/login"
-                className="w-full h-11 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold text-sm flex items-center justify-center gap-2 hover:border-black hover:text-black transition-colors mt-3"
+                className="w-full h-12 rounded-xl border-[1.5px] border-[var(--lp-outline)] text-[var(--lp-ink)] font-semibold text-sm flex items-center justify-center gap-2 hover:border-[var(--lp-green-a40)] hover:text-[var(--lp-green-deep)] transition-colors mt-3"
               >
                 Sign In to Existing Account
               </Link>
             </div>
           )}
 
-          <p className="text-center text-[11px] text-gray-400 mt-5">
+          <p className="text-center text-[11px] text-[var(--lp-ink-faint)] mt-5">
             By creating an account, you agree to the Terms of Service and Privacy Policy.
           </p>
+        </div>
         </div>
       </div>
     </div>
