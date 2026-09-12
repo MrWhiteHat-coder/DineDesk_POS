@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import logoUrl from '../../assets/dinedesk-logo.png';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
-  UtensilsCrossed, ArrowRight, ArrowUpRight, Check, Menu, X, Moon, Sun,
+  ArrowRight, ArrowUpRight, Check, Menu, X, Moon, Sun,
   Receipt, Package, ChefHat, BarChart3, HeartHandshake, Building2,
   Plug, Store as StoreIcon, Mail, Phone, ConciergeBell, LayoutGrid,
   Bell, Flame, Clock, Leaf,
@@ -60,14 +61,17 @@ function useScrollReveal() {
 /* ─────────────────── Shared bits ─────────────────── */
 
 function LogoMark({ size = 'md' }) {
-  const box = size === 'lg' ? 'w-11 h-11 rounded-2xl' : 'w-9 h-9 rounded-xl';
-  const icon = size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
+  /* Official brand lockup on a white chip — keeps the dark-green mark
+     legible on the mint nav (light), charcoal nav (Night Shift) and the
+     deep-green footer surface in both themes. */
+  const chip = size === 'lg' ? 'px-3 py-2 rounded-2xl' : 'px-2.5 py-1.5 rounded-xl';
+  const img = size === 'lg' ? 'h-9' : 'h-7';
   return (
     <span
-      className={`${box} bg-[var(--lp-surface)] border border-[var(--lp-surface-line)] flex items-center justify-center flex-shrink-0`}
+      className={`${chip} bg-[#FFFFFF] shadow-[var(--lp-shadow)] flex items-center justify-center flex-shrink-0`}
       aria-hidden="true"
     >
-      <UtensilsCrossed className={`${icon} text-[var(--lp-green)]`} strokeWidth={1.9} />
+      <img src={logoUrl} alt="" className={`${img} w-auto`} loading="eager" />
     </span>
   );
 }
@@ -139,15 +143,10 @@ function LandingNav() {
         className="max-w-7xl mx-auto flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px]"
         aria-label="Main"
       >
-        <Link to="/" className="flex items-center gap-3 min-w-0" aria-label="DineDesk home">
+        <Link to="/" className="flex items-end gap-2.5 min-w-0" aria-label="DineDesk home">
           <LogoMark />
-          <span className="min-w-0">
-            <span className="block font-heading font-bold text-lg tracking-tight text-[var(--lp-ink)] leading-none">
-              DineDesk
-            </span>
-            <span className="block text-[10px] text-[var(--lp-ink-faint)] mt-0.5 leading-none">
-              by Trident Ventures
-            </span>
+          <span className="text-[10px] text-[var(--lp-ink-faint)] pb-0.5 leading-none whitespace-nowrap">
+            by Trident Ventures
           </span>
         </Link>
 
@@ -1088,11 +1087,8 @@ function Footer() {
         <div className="grid gap-10 sm:gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
           {/* brand */}
           <div>
-            <Link to="/" className="flex items-center gap-3" aria-label="DineDesk home">
-              <LogoMark />
-              <span className="font-heading font-bold text-lg tracking-tight text-[var(--lp-on-dark)]">
-                DineDesk
-              </span>
+            <Link to="/" className="inline-flex" aria-label="DineDesk home">
+              <LogoMark size="lg" />
             </Link>
             <p className="font-script text-xl text-[var(--lp-green)] mt-4 leading-tight">
               Absorbs chaos. Serves calm.
