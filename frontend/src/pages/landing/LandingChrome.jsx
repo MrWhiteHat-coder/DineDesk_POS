@@ -260,8 +260,8 @@ export function Footer({ hashPrefix = '' }) {
               Absorbs chaos. Serves calm.
             </p>
             <p className="text-xs text-[var(--lp-on-dark-faint)] mt-3 max-w-xs leading-relaxed">
-              A restaurant operating system by Trident Ventures. Start small. Add power when you
-              need it.
+              DineDesk POS — restaurant billing and operations software by Trident Ventures,
+              Chennai. Start small. Add power when you need it.
             </p>
           </div>
 

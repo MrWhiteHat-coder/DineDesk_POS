@@ -200,7 +200,7 @@ function Hero() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-16 lg:pt-20 pb-16 sm:pb-20 lg:pb-24 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         <div>
-          <span className="lp-eyebrow lp-reveal">Restaurant POS that grows with you</span>
+          <span className="lp-eyebrow lp-reveal">DineDesk POS — Restaurant POS that grows with you</span>
 
           <h1 className="lp-reveal font-heading-xl text-[2.4rem] xs:text-[2.6rem] leading-[1.04] sm:text-5xl lg:text-[3.75rem] font-extrabold tracking-tight mt-5 text-[var(--lp-ink)]">
             Start small.
@@ -215,8 +215,8 @@ function Hero() {
           </p>
 
           <p className="lp-reveal mt-4 text-base sm:text-lg leading-relaxed text-[var(--lp-ink-soft)] max-w-xl">
-            DineDesk gives every restaurant a simple place to start, with powerful tools available
-            whenever your business needs them.
+            DineDesk POS gives every restaurant a simple place to start, with powerful tools
+            available whenever your business needs them.
           </p>
 
           <div className="lp-reveal mt-8 flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -377,9 +377,9 @@ function Pricing() {
     <section id="plans" className="py-16 sm:py-20 lg:py-24 scroll-mt-20" aria-labelledby="plans-heading">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Plans"
+          eyebrow="DineDesk POS pricing"
           title={<span id="plans-heading">Simple pricing that starts small</span>}
-          sub="Every plan runs on the same reliable DineDesk core. Add power when you need it — never before."
+          sub="Every plan runs on the same reliable DineDesk POS core. Add power when you need it — never before."
         />
 
         <div className="mt-12 grid lg:grid-cols-3 gap-5 lg:gap-6 items-stretch max-w-6xl mx-auto">
@@ -868,8 +868,8 @@ function FinalCTA() {
 export default function LandingPage() {
   const rootRef = useScrollReveal();
   usePageMeta({
-    title: 'DineDesk — Restaurant POS & Billing Software India | Start Small, Grow Without Limits',
-    description: 'Affordable restaurant POS and billing software for Indian restaurants, cafés and food carts. Billing, inventory automation and optional Store modules from ₹999/month. By Trident Ventures, Chennai.',
+    title: 'DineDesk POS — Restaurant POS & Billing Software India | DineDesk by Trident Ventures',
+    description: 'DineDesk POS (Dine Desk) — affordable restaurant POS & billing software for Indian restaurants, cafés and food carts. Billing, inventory automation, Store modules from ₹999/month. Trident Ventures, Chennai.',
   });
 
   return (

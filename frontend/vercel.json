@@ -1,0 +1,16 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "dinedeskpos.com" }],
+      "destination": "https://www.revontechnologies.in/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.dinedeskpos.com" }],
+      "destination": "https://www.revontechnologies.in/$1",
+      "permanent": true
+    }
+  ]
+}

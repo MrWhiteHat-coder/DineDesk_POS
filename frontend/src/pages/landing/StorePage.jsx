@@ -147,8 +147,8 @@ function ModuleCard({ cat }) {
 export default function StorePage() {
   const rootRef = useScrollReveal();
   usePageMeta({
-    title: 'DineDesk Store — Add Modules When Your Restaurant Is Ready',
-    description: 'Optional DineDesk Store modules: KDS, inventory, table management, QR ordering, CRM, loyalty, analytics, multi-branch and integrations. Add power only when you need it.',
+    title: 'DineDesk Store — POS Modules for Indian Restaurants | DineDesk POS',
+    description: 'Optional DineDesk POS Store modules: KDS, inventory, table management, QR ordering, CRM, loyalty, analytics, multi-branch and integrations. Add power only when you need it.',
   });
 
   return (
