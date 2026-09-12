@@ -911,6 +911,46 @@ html.dark .lp-badge-green { color: #06130C; }
     .lp-reveal { opacity: 1; transform: none; transition: none; }
 }
 
+/* ═══════════════════════════════════════
+   BRAND GREEN CTA REMAP (POS screens)
+   POS pages use the legacy bg-black / bg-gray-900
+   "ink button" pattern for primary actions, filter
+   chips and badge tiles. Remap those to the deep
+   brand green so the whole POS reads as one system.
+   Scoped to hover-paired buttons, standalone chips
+   and dark hero cards — same style as the Night
+   Shift shims above, theme-aware.
+   ═══════════════════════════════════════ */
+
+/* 1. Buttons: bg-black / bg-gray-900 paired with a hover */
+html:not(.dark) .bg-black.hover\:bg-gray-800,
+html:not(.dark) .bg-gray-900.hover\:bg-gray-700 {
+    background-color: #0F2417 !important;
+}
+html:not(.dark) .bg-black.hover\:bg-gray-800:hover,
+html:not(.dark) .bg-gray-900.hover\:bg-gray-700:hover {
+    background-color: #1C4632 !important;
+}
+
+/* 2. Standalone chips & badge tiles: category pills, order-type
+      toggles, qty bubbles, avatar discs, PRO-tier active chips */
+html:not(.dark) .bg-black:not(.hover\:bg-gray-800) {
+    background-color: #0F2417 !important;
+}
+html:not(.dark) .bg-gray-900:not(.hover\:bg-gray-700) {
+    background-color: #0F2417 !important;
+}
+
+/* 3. Dark summary/hero cards (Wallet counter/net cards, customer &
+      gift-card page headers, KDS panels) — deep green elevation */
+html:not(.dark) .bg-slate-900 {
+    background-color: #0F2417 !important;
+}
+
+/* 4. Shadow tints follow the green instead of black glow */
+html:not(.dark) .bg-black.shadow-md,
+html:not(.dark) .bg-gray-900.shadow-md { box-shadow: 0 4px 14px -4px rgba(15, 36, 23, 0.45) !important; }
+
 /* Menu card shine effect on hover */
 @media (hover: hover) {
     .group::before {
