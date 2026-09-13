@@ -505,8 +505,16 @@ html.dark .calm-mode .shadow-sm {
        bare .font-heading class — buttons/chips also carry it and explicit
        text-* sizes (e.g. the 12px restaurant chip in the POS topbar) were
        being inflated to 20px, overlapping the header actions. */
-    h1.font-heading, h2.font-heading, h3.font-heading { font-size: 1.25rem; }
+    h1.font-heading { font-size: 1.5rem; }
+    h2.font-heading, h3.font-heading { font-size: 1.25rem; }
     main > * { animation: none; }
+    /* Opacity-only on mobile: the desktop fadeInUp keyframe leaves a forwards-fill
+       transform on page roots, which silently turns `position: fixed` children
+       (mobile cart bar) into absolutely-positioned elements relative to the page —
+       pushing them far below the viewport. Opacity never creates a containing block. */
+    main > :first-child { animation: fadeIn 0.35s ease forwards; }
+    .animate-fade-in { animation: fadeIn 0.3s ease forwards; }
+    .animate-fade-in-up { animation: fadeIn 0.35s ease forwards; }
 }
 
 .overflow-x-auto::-webkit-scrollbar {
@@ -525,27 +533,49 @@ html.dark .calm-mode .shadow-sm {
    MOBILE UX ENHANCEMENTS
    ═══════════════════════════════════════ */
 
-/* Touch-friendly tap targets */
+/* Kill the gray tap-flash on Android while keeping active: states visible.
+   Our components define their own active: scale/color feedback, which reads
+   far better than the browser's default highlight. */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* No accidental double-tap zoom during fast billing; component active: states
+   still fire because they are plain CSS transitions, not tap-dependent. */
+.touch-manipulation, button, a {
+    touch-action: manipulation;
+}
+
+/* Icon-only round buttons (8/9-size) stay exempt from the blanket min-height —
+   the blanket rule below would stretch them into ovals. */
 @media (max-width: 768px) {
     button, a, [role="button"] {
         min-height: 44px;
     }
-    
-    /* Better scrolling on mobile */
+    /* Restore compact intended sizes for icon-only buttons */
+    .w-8.h-8, .w-9.h-9, .w-10.h-10 {
+        min-height: 0;
+    }
+    /* Theme/Profile round buttons in the mobile topbar keep 32px height
+       (they sit inside a 48px row — comfortable target via row padding). */
+
+    /* Better scrolling on mobile (no forced snap — it fights free scrolling
+       on short overflow rows and feels broken) */
     .overflow-x-auto {
         -webkit-overflow-scrolling: touch;
-        scroll-snap-type: x mandatory;
     }
-    .overflow-x-auto > * {
-        scroll-snap-align: start;
-    }
-    
+
     /* Card press effect for touch */
     [data-testid*="menu-item"]:active {
         transform: scale(0.97);
         transition: transform 0.1s ease;
     }
 }
+
+/* Smooth active press for every button across the app (subtle, calm) */
+button { transition: transform 0.12s ease; }
+button:active { transform: scale(0.97); }
+button:disabled:active { transform: none; }
 
 /* Smooth transitions for all interactive elements */
 @media (hover: hover) {

@@ -169,6 +169,17 @@ export default function POSDashboard() {
   const prevOrdersCount = ordersHistory[ordersHistory.length - 2]?.v ?? 0;
   const ordersDelta = prevOrdersCount > 0 ? Math.round(((lastOrdersCount - prevOrdersCount) / prevOrdersCount) * 100) : null;
 
+  /* Compact delta chip — hides the confusing "↑ -100%" case entirely when flat (new restaurant) */
+  const deltaChip = (delta) => {
+    if (delta === null || delta === 0) return null;
+    const up = delta > 0;
+    return (
+      <span className={`font-bold ${up ? 'text-emerald-500' : 'text-red-500'}`}>
+        {up ? '↑' : '↓'} {Math.abs(delta)}%
+      </span>
+    );
+  };
+
   const hasData = todayOrders.length > 0 || tables.length > 0 || lastSales > 0;
 
   /* Kitchen health line under the greeting */
@@ -315,10 +326,15 @@ export default function POSDashboard() {
             {greeting}, {firstName} <span aria-hidden="true">🌱</span>
           </h1>
           <p className="text-sm text-gray-500 dark:text-white/50 mt-1.5 flex items-center gap-2 flex-wrap">
-            <span>
+            <span className="hidden md:inline">
               {tables.length > 0
                 ? `${occupiedTables.length} table${occupiedTables.length !== 1 ? 's' : ''} active · ${attentionCount} thing${attentionCount !== 1 ? 's' : ''} need attention · ${kitchenLine}`
                 : `${kitchenLine} · add tables from the Tables page to see your floor`}
+            </span>
+            <span className="md:hidden">
+              {attentionCount > 0
+                ? `${attentionCount} thing${attentionCount !== 1 ? 's' : ''} need attention`
+                : kitchenLine !== 'kitchen running normally' ? kitchenLine : 'Service running smoothly'}
             </span>
             <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${hasData ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-white/45'}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${hasData ? 'bg-emerald-500 animate-calm-pulse' : 'bg-gray-400'}`} />
@@ -328,11 +344,11 @@ export default function POSDashboard() {
         </div>
 
         {/* Metric cards */}
-        <div className="grid grid-cols-3 gap-3 lg:w-[440px] flex-shrink-0">
+        <div className="grid grid-cols-3 gap-2 md:gap-3 lg:w-[440px] flex-shrink-0">
           {/* Sales today */}
           <button
             onClick={() => navigate('/pos/analytics')}
-            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark transition-all"
+            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all"
             data-testid="sales-today-card"
           >
             <div className="flex items-center gap-2 mb-2">
@@ -342,14 +358,14 @@ export default function POSDashboard() {
             <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">₹{(analytics?.daily_sales ?? lastSales ?? 0).toLocaleString('en-IN')}</p>
             <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
               Sales today
-              {salesDelta !== null && <span className={`font-bold ${salesDelta >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>↑ {salesDelta >= 0 ? '+' : ''}{salesDelta}%</span>}
+              {deltaChip(salesDelta)}
             </p>
           </button>
 
           {/* Active orders */}
           <button
             onClick={() => setShowOrdersDetail(true)}
-            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark transition-all"
+            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all"
             data-testid="active-orders-card"
           >
             <div className="flex items-center gap-2 mb-2">
@@ -359,13 +375,13 @@ export default function POSDashboard() {
             <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">{activeOrders.length}</p>
             <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
               Active orders
-              {ordersDelta !== null && <span className={`font-bold ${ordersDelta >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>↑ {ordersDelta >= 0 ? '+' : ''}{ordersDelta}%</span>}
+              {deltaChip(ordersDelta)}
             </p>
           </button>
 
           {/* Tables occupied */}
           <div
-            className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5"
+            className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5"
             data-testid="tables-occupied-card"
           >
             <div className="flex items-center gap-2 mb-2">
