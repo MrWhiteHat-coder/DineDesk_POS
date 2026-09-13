@@ -104,6 +104,7 @@ DEMO_PASSWORD = os.environ.get('DEMO_PASSWORD', '123456')
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI):
     # --- Startup ---
+    background_tasks = []
     try:
         if ADMIN_PASSWORD:
             admin = await db.users.find_one({"email": ADMIN_EMAIL})
@@ -295,10 +296,14 @@ async def lifespan(app_instance: FastAPI):
         await db.branches.create_index("restaurant_id")
         await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
         logger.info("Database indexes created")
+        reverify_task = asyncio.create_task(license_reverification_loop())
+        background_tasks.append(reverify_task)
     except Exception as e:
         logger.warning(f"Startup DB init skipped (will retry on first request): {e}")
     yield
     # --- Shutdown ---
+    for task in background_tasks:
+        task.cancel()
     client.close()
     logger.info("MongoDB connection closed")
 
@@ -444,6 +449,11 @@ class RestaurantResponse(BaseModel):
     fssai_expiry_date: Optional[str] = None
     fssai_verified: bool = False
     fssai_verified_at: Optional[str] = None
+    fssai_registry_status: Optional[str] = None
+    fssai_registry_entity: Optional[str] = None
+    fssai_registry_type: Optional[str] = None
+    fssai_registry_premises: Optional[str] = None
+    fssai_registry_checked_at: Optional[str] = None
 
 # Branch Models
 class BranchCreate(BaseModel):
@@ -1619,6 +1629,70 @@ async def check_license_expiry(restaurant: dict):
         "created_at": now.isoformat(),
     })
 
+# ---- Decentro FSSAI registry client (shared by manual verify + monthly loop) ----
+
+def _decentro_credentials():
+    return (
+        os.environ.get("DECENTRO_CLIENT_ID", ""),
+        os.environ.get("DECENTRO_CLIENT_SECRET", ""),
+        os.environ.get("DECENTRO_MODULE_SECRET", ""),
+        os.environ.get("DECENTRO_BASE_URL", "https://in.staging.decentro.tech"),
+    )
+
+def _decentro_fssai_lookup(license_number: str):
+    """Blocking call to Decentro's FSSAI registry lookup. Returns the parsed
+    payload dict, or raises on network/HTTP failure. Caller must run it in a
+    worker thread (asyncio.to_thread)."""
+    import requests as _requests
+    client_id, client_secret, module_secret, base_url = _decentro_credentials()
+    resp = _requests.post(
+        f"{base_url}/kyc/public_registry/validate",
+        headers={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "module_secret": module_secret,
+            "Content-Type": "application/json",
+        },
+        json={
+            "reference_id": f"dinedesk-{uuid.uuid4().hex[:12]}",
+            "document_type": "FSSAI",
+            "id_number": license_number,
+            "consent": "Y",
+            "consent_purpose": "DineDesk FSSAI license verification",
+        },
+        timeout=30,
+    )
+    return resp.json()
+
+async def fssai_registry_check(license_number: str) -> dict:
+    """Query the official FSSAI registry via Decentro without blocking the
+    event loop. Returns one of:
+      {outcome: 'verified'|'not_found'|'invalid_format'|'unreachable', ...}.
+    Never fabricates a registry result."""
+    try:
+        payload = await asyncio.to_thread(_decentro_fssai_lookup, license_number)
+    except Exception as e:
+        logger.warning(f"Decentro FSSAI lookup unreachable: {str(e)[:150]}")
+        return {"outcome": "unreachable", "message": "Government registry could not be reached right now."}
+    kyc_status = (payload.get("kycStatus") or "").upper()
+    result = payload.get("kycResult") or {}
+    error_msg = (payload.get("error") or {}).get("message") or payload.get("message") or ""
+    if kyc_status == "SUCCESS":
+        reg_status = (result.get("status") or "UNKNOWN").upper()
+        return {
+            "outcome": "verified",
+            "registry_status": reg_status,
+            "entity_name": result.get("entityName") or "",
+            "license_type": result.get("licenseType"),
+            "premises_address": (result.get("premissesAddress") or {}).get("address"),
+        }
+    if "No records found" in error_msg:
+        return {"outcome": "not_found", "message": "This license number was not found in the FSSAI registry."}
+    if "Invalid FSSAI" in error_msg or "14 digit" in error_msg:
+        return {"outcome": "invalid_format", "message": "FSSAI rejected this number — it must be a valid 14-digit license/registration number."}
+    logger.warning(f"Decentro FSSAI lookup failed: {payload.get('responseKey')} {error_msg[:120]}")
+    return {"outcome": "unreachable", "message": error_msg[:150] or "Registry lookup failed."}
+
 @api_router.post("/restaurants/verify-license")
 async def verify_fssai_license(data: dict, user: dict = Depends(get_current_user)):
     """Verify a FSSAI food license number against the official government
@@ -1629,63 +1703,52 @@ async def verify_fssai_license(data: dict, user: dict = Depends(get_current_user
     if not validate_fssai_format(license_number):
         return {"valid": False, "status": "invalid_format", "message": "FSSAI license must be a 14-digit number starting with a valid state code (1-9)."}
 
-    client_id = os.environ.get("DECENTRO_CLIENT_ID", "")
-    client_secret = os.environ.get("DECENTRO_CLIENT_SECRET", "")
-    module_secret = os.environ.get("DECENTRO_MODULE_SECRET", "")
-    base_url = os.environ.get("DECENTRO_BASE_URL", "https://in.staging.decentro.tech")
-
+    client_id, client_secret, module_secret, _base = _decentro_credentials()
     if client_id and client_secret and module_secret:
-        try:
-            import requests as _requests
-            resp = _requests.post(
-                f"{base_url}/kyc/public_registry/validate",
-                headers={
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "module_secret": module_secret,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "reference_id": f"dinedesk-{uuid.uuid4().hex[:12]}",
-                    "document_type": "FSSAI",
-                    "id_number": license_number,
-                    "consent": "Y",
-                    "consent_purpose": "DineDesk FSSAI license verification",
-                },
-                timeout=30,
-            )
-            payload = resp.json()
-            kyc_status = (payload.get("kycStatus") or "").upper()
-            result = payload.get("kycResult") or {}
-            error_msg = (payload.get("error") or {}).get("message") or payload.get("message") or ""
-
-            if kyc_status == "SUCCESS":
-                reg_status = (result.get("status") or "UNKNOWN").upper()
-                entity = result.get("entityName") or ""
-                lic_type = (result.get("licenseType") or "").title()
-                msg = f"Verification successful — license is {reg_status} in the FSSAI registry"
-                if entity:
-                    msg += f" for {entity}"
-                if lic_type:
-                    msg += f" ({lic_type})"
-                msg += "."
-                return {
-                    "valid": reg_status == "ACTIVE",
-                    "status": "verified",
-                    "registry_status": reg_status,
-                    "entity_name": entity,
-                    "license_type": result.get("licenseType"),
-                    "premises_address": (result.get("premissesAddress") or {}).get("address"),
-                    "message": msg if reg_status == "ACTIVE" else f"License found but status is {reg_status} — not active. Please renew or correct the number.",
-                }
-            if "No records found" in error_msg:
-                return {"valid": False, "status": "not_found", "message": "This license number was not found in the FSSAI registry. Double-check the 14-digit number on your certificate."}
-            if "Invalid FSSAI" in error_msg or "14 digit" in error_msg:
-                return {"valid": False, "status": "invalid_format", "message": "FSSAI rejected this number — it must be a valid 14-digit license/registration number."}
-            # Any other provider-side failure: log and fall through to format check
-            logger.warning(f"Decentro FSSAI verify failed: {payload.get('responseKey')} {error_msg[:120]}")
-        except Exception as e:
-            logger.warning(f"Decentro FSSAI verify unreachable: {str(e)[:150]}")
+        check = await fssai_registry_check(license_number)
+        if check["outcome"] == "verified":
+            reg_status = check["registry_status"]
+            entity = check.get("entity_name") or ""
+            lic_type = (check.get("license_type") or "")
+            lic_type_title = lic_type.title() if lic_type else ""
+            msg = f"Verification successful — license is {reg_status} in the FSSAI registry"
+            if entity:
+                msg += f" for {entity}"
+            if lic_type_title:
+                msg += f" ({lic_type_title})"
+            msg += "."
+            # Persist the registry result so the details page shows the last
+            # official check even after the visitor leaves.
+            if user.get("restaurant_id"):
+                try:
+                    await db.restaurants.update_one(
+                        {"id": user["restaurant_id"]},
+                        {"$set": {
+                            "fssai_registry_status": reg_status,
+                            "fssai_registry_entity": entity,
+                            "fssai_registry_type": lic_type,
+                            "fssai_registry_premises": check.get("premises_address"),
+                            "fssai_registry_checked_at": datetime.now(timezone.utc).isoformat(),
+                            "fssai_verified": reg_status == "ACTIVE",
+                            "fssai_verified_at": datetime.now(timezone.utc).isoformat(),
+                        }},
+                    )
+                except Exception as _e:
+                    logger.warning(f"Failed to persist FSSAI registry result: {_e}")
+            return {
+                "valid": reg_status == "ACTIVE",
+                "status": "verified",
+                "registry_status": reg_status,
+                "entity_name": entity,
+                "license_type": lic_type,
+                "premises_address": check.get("premises_address"),
+                "message": msg if reg_status == "ACTIVE" else f"License found but status is {reg_status} — not active. Please renew or correct the number.",
+            }
+        if check["outcome"] == "not_found":
+            return {"valid": False, "status": "not_found", "message": "This license number was not found in the FSSAI registry. Double-check the 14-digit number on your certificate."}
+        if check["outcome"] == "invalid_format":
+            return {"valid": False, "status": "invalid_format", "message": "FSSAI rejected this number — it must be a valid 14-digit license/registration number."}
+        # unreachable → fall through to honest format-level fallback
 
     # Fallback: format-level check only, stated honestly.
     configured = bool(client_id and client_secret and module_secret)
@@ -1698,6 +1761,127 @@ async def verify_fssai_license(data: dict, user: dict = Depends(get_current_user
             else "Full registry verification is being activated shortly."
         ),
     }
+
+@api_router.post("/restaurants/reverify-licenses")
+async def reverify_all_licenses(user: dict = Depends(get_current_user)):
+    """Manual trigger for the monthly re-verification sweep. Owner/admin only.
+    Runs the same checks as the scheduled loop and returns what changed."""
+    check_role(user, "settings")
+    summary = await run_license_reverification(force=True)
+    return {"message": "Re-verification complete", **summary}
+
+async def run_license_reverification(force: bool = False) -> dict:
+    """Re-verify every restaurant's FSSAI license against the registry and:
+      - store the fresh registry snapshot (status, entity, premises, time)
+      - raise an in-app alert the first time a license turns inactive or
+        disappears from the registry (never duplicated per status+day)
+      - stay silent on transient provider outages (no false alarms)
+    Licenses are re-checked at most once every 30 days unless force=True.
+    Returns a small summary dict for logging/monitoring."""
+    summary = {"checked": 0, "still_active": 0, "went_inactive": 0, "not_found": 0, "skipped": 0, "unreachable": 0}
+    client_id, client_secret, module_secret, _base = _decentro_credentials()
+    if not (client_id and client_secret and module_secret):
+        logger.info("License re-verification skipped: Decentro not configured")
+        return summary
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(days=30)).isoformat()
+    query = {"fssai_license_number": {"$exists": True, "$nin": [None, ""]}}
+    if not force:
+        query["$or"] = [
+            {"fssai_registry_checked_at": {"$exists": False}},
+            {"fssai_registry_checked_at": None},
+            {"fssai_registry_checked_at": {"$lt": cutoff}},
+        ]
+    restaurants = await db.restaurants.find(query, {"_id": 0}).to_list(500)
+    for restaurant in restaurants:
+        license_number = restaurant.get("fssai_license_number", "").strip()
+        if not validate_fssai_format(license_number):
+            summary["skipped"] += 1
+            continue
+        summary["checked"] += 1
+        check = await fssai_registry_check(license_number)
+        outcome = check.get("outcome")
+        if outcome == "unreachable":
+            # Transient provider problem — not a compliance signal. Never alert.
+            summary["unreachable"] += 1
+            continue
+        reg_status = (check.get("registry_status") or "").upper() if outcome == "verified" else ""
+        update_set = {
+            "fssai_registry_checked_at": now.isoformat(),
+        }
+        if outcome == "verified":
+            update_set.update({
+                "fssai_registry_status": reg_status,
+                "fssai_registry_entity": check.get("entity_name") or "",
+                "fssai_registry_type": check.get("license_type"),
+                "fssai_registry_premises": check.get("premises_address"),
+                "fssai_verified": reg_status == "ACTIVE",
+                "fssai_verified_at": now.isoformat(),
+            })
+        elif outcome == "not_found":
+            update_set.update({
+                "fssai_registry_status": "NOT_FOUND",
+                "fssai_verified": False,
+            })
+        await db.restaurants.update_one({"id": restaurant["id"]}, {"$set": update_set})
+
+        # Compliance alert only on genuine registry state:
+        # ACTIVE → healthy (clears any previous inactive flag internally).
+        active = outcome == "verified" and reg_status == "ACTIVE"
+        if active:
+            summary["still_active"] += 1
+            continue
+        went_inactive = outcome == "verified" and reg_status != "ACTIVE"
+        if went_inactive:
+            summary["went_inactive"] += 1
+            alert_title = f"FSSAI license {license_number} is now {reg_status} in the government registry"
+            alert_body = (
+                f"{alert_title}. Your license was active earlier but the registry now reports "
+                f"{reg_status}. Renew it on the FoSCoS portal to stay compliant."
+            )
+        else:
+            summary["not_found"] += 1
+            alert_title = f"FSSAI license {license_number} not found in the government registry"
+            alert_body = (
+                f"{alert_title}. During DineDesk's monthly compliance check the registry returned "
+                f"no record for this number. Verify the number on your certificate and update it "
+                f"in Restaurant Details."
+            )
+        dedupe_key = f"license_status:{outcome}:{reg_status or 'NOT_FOUND'}:{now.strftime('%Y-%m')}"
+        already = await db.notifications.find_one({
+            "restaurant_id": restaurant["id"],
+            "type": "license_alert",
+            "message": {"$regex": f"^{re.escape(dedupe_key)}"},
+        })
+        if not already:
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "restaurant_id": restaurant["id"],
+                "type": "license_alert",
+                "message": f"{dedupe_key}|{alert_body}",
+                "channel": "system",
+                "status": "warning",
+                "created_at": now.isoformat(),
+            })
+        logger.warning(f"License compliance alert [{restaurant.get('name', restaurant['id'])}]: {alert_title}")
+    return summary
+
+async def license_reverification_loop():
+    """Background loop: runs the re-verification sweep once a day. The sweep
+    itself rate-limits each restaurant to one registry check per 30 days, so
+    this gives 'monthly re-verification' with daily retry safety if a sweep
+    was interrupted or the provider was down."""
+    while True:
+        try:
+            await asyncio.sleep(3600)  # first sweep 1h after boot, then daily
+            summary = await run_license_reverification()
+            if summary.get("checked"):
+                logger.info(f"License re-verification sweep: {summary}")
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.warning(f"License re-verification loop error: {e}")
+            await asyncio.sleep(3600)
 
 @api_router.put("/restaurants/my", response_model=RestaurantResponse)
 async def update_my_restaurant(data: RestaurantUpdate, user: dict = Depends(get_current_user)):

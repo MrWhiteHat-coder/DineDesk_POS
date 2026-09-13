@@ -219,7 +219,19 @@ export default function RestaurantDetailsPage() {
               <div className={`flex items-center gap-1.5 text-xs font-semibold ${verified ? 'text-emerald-700' : 'text-red-600'}`} data-testid="details-license-status">
                 {verified ? <BadgeCheck className="w-4 h-4" /> : <BadgeX className="w-4 h-4" />}
                 {verified ? 'Verified license' : 'Not verified'}
+                {restaurant?.fssai_registry_status && (
+                  <span className="font-normal text-slate-500">
+                    · registry: {restaurant.fssai_registry_status.toLowerCase()}
+                    {restaurant.fssai_registry_checked_at && ` · checked ${new Date(restaurant.fssai_registry_checked_at).toLocaleDateString()}`}
+                  </span>
+                )}
               </div>
+            )}
+            {!licenseResult && restaurant?.fssai_registry_entity && (
+              <p className="text-xs text-slate-600">
+                Registered to <span className="font-semibold">{restaurant.fssai_registry_entity}</span>
+                {restaurant.fssai_registry_type ? ` · ${String(restaurant.fssai_registry_type).charAt(0) + String(restaurant.fssai_registry_type).slice(1).toLowerCase()}` : ''}
+              </p>
             )}
             {licenseResult && (
               <div
