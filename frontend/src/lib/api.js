@@ -90,6 +90,7 @@ export const restaurantAPI = {
   onboard: (data) => api.post('/restaurants/onboard', data),
   getMy: () => api.get('/restaurants/my'),
   updateMy: (data) => api.put('/restaurants/my', data),
+  verifyLicense: (licenseNumber) => api.post('/restaurants/verify-license', { license_number: licenseNumber }),
 };
 
 // Branch APIs

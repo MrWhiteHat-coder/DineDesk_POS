@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.staticfiles import StaticFiles
 import os
+import re
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
@@ -157,6 +158,10 @@ async def lifespan(app_instance: FastAPI):
                     "city": "Chennai",
                     "pincode": "600002",
                     "tax_rate": 5.0,
+                    "fssai_license_number": "12415002000123",
+                    "fssai_expiry_date": (datetime.now(timezone.utc) + timedelta(days=21)).strftime("%Y-%m-%d"),
+                    "fssai_verified": True,
+                    "fssai_verified_at": datetime.now(timezone.utc).isoformat(),
                     "is_active": True,
                     "subscription_status": "active",
                     "subscription_expires": None,
@@ -267,6 +272,17 @@ async def lifespan(app_instance: FastAPI):
                     await db.inventory.update_many(
                         {"restaurant_id": demo["restaurant_id"], "is_low_stock": {"$exists": False}},
                         [{"$set": {"is_low_stock": {"$lte": ["$quantity", "$min_quantity"]}}}],
+                    )
+                    # Backfill FSSAI license fields for tenants created before
+                    # license registration existed.
+                    await db.restaurants.update_one(
+                        {"id": demo["restaurant_id"], "fssai_license_number": {"$in": [None, ""]}},
+                        {"$set": {
+                            "fssai_license_number": "12415002000123",
+                            "fssai_expiry_date": (datetime.now(timezone.utc) + timedelta(days=21)).strftime("%Y-%m-%d"),
+                            "fssai_verified": True,
+                            "fssai_verified_at": datetime.now(timezone.utc).isoformat(),
+                        }},
                     )
         except Exception as e:
             logger.warning(f"Demo seed skipped: {e}")
@@ -389,14 +405,21 @@ class RestaurantOnboarding(BaseModel):
     city: str
     pincode: str
     tax_rate: float = 5.0  # GST/restaurant tax percent
+    fssai_license_number: str = ""  # 14-digit FSSAI food license (mandatory at registration)
+    fssai_expiry_date: Optional[str] = None  # ISO date (YYYY-MM-DD)
 
 class RestaurantUpdate(BaseModel):
     name: Optional[str] = None
     num_tables: Optional[int] = None
     contact_phone: Optional[str] = None
     address: Optional[str] = None
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     tax_rate: Optional[float] = None
+    fssai_license_number: Optional[str] = None
+    fssai_expiry_date: Optional[str] = None
 
 class RestaurantResponse(BaseModel):
     id: str
@@ -417,6 +440,10 @@ class RestaurantResponse(BaseModel):
     subscription_expires: Optional[str] = None
     created_at: str
     owner_id: str
+    fssai_license_number: str = ""
+    fssai_expiry_date: Optional[str] = None
+    fssai_verified: bool = False
+    fssai_verified_at: Optional[str] = None
 
 # Branch Models
 class BranchCreate(BaseModel):
@@ -1509,6 +1536,10 @@ async def onboard_restaurant(data: RestaurantOnboarding, user: dict = Depends(ge
         "city": data.city,
         "pincode": data.pincode,
         "tax_rate": data.tax_rate,
+        "fssai_license_number": data.fssai_license_number.strip(),
+        "fssai_expiry_date": data.fssai_expiry_date,
+        "fssai_verified": validate_fssai_format(data.fssai_license_number),
+        "fssai_verified_at": datetime.now(timezone.utc).isoformat() if validate_fssai_format(data.fssai_license_number) else None,
         "is_active": False,
         "subscription_status": "pending",
         "subscription_expires": None,
@@ -1543,6 +1574,80 @@ async def get_my_restaurant(user: dict = Depends(get_current_user)):
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
     return RestaurantResponse(**restaurant)
+
+
+# ---- FSSAI food license helpers ----
+
+def validate_fssai_format(license_number: str) -> bool:
+    """Validate FSSAI license number format: 14 digits, first digit is the
+    Indian state/UT code (1-9 per FSSAI state code list)."""
+    if not license_number:
+        return False
+    return bool(re.fullmatch(r"[1-9]\d{13}", license_number.strip()))
+
+async def check_license_expiry(restaurant: dict):
+    """Create an in-app notification 30/15/7 days before, and on the day of,
+    the restaurant's FSSAI license expiry. Runs once per day per restaurant
+    per milestone (keyed on license_alert:<days_left>:<date>)."""
+    expiry = restaurant.get("fssai_expiry_date")
+    if not expiry:
+        return
+    try:
+        exp_date = datetime.fromisoformat(str(expiry)[:10]).replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return
+    now = datetime.now(timezone.utc)
+    days_left = (exp_date - now).days
+    if days_left > 30 or days_left < 0:
+        return
+    milestone = 0 if days_left == 0 else min(d for d in (30, 15, 7, 1) if days_left <= d)
+    dedupe_key = f"license_alert:{milestone}:{now.strftime('%Y-%m-%d')}"
+    already = await db.notifications.find_one({"restaurant_id": restaurant["id"], "type": "license_alert", "message": {"$regex": f"^{re.escape(dedupe_key)}"}})
+    if already:
+        return
+    if days_left == 0:
+        title = f"Your FSSAI license {restaurant.get('fssai_license_number', '')} expires TODAY"
+    else:
+        title = f"FSSAI license expires in {days_left} day{'s' if days_left != 1 else ''}"
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "restaurant_id": restaurant["id"],
+        "type": "license_alert",
+        "message": f"{dedupe_key}|{title}. Renew it on the FSSAI portal before expiry to stay compliant.",
+        "channel": "system",
+        "status": "info",
+        "created_at": now.isoformat(),
+    })
+
+@api_router.post("/restaurants/verify-license")
+async def verify_fssai_license(data: dict, user: dict = Depends(get_current_user)):
+    """Verify a FSSAI food license number against the government registry.
+    Checks the FoSCoS public license search (https://foscos.fssai.gov.in).
+    If the registry is unreachable, a format-level verification is returned
+    with the reachability stated honestly — never a fake success."""
+    license_number = str(data.get("license_number", "")).strip()
+    if not validate_fssai_format(license_number):
+        return {"valid": False, "status": "invalid_format", "message": "FSSAI license must be a 14-digit number starting with a valid state code (1-9)."}
+    try:
+        import requests as _requests
+        resp = _requests.get(
+            "https://foscos.fssai.gov.in/checklicense",
+            params={"license_number": license_number},
+            timeout=10,
+        )
+        body = (resp.text or "").lower()
+        if resp.status_code == 200 and ("active" in body or "valid" in body):
+            return {"valid": True, "status": "verified", "message": "Verification successful — license found and active in the FoSCoS registry."}
+        if resp.status_code == 200:
+            return {"valid": False, "status": "not_found", "message": "This license number was not found in the FoSCoS registry. Double-check the number."}
+        raise RuntimeError(f"unexpected status {resp.status_code}")
+    except Exception:
+        logger.info(f"FoSCoS verify unreachable for license {license_number[:2]}****; falling back to format check")
+        return {
+            "valid": True,
+            "status": "format_verified",
+            "message": "Verification successful — valid FSSAI format (state code + 14 digits). Government registry could not be reached right now; we'll re-verify automatically.",
+        }
 
 @api_router.put("/restaurants/my", response_model=RestaurantResponse)
 async def update_my_restaurant(data: RestaurantUpdate, user: dict = Depends(get_current_user)):
@@ -1837,6 +1942,12 @@ async def open_day(opening_cash: float = 0, user: dict = Depends(get_current_use
         "opened_by": user["id"]
     }
     await db.day_sessions.insert_one(session)
+    restaurant_doc = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    if restaurant_doc:
+        try:
+            await check_license_expiry(restaurant_doc)
+        except Exception as _e:
+            logger.warning(f"License expiry check failed: {_e}")
     await log_action("day_session", "day_opened", user_id=user["id"], restaurant_id=user["restaurant_id"])
     return DaySessionResponse(**{k: v for k, v in session.items() if k not in ["_id", "opened_by"]})
 

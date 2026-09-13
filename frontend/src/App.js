@@ -39,6 +39,7 @@ import CustomersPage from './pages/pos/CustomersPage';
 import GiftCardsPage from './pages/pos/GiftCardsPage';
 import TridentCoinsPage from './pages/pos/TridentCoinsPage';
 import StorePage from './pages/pos/StorePage';
+import RestaurantDetailsPage from './pages/pos/RestaurantDetailsPage';
 import FeatureLocked from './components/store/FeatureLocked';
 import { useFeatures } from './contexts/FeatureContext';
 
@@ -150,6 +151,7 @@ function AppRoutes() {
         <Route path="analytics" element={<FeatureGate featureKey="analytics"><AnalyticsPage /></FeatureGate>} />
         <Route path="staff" element={<StaffPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="restaurant" element={<RestaurantDetailsPage />} />
         <Route path="online-orders" element={<FeatureGate featureKey="online_orders"><OnlineOrdersPage /></FeatureGate>} />
         <Route path="kds" element={<KDSPage />} />
         <Route path="wallet" element={<WalletPage />} />

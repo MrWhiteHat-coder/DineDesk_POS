@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { notificationAPI } from '../../lib/api';
 import { toast } from 'sonner';
-import { Bell, MessageSquare, Send, CheckCircle, XCircle, Clock, Settings2, RefreshCw, Smartphone } from 'lucide-react';
+import { Bell, MessageSquare, Send, CheckCircle, XCircle, Clock, Settings2, RefreshCw, Smartphone, ShieldAlert } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -140,6 +140,22 @@ export default function NotificationsPage() {
           ) : (
             <div className="space-y-2">
               {notifications.map((notif) => (
+                notif.type === 'license_alert' ? (
+                  <div key={notif.id} className="p-3 bg-amber-50 rounded-xl border border-amber-200 transition-colors" data-testid={`notif-${notif.id}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <ShieldAlert className="w-4 h-4 text-amber-700" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-amber-900">{String(notif.message || '').split('|')[1] || notif.message}</p>
+                          <p className="text-xs text-amber-700 mt-0.5">Food license compliance reminder — renew on the FSSAI (FoSCoS) portal.</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-amber-600 whitespace-nowrap">{new Date(notif.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ) : (
                 <div key={notif.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors" data-testid={`notif-${notif.id}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
@@ -169,6 +185,7 @@ export default function NotificationsPage() {
                   </div>
                   {notif.error && <p className="text-[10px] text-red-500 mt-1 bg-red-50 rounded p-1.5 font-mono">{notif.error}</p>}
                 </div>
+                )
               ))}
             </div>
           )}

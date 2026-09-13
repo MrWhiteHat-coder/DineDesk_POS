@@ -348,12 +348,12 @@ export default function POSLayout() {
         {/* ──────────── TOP BAR (desktop) ──────────── */}
         <header className="hidden lg:flex h-14 items-center gap-3 px-4 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] flex-shrink-0 z-30">
 
-          {/* Restaurant / Day-status card */}
+          {/* Restaurant chip → details page */}
           <button
-            onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
+            onClick={() => navigate('/pos/restaurant')}
             className="flex items-center gap-2.5 bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl pl-1.5 pr-2 py-1 hover:border-gray-400 dark:hover:border-white/20 hover:shadow-sm transition-all flex-shrink-0"
-            data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
-            title={isDayOpen ? 'Close the day' : 'Open the day'}
+            data-testid="restaurant-chip"
+            title="View restaurant details"
           >
             <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-base" aria-hidden="true">
               🍩
@@ -368,11 +368,26 @@ export default function POSLayout() {
                 <span className="text-[10px] text-gray-500 dark:text-white/45 font-medium">
                   {restaurant?.opening_time && restaurant?.closing_time
                     ? `${restaurant.opening_time} - ${restaurant.closing_time}`
-                    : '08:30 - 20:20'}
+                    : 'Details'}
                 </span>
               </div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-white/40" />
+          </button>
+
+          {/* Standalone Day Open/Close control */}
+          <button
+            onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-xl border text-xs font-bold transition-all flex-shrink-0 ${
+              isDayOpen
+                ? 'bg-emerald-50 dark:bg-emerald-400/10 border-emerald-200 dark:border-emerald-400/25 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-400/20'
+                : 'bg-white dark:bg-white/[0.04] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-white/60 hover:border-gray-400 dark:hover:border-white/25'
+            }`}
+            data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
+            title={isDayOpen ? 'Close the day' : 'Open the day'}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`} aria-hidden="true"></span>
+            {isDayOpen ? 'Close Day' : 'Open Day'}
           </button>
 
           {/* Command search (visual affordance — wired to a hint for now) */}
@@ -452,17 +467,31 @@ export default function POSLayout() {
           <div className="flex items-center gap-2 min-w-0">
             <img src={logoUrl} alt="DineDesk" className="lp-logo-white h-7 w-auto flex-shrink-0" loading="eager" />
             <div className="min-w-0 leading-tight">
-              <p className="font-heading font-bold text-gray-900 dark:text-white text-xs truncate">{restaurant?.name || 'DineDesk'}</p>
               <button
-                onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
-                className={`text-[9px] font-bold ${isDayOpen ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
-                data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
+                onClick={() => navigate('/pos/restaurant')}
+                className="font-heading font-bold text-gray-900 dark:text-white text-xs truncate block"
+                data-testid="restaurant-chip"
+                title="View restaurant details"
               >
-                {isDayOpen ? '● Day Open — tap to close' : '● Day Closed — tap to open'}
+                {restaurant?.name || 'DineDesk'}
               </button>
+              <span className={`text-[9px] font-bold ${isDayOpen ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                {isDayOpen ? '● Open' : '● Closed'}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
+              className={`h-8 px-2 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors ${
+                isDayOpen
+                  ? 'border-emerald-300 dark:border-emerald-400/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-400/10'
+                  : 'border-gray-200 dark:border-white/[0.12] text-gray-500 dark:text-white/60'
+              }`}
+              data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
+            >
+              {isDayOpen ? 'Close Day' : 'Open Day'}
+            </button>
             <button
               onClick={toggleTheme}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
