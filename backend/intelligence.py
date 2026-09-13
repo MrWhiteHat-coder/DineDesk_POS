@@ -289,9 +289,12 @@ _SAFETY_RULES = (
 )
 
 
-async def gemini_explain(facts: str, task_prompt: str, max_words: int = 220) -> str | None:
-    """One call shape for all features. Returns None if Gemini unavailable."""
+async def gemini_explain(facts: str, task_prompt: str, max_words: int = 220, _err_box: list | None = None) -> str | None:
+    """One call shape for all features. Returns None if Gemini unavailable.
+    Pass _err_box=["..."] to capture the exception message for diagnostics."""
     if not GEMINI_READY:
+        if _err_box is not None:
+            _err_box.append("GEMINI_READY=False (missing key or SDK import failed)")
         return None
     try:
         model = genai.GenerativeModel(
@@ -308,6 +311,8 @@ async def gemini_explain(facts: str, task_prompt: str, max_words: int = 220) -> 
         return (resp.text or "").strip() or None
     except Exception as e:
         logger.error(f"Gemini call failed: {e}")
+        if _err_box is not None:
+            _err_box.append(f"{type(e).__name__}: {str(e)[:180]}")
         return None
 
 
@@ -469,6 +474,7 @@ async def ask(db, restaurant_id: str, restaurant_name: str, question: str) -> di
         "general": "Answer the user's question from the fact sheet as directly as possible.",
     }
 
+    err = []
     ai_text = await gemini_explain(
         facts,
         f"Restaurant: {restaurant_name}. User question: \"{question}\"\n"
@@ -477,13 +483,17 @@ async def ask(db, restaurant_id: str, restaurant_name: str, question: str) -> di
         "Quote exact numbers from the sheet where relevant. "
         "If the sheet truly lacks the data, say: you don't have enough data to answer reliably.",
         max_words=140,
+        _err_box=err,
     )
 
     if ai_text:
         return {"answer": ai_text, "ai_generated": True, "intent": intent}
 
     # No AI → honest computed answer, never a guess
-    return {"answer": _fallback_answer(snap, intent), "ai_generated": False, "intent": intent}
+    out = {"answer": _fallback_answer(snap, intent), "ai_generated": False, "intent": intent}
+    if err:
+        out["ai_error"] = err[0][:200]
+    return out
 
 
 def _fallback_answer(snap: dict, intent: str) -> str:
