@@ -159,7 +159,7 @@ async def lifespan(app_instance: FastAPI):
                     "city": "Chennai",
                     "pincode": "600002",
                     "tax_rate": 5.0,
-                    "fssai_license_number": "12415002000123",
+                    "fssai_license_number": "22426478000602",
                     "fssai_expiry_date": (datetime.now(timezone.utc) + timedelta(days=21)).strftime("%Y-%m-%d"),
                     "fssai_verified": True,
                     "fssai_verified_at": datetime.now(timezone.utc).isoformat(),
@@ -279,7 +279,7 @@ async def lifespan(app_instance: FastAPI):
                     await db.restaurants.update_one(
                         {"id": demo["restaurant_id"], "fssai_license_number": {"$in": [None, ""]}},
                         {"$set": {
-                            "fssai_license_number": "12415002000123",
+                            "fssai_license_number": "22426478000602",
                             "fssai_expiry_date": (datetime.now(timezone.utc) + timedelta(days=21)).strftime("%Y-%m-%d"),
                             "fssai_verified": True,
                             "fssai_verified_at": datetime.now(timezone.utc).isoformat(),
