@@ -8,6 +8,7 @@ import { daySessionAPI } from '../lib/api';
 import { initOfflineSync, syncOfflineOrders, onSyncEvent } from '../lib/offlineSync';
 import { getPendingCount } from '../lib/offlineOrders';
 import { toast } from 'sonner';
+import haptics from '../lib/haptics';
 import DayCloseReport from '../components/pos/DayCloseReport';
 import {
   Home,
@@ -214,6 +215,7 @@ export default function POSLayout() {
     try {
       const res = await daySessionAPI.open(parseFloat(openingCash) || 0);
       setCurrentSession(res.data); setIsDayOpen(true); setShowDayOpenModal(false); setOpeningCash('');
+      haptics.success();
       toast.success('Day opened successfully!');
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed to open day'); }
     finally { setLoading(false); }
@@ -224,6 +226,7 @@ export default function POSLayout() {
     try {
       const res = await daySessionAPI.closeForce(parseFloat(closingCash) || 0, force);
       setCurrentSession(null); setIsDayOpen(false); setShowDayCloseModal(false); setClosingCash('');
+      haptics.warning();
       toast.success(`Day closed! Total sales: ₹${res.data.total_sales.toFixed(2)}`);
       setReportSessionId(currentSession?.id); setShowDayReport(true);
     } catch (err) {
@@ -546,11 +549,11 @@ export default function POSLayout() {
               >
                 {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <button
-                onClick={() => setMoreSheetOpen(true)}
-                className="w-8 h-8 rounded-full bg-[#0F2417] dark:bg-white/[0.08] flex items-center justify-center transition-transform active:scale-95"
-                aria-label="Open menu"
-              >
+            <button
+              onClick={() => { haptics.press(); setMoreSheetOpen(true); }}
+              className="w-8 h-8 rounded-full bg-[#0F2417] dark:bg-white/[0.08] flex items-center justify-center transition-transform active:scale-95"
+              aria-label="Open menu"
+            >
                 {user
                   ? <span className="text-white font-semibold text-xs">{user.name?.charAt(0).toUpperCase()}</span>
                   : <Menu className="w-4 h-4 text-white" />}
@@ -648,7 +651,7 @@ export default function POSLayout() {
 
           {/* More tab */}
           <button
-            onClick={() => setMoreSheetOpen(true)}
+            onClick={() => { haptics.press(); setMoreSheetOpen(true); }}
             className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 transition-all ${
               moreSheetOpen ? 'text-[#217A42] dark:text-[#3FCE85]' : 'text-gray-400 dark:text-white/40'
             }`}

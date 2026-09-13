@@ -512,9 +512,36 @@ html.dark .calm-mode .shadow-sm {
        transform on page roots, which silently turns `position: fixed` children
        (mobile cart bar) into absolutely-positioned elements relative to the page —
        pushing them far below the viewport. Opacity never creates a containing block. */
-    main > :first-child { animation: fadeIn 0.35s ease forwards; }
-    .animate-fade-in { animation: fadeIn 0.3s ease forwards; }
-    .animate-fade-in-up { animation: fadeIn 0.35s ease forwards; }
+    main > :first-child { animation: contentReveal 0.3s ease forwards; }
+    .animate-fade-in { animation: contentReveal 0.3s ease forwards; }
+    .animate-fade-in-up { animation: contentReveal 0.35s ease forwards; }
+}
+
+/* ═══════════════════════════════════════
+   PREMIUM MOTION SYSTEM
+   ═══════════════════════════════════════ */
+
+/* Skeleton → content crossfade: opacity-only (never creates a transform
+   containing block, so position:fixed children stay viewport-anchored). */
+@keyframes contentReveal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* New-order live pulse: a single calm emerald ring expanding from the card.
+   Runs once (forwards holds the cleared state), 2s, then React removes the class. */
+@keyframes livePulseRing {
+    0% { box-shadow: 0 0 0 0 rgba(46, 158, 91, 0.45); border-color: rgba(46, 158, 91, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(46, 158, 91, 0); border-color: rgba(46, 158, 91, 0.35); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 158, 91, 0); }
+}
+.live-pulse {
+    animation: livePulseRing 1.6s cubic-bezier(0.16, 1, 0.3, 1) 1;
+}
+
+/* Sparkline entrance: soft fade alongside the recharts line draw. */
+.spark-draw {
+    animation: contentReveal 0.9s ease forwards;
 }
 
 .overflow-x-auto::-webkit-scrollbar {

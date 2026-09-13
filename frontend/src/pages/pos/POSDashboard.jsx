@@ -5,6 +5,8 @@ import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI, tableA
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
+import CountUp from '../../components/ui/CountUp';
+import haptics from '../../lib/haptics';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '../../components/ui/dialog';
@@ -85,7 +87,7 @@ function tableVisual(table, order) {
 function Spark({ data, color = '#2E9E5B' }) {
   if (!data || data.length < 2) return null;
   return (
-    <div className="w-16 h-8 hidden sm:block flex-shrink-0" aria-hidden="true">
+    <div className="w-16 h-8 hidden sm:block flex-shrink-0 spark-draw" aria-hidden="true">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
           <defs>
@@ -94,7 +96,16 @@ function Spark({ data, color = '#2E9E5B' }) {
               <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#spark-${color.replace('#', '')})`} />
+          <Area
+            type="monotone"
+            dataKey="v"
+            stroke={color}
+            strokeWidth={1.5}
+            fill={`url(#spark-${color.replace('#', '')})`}
+            isAnimationActive
+            animationDuration={900}
+            animationEasing="ease-out"
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -118,13 +129,17 @@ export default function POSDashboard() {
 
   const [mapTab, setMapTab] = useState('floor');
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [newOrderPulse, setNewOrderPulse] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [receiptData, setReceiptData] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showOrdersDetail, setShowOrdersDetail] = useState(false);
   const receiptRef = useRef(null);
+  const seenOrderIdsRef = useRef(null);
+  const pulseTimerRef = useRef(null);
 
   useEffect(() => { fetchData(); }, [isDayOpen]);
+  useEffect(() => () => { if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current); }, []);
 
   const fetchData = async () => {
     try {
@@ -136,10 +151,30 @@ export default function POSDashboard() {
         tableAPI.getAll().catch(() => ({ data: [] })),
       ]);
       setAnalytics(analyticsRes.data);
-      setTodayOrders(ordersRes.data || []);
+      const incoming = ordersRes.data || [];
+      setTodayOrders(incoming);
       setSessionHistory(historyRes.data || []);
       setLowStockItems(inventoryRes.data || []);
       setTables(tablesRes.data || []);
+
+      /* ── new-order live pulse ──
+         First load only seeds the seen-set (no pulse on page open). Any
+         genuinely fresh order afterwards fires a one-shot ring + haptic. */
+      const incomingIds = new Set(incoming.map(o => o.id));
+      if (seenOrderIdsRef.current === null) {
+        seenOrderIdsRef.current = incomingIds;
+      } else {
+        const fresh = incoming.find(o => !seenOrderIdsRef.current.has(o.id));
+        if (fresh) {
+          seenOrderIdsRef.current = incomingIds;
+          setNewOrderPulse(true);
+          haptics.tick();
+          if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+          pulseTimerRef.current = setTimeout(() => setNewOrderPulse(false), 2000);
+        } else {
+          seenOrderIdsRef.current = incomingIds;
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     } finally {
@@ -355,7 +390,9 @@ export default function POSDashboard() {
               <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center"><Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-300" /></div>
               <Spark data={salesHistory} />
             </div>
-            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">₹{(analytics?.daily_sales ?? lastSales ?? 0).toLocaleString('en-IN')}</p>
+            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">
+              <CountUp value={analytics?.daily_sales ?? lastSales ?? 0} prefix="₹" />
+            </p>
             <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
               Sales today
               {deltaChip(salesDelta)}
@@ -365,14 +402,16 @@ export default function POSDashboard() {
           {/* Active orders */}
           <button
             onClick={() => setShowOrdersDetail(true)}
-            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all"
+            className={`text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all ${newOrderPulse ? 'live-pulse' : ''}`}
             data-testid="active-orders-card"
           >
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center"><Users className="w-4 h-4 text-blue-600 dark:text-blue-300" /></div>
               <Spark data={ordersHistory} color="#3B82F6" />
             </div>
-            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">{activeOrders.length}</p>
+            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">
+              <CountUp value={activeOrders.length} />
+            </p>
             <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
               Active orders
               {deltaChip(ordersDelta)}

@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/input';
 import { Skeleton } from '../../components/ui/skeleton';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { ChefShrugging, ChefWinking } from '../../components/illustrations/ChefBot';
+import haptics from '../../lib/haptics';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
@@ -96,6 +97,7 @@ export default function POSMain() {
   const addToCart = (item) => {
     if (!isDayOpen) { toast.error('Please open the day first'); return; }
     if (!item.is_available) { toast.error('Item not available'); return; }
+    haptics.tick();
     setCart((prev) => { const ex = prev.find(c => c.item.id === item.id); if (ex) return prev.map(c => c.item.id === item.id ? { ...c, quantity: c.quantity + 1 } : c); return [...prev, { item, quantity: 1, notes: '' }]; });
   };
   const getCartQuantity = (id) => cart.find(c => c.item.id === id)?.quantity || 0;
@@ -127,6 +129,7 @@ export default function POSMain() {
       setCheckoutLoading(true);
       try {
         const result = await createOrderResilient({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: customerName.trim(), customer_phone: customerPhone.trim(), customer_email: customerEmail.trim() || null }, { total });
+        haptics.success();
         if (!result.online) toast.info('Saved offline — will sync automatically when back online');
         else toast.success(`Order #${result.data.order_number} placed!`);
         clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
