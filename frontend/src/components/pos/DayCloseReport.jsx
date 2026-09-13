@@ -93,6 +93,21 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
         {loading ? (
           <div className="flex items-center justify-center h-40"><div className="w-6 h-6 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" /></div>
         ) : report ? (
+          <>
+          {/* ── Calm celebration header: "Day closed · ₹X served today" ── */}
+          <div className="animate-day-close -mt-1 mb-4 rounded-2xl bg-gradient-to-r from-[#0F2417] via-[#1B5A38] to-[#2E9E5B] text-white px-5 py-4 flex items-center gap-4" data-testid="day-close-celebration">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-amber-300" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-heading font-extrabold text-base leading-tight">
+                Day closed · <span className="font-numbers">₹{(report.total_sales ?? 0).toLocaleString('en-IN')}</span> served today
+              </p>
+              <p className="text-[11px] text-white/70 mt-0.5">
+                {report.total_orders ?? 0} order{((report.total_orders ?? 0)) === 1 ? '' : 's'} · {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} — good work today. 🌿
+              </p>
+            </div>
+          </div>
           <div ref={printRef} className="space-y-5">
             {/* Header */}
             <div className="text-center border-b border-slate-200 pb-3">
@@ -211,6 +226,7 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
               )}
             </div>
           </div>
+          </>
         ) : (
           <p className="text-center text-slate-400 py-8">No report data available</p>
         )}

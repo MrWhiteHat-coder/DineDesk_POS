@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { kdsAPI } from '../../lib/api';
 import { toast } from 'sonner';
+import { sounds } from '../../lib/sounds';
 import { Clock, ChefHat, CheckCircle2, Utensils, RefreshCw, Play, Pause, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -27,9 +28,31 @@ export default function KDSPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [freshIds, setFreshIds] = useState([]);
+  const seenIdsRef = useRef(null);
+  const freshTimerRef = useRef(null);
 
   const fetchOrders = async () => {
-    try { const res = await kdsAPI.getOrders(); setOrders(res.data); } catch (err) { console.error(err); } finally { setLoading(false); }
+    try {
+      const res = await kdsAPI.getOrders();
+      const incoming = res.data || [];
+      setOrders(incoming);
+
+      /* New-order detection → chime + card highlight (skip first load) */
+      const ids = new Set(incoming.map(o => o.id));
+      if (seenIdsRef.current === null) {
+        seenIdsRef.current = ids;
+      } else {
+        const fresh = incoming.filter(o => !seenIdsRef.current.has(o.id) && o.status === 'received');
+        seenIdsRef.current = ids;
+        if (fresh.length > 0) {
+          sounds.newOrder();
+          setFreshIds(fresh.map(o => o.id));
+          if (freshTimerRef.current) clearTimeout(freshTimerRef.current);
+          freshTimerRef.current = setTimeout(() => setFreshIds([]), 4000);
+        }
+      }
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -109,7 +132,7 @@ export default function KDSPage() {
             const orderTypeLabel = order.order_type === 'dine_in' ? 'Dine In' : order.order_type === 'takeaway' ? 'Takeaway' : 'Online';
 
             return (
-              <div key={order.id} className={`bg-white rounded-xl border ${delayed ? 'border-rose-200' : config.borderColor} overflow-hidden shadow-sm hover:shadow-md transition-all`} data-testid={`kds-order-${order.id}`}>
+              <div key={order.id} className={`bg-white rounded-xl border ${delayed ? 'border-rose-200' : config.borderColor} overflow-hidden shadow-sm hover:shadow-md transition-all ${freshIds.includes(order.id) ? 'kds-fresh-ring' : ''}`} data-testid={`kds-order-${order.id}`}>
                 {/* Colored Header */}
                 <div className={`${headerBg} px-4 py-3 text-white`}>
                   <div className="flex items-center justify-between mb-1.5">

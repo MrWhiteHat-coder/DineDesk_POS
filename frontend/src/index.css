@@ -553,6 +553,99 @@ html.dark .calm-mode .shadow-sm {
     animation: promoIn 0.35s ease forwards;
 }
 
+/* KDS new-order arrival: double emerald ring so it reads across a hot kitchen. */
+@keyframes kdsFreshRing {
+    0% { box-shadow: 0 0 0 0 rgba(46, 158, 91, 0.55); }
+    40% { box-shadow: 0 0 0 10px rgba(46, 158, 91, 0); }
+    60% { box-shadow: 0 0 0 0 rgba(46, 158, 91, 0.4); }
+    100% { box-shadow: 0 0 0 14px rgba(46, 158, 91, 0); }
+}
+.kds-fresh-ring {
+    animation: kdsFreshRing 1.8s cubic-bezier(0.16, 1, 0.3, 1) 2;
+    border-color: rgba(46, 158, 91, 0.6) !important;
+}
+
+/* ═══════════════════════════════════════
+   BRAND-TINTED SHADOW SYSTEM
+   Gray shadows feel cold on a green brand. These layer a faint
+   emerald cast into every elevation step — the whole app reads
+   slightly warmer and more "ours" without looking colored.
+   Apply via .shadow-brand / .shadow-brand-lg utilities.
+   ═══════════════════════════════════════ */
+.shadow-brand {
+    box-shadow:
+        0 1px 2px rgba(15, 36, 23, 0.05),
+        0 4px 16px -4px rgba(46, 158, 91, 0.14);
+}
+.shadow-brand-lg {
+    box-shadow:
+        0 2px 6px rgba(15, 36, 23, 0.06),
+        0 16px 40px -12px rgba(46, 158, 91, 0.22);
+}
+.shadow-brand-sm {
+    box-shadow: 0 1px 6px -1px rgba(46, 158, 91, 0.16);
+}
+html.dark .shadow-brand {
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.4),
+        0 4px 16px -4px rgba(46, 158, 91, 0.10);
+}
+html.dark .shadow-brand-lg {
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.45),
+        0 16px 40px -12px rgba(46, 158, 91, 0.14);
+}
+
+/* Day-close celebration: calm fade-up + one soft ring (no confetti). */
+@keyframes dayCloseIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-day-close {
+    animation: dayCloseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ═══════════════════════════════════════
+   ZOMATO-STYLE CURVE SYSTEM
+   Everything soft: solid CTAs become full pills, secondary controls
+   get generous 16px rounding, inputs/selects 14px. Tiny icon steppers
+   keep compact radii so they stay crisp.
+   ═══════════════════════════════════════ */
+button[class*="rounded-lg"]:not([class*="w-7"]):not([class*="w-8"]):not([class*="w-9"]):not([class*="h-7"]):not([class*="h-8"]):not([class*="h-9"]) {
+    border-radius: 16px !important;
+}
+button[class*="rounded-md"] {
+    border-radius: 12px !important;
+}
+button[class*="rounded-xl"] {
+    border-radius: 18px !important;
+}
+/* Solid CTA buttons (dark + brand green) go full pill */
+button[class*="bg-black"],
+button[class*="bg-[#0F2417]"],
+button[class*="bg-[#2E9E5B]"],
+button[class*="bg-emerald-600"],
+button[class*="bg-[#217A42]"] {
+    border-radius: 9999px !important;
+}
+/* Inputs & selects soften to match */
+input[class*="rounded-lg"], select[class*="rounded-lg"] {
+    border-radius: 14px !important;
+}
+
+/* Brand-tinted scrollbars — even the scroll feel is ours */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(46, 158, 91, 0.35) transparent;
+}
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+    background: rgba(46, 158, 91, 0.30);
+    border-radius: 99px;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(46, 158, 91, 0.5); }
+
 .overflow-x-auto::-webkit-scrollbar {
     height: 2px;
 }

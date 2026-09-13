@@ -6,6 +6,17 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { InstallPrompt, SWUpdateToast } from "./components/pwa/PWAComponents";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
+
+/* Splash handoff: fade the pre-React splash out the moment the app mounts. */
+const dismissSplash = () => {
+  const splash = document.getElementById("dd-splash");
+  if (!splash) return;
+  splash.style.transition = "opacity .45s ease";
+  splash.style.opacity = "0";
+  setTimeout(() => splash.remove(), 500);
+};
+setTimeout(dismissSplash, 250);
+
 root.render(
   <React.StrictMode>
     <ThemeProvider>

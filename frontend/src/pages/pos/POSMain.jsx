@@ -457,7 +457,16 @@ export default function POSMain() {
               </div>
             </div>
           ) : !selectedRunningOrder ? (
-            upsellStrip
+            <>
+              <div className="flex flex-col items-center text-center py-3">
+                <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-2">
+                  <ShoppingCart className="w-6 h-6 text-emerald-500" />
+                </div>
+                <p className="text-sm font-semibold text-slate-700">Cart is empty</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Tap items on the menu — suggestions below</p>
+              </div>
+              {upsellStrip}
+            </>
           ) : null}
         </ScrollArea>
 
