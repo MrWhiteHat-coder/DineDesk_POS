@@ -1688,10 +1688,15 @@ async def verify_fssai_license(data: dict, user: dict = Depends(get_current_user
             logger.warning(f"Decentro FSSAI verify unreachable: {str(e)[:150]}")
 
     # Fallback: format-level check only, stated honestly.
+    configured = bool(client_id and client_secret and module_secret)
     return {
         "valid": True,
         "status": "format_verified",
-        "message": "Verification successful — valid FSSAI format (state code + 14 digits). Government registry could not be reached right now; we'll re-verify automatically.",
+        "provider_configured": configured,
+        "message": "Verification successful — valid FSSAI format (state code + 14 digits). " + (
+            "Government registry could not be reached right now; we'll re-verify automatically." if configured
+            else "Full registry verification is being activated shortly."
+        ),
     }
 
 @api_router.put("/restaurants/my", response_model=RestaurantResponse)
