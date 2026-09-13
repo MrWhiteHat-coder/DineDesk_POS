@@ -42,6 +42,12 @@ export default function InventoryPage() {
   const [itemLoading, setItemLoading] = useState(false);
   const [showLowStock, setShowLowStock] = useState(false);
 
+  /* 17.84999999999998 → "17.85" — hide float dust from stock deductions */
+  const formatQty = (q) => {
+    const n = Number(q) || 0;
+    return Number.isInteger(n) ? n.toString() : parseFloat(n.toFixed(2)).toString();
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     unit: 'kg',
@@ -197,12 +203,12 @@ export default function InventoryPage() {
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
                     <span className="font-numbers">
-                      {item.quantity} {item.unit}
+                      {formatQty(item.quantity)} {item.unit}
                     </span>
                   </TableCell>
                   <TableCell>
                     <span className="font-numbers text-slate-500">
-                      {item.min_quantity} {item.unit}
+                      {formatQty(item.min_quantity)} {item.unit}
                     </span>
                   </TableCell>
                   <TableCell>

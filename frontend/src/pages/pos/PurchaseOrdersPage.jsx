@@ -91,19 +91,20 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div data-testid="purchase-orders-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-heading text-xl font-bold text-slate-900">Purchase Orders</h1>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            {['', 'ordered', 'received', 'cancelled'].map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-                {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
-              </button>
-            ))}
-          </div>
-          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm" data-testid="create-po-btn">
+      {/* Title on its own line on phones — no clipping against filter row */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="font-heading text-xl font-bold text-slate-900">Purchase Orders</h1>
+          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm flex-shrink-0" data-testid="create-po-btn">
             <Plus className="w-4 h-4 mr-1.5" /> New Order
           </Button>
+        </div>
+        <div className="flex gap-1.5 mt-3 overflow-x-auto pb-1 -mx-1 px-1">
+          {['', 'ordered', 'received', 'cancelled'].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)} className={`px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${statusFilter === s ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+              {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
+            </button>
+          ))}
         </div>
       </div>
 
