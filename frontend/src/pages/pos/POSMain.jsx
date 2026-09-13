@@ -3,6 +3,7 @@ import foodDeliveredAnimation from '../../assets/food-delivered.json';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
+import { createOrderResilient } from '../../lib/resilientOrder';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -125,8 +126,10 @@ export default function POSMain() {
       if (!tableNumber) { toast.error('Please select a table'); return; }
       setCheckoutLoading(true);
       try {
-        const res = await orderAPI.create({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: customerName.trim(), customer_phone: customerPhone.trim(), customer_email: customerEmail.trim() || null });
-        toast.success(`Order #${res.data.order_number} placed!`); clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
+        const result = await createOrderResilient({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: customerName.trim(), customer_phone: customerPhone.trim(), customer_email: customerEmail.trim() || null }, { total });
+        if (!result.online) toast.info('Saved offline — will sync automatically when back online');
+        else toast.success(`Order #${result.data.order_number} placed!`);
+        clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
       } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
     } else { openPaymentModal(); }
   };
@@ -173,8 +176,14 @@ export default function POSMain() {
         payload.payment_method = 'split';
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
-      const res = await orderAPI.create(payload);
-      toast.success(`Order #${res.data.order_number} completed!`); await fetchAndShowReceipt(res.data.id); clearCart(); setShowPaymentModal(false);
+      const result = await createOrderResilient(payload, { total });
+      if (!result.online) {
+        toast.info('Order saved offline with payment recorded — syncs automatically when back online');
+      } else {
+        toast.success(`Order #${result.data.order_number} completed!`);
+        await fetchAndShowReceipt(result.data.id);
+      }
+      clearCart(); setShowPaymentModal(false);
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
   };
 

@@ -21,6 +21,8 @@ export default function VerifyEmailPage() {
         const { access_token, user } = res.data;
         sessionStorage.setItem('token', access_token);
         sessionStorage.setItem('user', JSON.stringify(user));
+        try { localStorage.setItem('token', access_token); } catch { /* private mode */ }
+        try { localStorage.setItem('user', JSON.stringify(user)); } catch { /* private mode */ }
         setStatus('success');
         setTimeout(() => {
           if (user.role === 'admin') navigate('/admin');

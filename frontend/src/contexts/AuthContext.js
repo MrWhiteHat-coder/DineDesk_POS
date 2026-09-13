@@ -17,6 +17,33 @@ export const getPostAuthPath = (user, restaurant) => {
   return '/pos';
 };
 
+/* Session storage: the token lives in BOTH sessionStorage and localStorage.
+ * - sessionStorage keeps multi-tab behaviour identical to before (each tab
+ *   shares localStorage, so reads fall through to it).
+ * - localStorage is what makes the installed PWA work: closing the app no
+ *   longer wipes the session, and the offline order queue can replay with a
+ *   valid token even after a fresh app launch without network.
+ */
+const setSession = (token, userData) => {
+  sessionStorage.setItem('token', token);
+  sessionStorage.setItem('user', JSON.stringify(userData));
+  try { localStorage.setItem('token', token); } catch { /* private mode */ }
+  try { localStorage.setItem('user', JSON.stringify(userData)); } catch { /* private mode */ }
+};
+
+const clearSession = () => {
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('user');
+  try { localStorage.removeItem('token'); } catch { /* noop */ }
+  try { localStorage.removeItem('user'); } catch { /* noop */ }
+};
+
+const readSession = () => {
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+  const savedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
+  return { token, savedUser };
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -32,8 +59,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = sessionStorage.getItem('token');
-      const savedUser = sessionStorage.getItem('user');
+      const { token, savedUser } = readSession();
       
       if (token && savedUser) {
         try {
@@ -50,8 +76,7 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } catch (e) {
-          sessionStorage.removeItem('token');
-          sessionStorage.removeItem('user');
+          clearSession();
         }
       }
       setLoading(false);
@@ -64,8 +89,7 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.login({ email, password });
     const { access_token, user: userData } = response.data;
     
-    sessionStorage.setItem('token', access_token);
-    sessionStorage.setItem('user', JSON.stringify(userData));
+    setSession(access_token, userData);
     setUser(userData);
     
     // Fetch restaurant if exists
@@ -85,11 +109,10 @@ export const AuthProvider = ({ children }) => {
     const response = await authAPI.googleLogin(credential);
     const { access_token, user: userData } = response.data;
 
-    // Publish the session in React state (not only sessionStorage) so
-    // ProtectedRoute/PublicRoute see the user as authenticated immediately
-    // instead of bouncing them back to /login.
     sessionStorage.setItem('token', access_token);
     sessionStorage.setItem('user', JSON.stringify(userData));
+    try { localStorage.setItem('token', access_token); } catch { /* private mode */ }
+    try { localStorage.setItem('user', JSON.stringify(userData)); } catch { /* private mode */ }
     setUser(userData);
     setRestaurant(null);
 
@@ -124,8 +147,7 @@ export const AuthProvider = ({ children }) => {
     // authenticated and routes them into onboarding/POS instead of bouncing
     // them back to the login page.
     const userData = data.user;
-    sessionStorage.setItem('token', data.access_token);
-    sessionStorage.setItem('user', JSON.stringify(userData));
+    setSession(data.access_token, userData);
     setUser(userData);
 
     if (userData.restaurant_id) {
@@ -141,8 +163,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    clearSession();
     setUser(null);
     setRestaurant(null);
   };
@@ -150,7 +171,7 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (updates) => {
     const updated = { ...user, ...updates };
     setUser(updated);
-    sessionStorage.setItem('user', JSON.stringify(updated));
+    setSession(sessionStorage.getItem('token') || localStorage.getItem('token'), updated);
   };
 
   const updateRestaurant = (data) => {

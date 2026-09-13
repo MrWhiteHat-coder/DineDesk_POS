@@ -574,6 +574,10 @@ class OrderCreate(BaseModel):
     change_amount: Optional[float] = 0
     discount_amount: float = 0
     platform: Optional[str] = None
+    # Idempotency key: set by the offline-capable client. If the same key was
+    # already accepted (e.g. an offline order replaying after reconnect), the
+    # original order is returned instead of creating a duplicate.
+    client_uuid: Optional[str] = None
 
 class OrderAddItems(BaseModel):
     items: List[OrderItemCreate]
@@ -2321,9 +2325,20 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
                 payment_splits_data = [{"method": actual_method, "amount": round(total_amount, 2)}]
         if data.payment_method == "cash" and change_amt > 0 and change_amt >= total_amount and not data.payment_splits:
             raise HTTPException(status_code=400, detail="Change amount cannot be greater than or equal to cash tendered total — check the amount paid")
+    # Idempotent replay: an offline order syncing after reconnect must not
+    # create a second copy if the first sync attempt already landed.
+    if data.client_uuid:
+        existing = await db.orders.find_one(
+            {"restaurant_id": user["restaurant_id"], "client_uuid": data.client_uuid},
+            {"_id": 0, "created_by": 0},
+        )
+        if existing:
+            return OrderResponse(**existing)
+
     order_id = str(uuid.uuid4())
     order = {
         "id": order_id,
+        "client_uuid": data.client_uuid,
         "order_number": order_number,
         "restaurant_id": user["restaurant_id"],
         "branch_id": user.get("branch_id"),

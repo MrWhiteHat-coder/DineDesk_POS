@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
+import { createOrderResilient } from '../../lib/resilientOrder';
 import { toast } from 'sonner';
 import { Zap, Search, X, Banknote, CreditCard, Smartphone, Printer, Check, User, Plus, Wallet } from 'lucide-react';
 import { Input } from '../../components/ui/input';
@@ -123,13 +124,16 @@ export default function QuickPOSPage() {
         payload.payment_method = 'split';
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
-      const res = await orderAPI.create(payload);
-      toast.success(`Order #${res.data.order_number} done!`);
-      try {
-        const rcpt = await receiptAPI.get(res.data.id);
-        setReceiptData(rcpt.data);
-        setShowReceipt(true);
-      } catch {}
+      const result = await createOrderResilient(payload, { total });
+      if (!result.online) toast.info('Saved offline — will sync automatically when back online');
+      else toast.success(`Order #${result.data.order_number} done!`);
+      if (result.online) {
+        try {
+          const rcpt = await receiptAPI.get(result.data.id);
+          setReceiptData(rcpt.data);
+          setShowReceipt(true);
+        } catch {}
+      }
       setCart([]);
       setCustomerName('');
       setCustomerPhone('');

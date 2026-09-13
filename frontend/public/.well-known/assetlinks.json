@@ -1,0 +1,12 @@
+{
+  "comment": "Digital Asset Links — verifies that the DineDesk Android TWA (Play Store app) is allowed to display this site in full-screen without a browser URL bar. Replace the REPLACE_WITH_SHA256_FINGERPRINT value with your app signing certificate's SHA-256 fingerprint (see PLAYSTORE_GUIDE.md step 4). Multiple fingerprints (upload + release keys) can be listed.",
+  "target": {},
+  "android_app": [
+    {
+      "package_name": "in.revontechnologies.dinedesk",
+      "sha256_cert_fingerprints": [
+        "REPLACE_WITH_SHA256_FINGERPRINT"
+      ]
+    }
+  ]
+}

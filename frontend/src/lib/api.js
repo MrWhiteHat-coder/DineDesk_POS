@@ -26,9 +26,11 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor for auth token
+// Request interceptor for auth token. Reads sessionStorage first (per-tab
+// session) and falls back to localStorage (survives PWA close/reopen — needed
+// for offline order sync after a fresh app launch).
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token');
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -59,6 +61,8 @@ api.interceptors.response.use(
       if (hadSession && !isPublicAuthPath) {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
+        try { localStorage.removeItem('token'); } catch { /* noop */ }
+        try { localStorage.removeItem('user'); } catch { /* noop */ }
         // Avoid redirect loops when we are already on the login page.
         if (!window.location.pathname.startsWith('/login')) {
           window.location.assign('/login');

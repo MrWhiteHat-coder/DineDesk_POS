@@ -5,6 +5,8 @@ import { useFeatures } from '../contexts/FeatureContext';
 import { useTheme } from '../contexts/ThemeContext';
 import logoUrl from '../assets/dinedesk-logo.png';
 import { daySessionAPI } from '../lib/api';
+import { initOfflineSync, syncOfflineOrders, onSyncEvent } from '../lib/offlineSync';
+import { getPendingCount } from '../lib/offlineOrders';
 import { toast } from 'sonner';
 import DayCloseReport from '../components/pos/DayCloseReport';
 import {
@@ -38,6 +40,8 @@ import {
   Search,
   Package,
   Monitor,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -141,6 +145,41 @@ export default function POSLayout() {
 
   /* ── mobile more sheet ── */
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+
+  /* ── offline state: connection + queued order count ── */
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [pendingOffline, setPendingOffline] = useState(0);
+  const [syncingNow, setSyncingNow] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const refreshCount = async () => {
+      const n = await getPendingCount();
+      if (alive) setPendingOffline(n);
+    };
+    refreshCount();
+    const cleanupSync = initOfflineSync({ toast });
+    const unsubscribe = onSyncEvent(() => refreshCount());
+    const onQueued = () => refreshCount();
+    window.addEventListener('dinedesk:orders-queued', onQueued);
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      alive = false;
+      cleanupSync();
+      unsubscribe();
+      window.removeEventListener('dinedesk:orders-queued', onQueued);
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  const handleManualSync = async () => {
+    setSyncingNow(true);
+    try { await syncOfflineOrders({ silent: false, toast }); } finally { setSyncingNow(false); }
+  };
 
   /* ── sidebar More section (desktop) ── */
   const [sidebarMoreOpen, setSidebarMoreOpen] = useState(false);
@@ -511,6 +550,39 @@ export default function POSLayout() {
             </button>
           </div>
         </header>
+
+        {/* ──────────── OFFLINE BANNER ──────────── */}
+        {(!online || pendingOffline > 0) && (
+          <div
+            className={`flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-semibold z-30 ${
+              !online
+                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                : 'bg-[#2E9E5B]/10 text-[#217A42] dark:text-[#3FCE85]'
+            }`}
+            data-testid="offline-banner"
+            role="status"
+          >
+            {!online ? (
+              <>
+                <WifiOff className="w-3.5 h-3.5" />
+                <span>Offline mode — billing continues, orders sync automatically</span>
+                {pendingOffline > 0 && <span className="font-bold">({pendingOffline} waiting)</span>}
+              </>
+            ) : (
+              <button
+                onClick={handleManualSync}
+                disabled={syncingNow}
+                className="flex items-center gap-2 hover:brightness-95 disabled:opacity-60 transition-all"
+                data-testid="sync-now-btn"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingNow ? 'animate-spin' : ''}`} />
+                <span>
+                  Back online{pendingOffline > 0 ? ` — ${pendingOffline} offline order${pendingOffline > 1 ? 's' : ''} syncing` : ''}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ──────────── MAIN CONTENT ──────────── */}
         <main className="flex-1 overflow-y-auto">
