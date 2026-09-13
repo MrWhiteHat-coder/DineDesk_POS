@@ -26,7 +26,7 @@ const statusConfig = {
 
 const orderTypeConfig = {
   dine_in: { label: 'Dine In', color: 'bg-blue-100 text-blue-700' },
-  takeaway: { label: 'Takeaway', color: 'bg-green-100 text-green-700' },
+  takeaway: { label: 'Takeaway', color: 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' },
   online: { label: 'Online', color: 'bg-purple-100 text-purple-700' },
 };
 
@@ -100,8 +100,8 @@ export default function OrderManagement() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-slate-100 p-1">
-          <TabsTrigger value="all" className="data-[state=active]:bg-white">
+        <TabsList className="bg-slate-100 dark:bg-slate-800/80 p-1">
+          <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900">
             Active ({orderCounts.all})
           </TabsTrigger>
           <TabsTrigger value="received" className="data-[state=active]:bg-white">
@@ -110,10 +110,10 @@ export default function OrderManagement() {
           <TabsTrigger value="preparing" className="data-[state=active]:bg-white">
             Preparing ({orderCounts.preparing})
           </TabsTrigger>
-          <TabsTrigger value="ready" className="data-[state=active]:bg-white">
+          <TabsTrigger value="ready" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900">
             Ready ({orderCounts.ready})
           </TabsTrigger>
-          <TabsTrigger value="completed" className="data-[state=active]:bg-white">
+          <TabsTrigger value="completed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900">
             Completed ({orderCounts.completed})
           </TabsTrigger>
         </TabsList>

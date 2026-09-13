@@ -221,7 +221,7 @@ export default function InventoryPage() {
                         Low Stock
                       </Badge>
                     ) : (
-                      <Badge className="bg-green-100 text-green-700">In Stock</Badge>
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300">In Stock</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">

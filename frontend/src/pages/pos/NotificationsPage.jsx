@@ -169,13 +169,13 @@ export default function NotificationsPage() {
                         <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{notif.message}</p>
                         <div className="flex items-center gap-3 mt-1">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                            notif.status === 'sent' ? 'bg-green-100 text-green-700'
-                            : notif.status === 'failed' ? 'bg-red-100 text-red-700'
-                            : 'bg-slate-200 text-slate-600'
+                            notif.status === 'sent' ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                            : notif.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                            : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                           }`}>SMS: {notif.status}</span>
                           {notif.whatsapp_status && (
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                              notif.whatsapp_status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              notif.whatsapp_status === 'sent' ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
                             }`}>WhatsApp: {notif.whatsapp_status}</span>
                           )}
                         </div>

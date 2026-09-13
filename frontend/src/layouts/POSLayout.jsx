@@ -46,6 +46,11 @@ import {
   Monitor,
   WifiOff,
   RefreshCw,
+  MapPin,
+  Phone,
+  Mail,
+  ShieldCheck,
+  Clock,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -62,6 +67,11 @@ import {
   SheetContent,
   SheetTitle,
 } from '../components/ui/sheet';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover';
 
 /* ───────── nav config ───────── */
 const allNavItems = [
@@ -149,6 +159,64 @@ export default function POSLayout() {
 
   /* ── mobile more sheet ── */
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+
+  /* ── restaurant quick-look (mobile bottom sheet) ── */
+  const [restSheetOpen, setRestSheetOpen] = useState(false);
+
+  /* Compact restaurant summary reused by the desktop popover and mobile sheet.
+     showHeader=false lets the mobile sheet render its own larger title. */
+  const restaurantQuickLook = (showHeader = true) => (
+    <>
+      {showHeader && (
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="min-w-0">
+            <p className="font-heading font-bold text-sm text-gray-900 dark:text-white truncate">{restaurant?.name || 'Restaurant'}</p>
+            <p className="text-[11px] text-gray-400 dark:text-white/40 capitalize">{(restaurant?.restaurant_type || 'restaurant').replace(/_/g, ' ')} · {restaurant?.num_tables ?? '—'} tables</p>
+          </div>
+          <span className={`inline-flex items-center gap-1 flex-shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full ${isDayOpen ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300' : 'bg-red-100 text-red-600 dark:bg-red-400/15 dark:text-red-300'}`}>
+            <span className={`w-1 h-1 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`} aria-hidden="true" />
+            {isDayOpen ? 'Open' : 'Closed'}
+          </span>
+        </div>
+      )}
+      <div className="space-y-1.5 text-[11px]">
+        <div className="flex items-center gap-2 text-gray-600 dark:text-white/60">
+          <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-white/35 flex-shrink-0" />
+          <span className="truncate">{[restaurant?.address, restaurant?.city, restaurant?.pincode].filter(Boolean).join(', ') || 'Address not set'}</span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-600 dark:text-white/60">
+          <Phone className="w-3.5 h-3.5 text-gray-400 dark:text-white/35 flex-shrink-0" />
+          <span className="truncate">{restaurant?.contact_phone || 'Phone not set'}</span>
+        </div>
+        {restaurant?.contact_email && (
+          <div className="flex items-center gap-2 text-gray-600 dark:text-white/60">
+            <Mail className="w-3.5 h-3.5 text-gray-400 dark:text-white/35 flex-shrink-0" />
+            <span className="truncate">{restaurant.contact_email}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-gray-600 dark:text-white/60">
+          <ShieldCheck className="w-3.5 h-3.5 text-gray-400 dark:text-white/35 flex-shrink-0" />
+          <span className="truncate">
+            FSSAI {restaurant?.fssai_license_number ? `${String(restaurant.fssai_license_number).slice(0, 4)}••••${String(restaurant.fssai_license_number).slice(-3)}` : 'not set'}
+            {restaurant?.fssai_expiry_date && ` · exp ${String(restaurant.fssai_expiry_date).slice(0, 10)}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-600 dark:text-white/60">
+          <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-white/35 flex-shrink-0" />
+          <span className="truncate">
+            {restaurant?.opening_time && restaurant?.closing_time ? `${restaurant.opening_time} – ${restaurant.closing_time}` : 'Hours not set'}
+          </span>
+        </div>
+      </div>
+      <button
+        onClick={() => { setRestSheetOpen(false); navigate('/pos/restaurant'); }}
+        className="mt-3 w-full py-2 rounded-full bg-gray-100 dark:bg-white/[0.06] text-[11px] font-bold text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/[0.1] active:scale-[0.98] transition-all"
+        data-testid="quicklook-edit-btn"
+      >
+        Edit details
+      </button>
+    </>
+  );
   const { dragRef: moreDragRef, dragHandlers: moreDragHandlers } = useDragToDismiss({
     onDismiss: () => setMoreSheetOpen(false),
   });
@@ -413,32 +481,38 @@ export default function POSLayout() {
         {/* ──────────── TOP BAR (desktop) ──────────── */}
         <header className="hidden lg:flex h-14 items-center gap-3 px-4 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] flex-shrink-0 z-30">
 
-          {/* Restaurant chip → details page */}
-          <button
-            onClick={() => navigate('/pos/restaurant')}
-            className="flex items-center gap-2.5 bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl pl-1.5 pr-2 py-1 hover:border-gray-400 dark:hover:border-white/20 hover:shadow-sm transition-all flex-shrink-0"
-            data-testid="restaurant-chip"
-            title="View restaurant details"
-          >
-            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-base" aria-hidden="true">
-              🍩
-            </div>
-            <div className="text-left leading-tight">
-              <p className="text-xs font-semibold text-gray-900 dark:text-white truncate max-w-[120px]">{restaurant?.name || 'Restaurant'}</p>
-              <div className="flex items-center gap-1.5">
-                <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-px rounded-full ${isDayOpen ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300' : 'bg-red-100 text-red-600 dark:bg-red-400/15 dark:text-red-300'}`}>
-                  <span className={`w-1 h-1 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-                  {isDayOpen ? 'Open' : 'Closed'}
-                </span>
-                <span className="text-[10px] text-gray-500 dark:text-white/45 font-medium">
-                  {restaurant?.opening_time && restaurant?.closing_time
-                    ? `${restaurant.opening_time} - ${restaurant.closing_time}`
-                    : 'Details'}
-                </span>
-              </div>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-white/40" />
-          </button>
+          {/* Restaurant chip → quick-look popover (edit via footer button) */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="flex items-center gap-2.5 bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-xl pl-1.5 pr-2 py-1 hover:border-gray-400 dark:hover:border-white/20 hover:shadow-sm transition-all flex-shrink-0"
+                data-testid="restaurant-chip"
+                title="Restaurant quick look"
+              >
+                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-base" aria-hidden="true">
+                  🍩
+                </div>
+                <div className="text-left leading-tight">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white truncate max-w-[120px]">{restaurant?.name || 'Restaurant'}</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-px rounded-full ${isDayOpen ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300' : 'bg-red-100 text-red-600 dark:bg-red-400/15 dark:text-red-300'}`}>
+                      <span className={`w-1 h-1 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                      {isDayOpen ? 'Open' : 'Closed'}
+                    </span>
+                    <span className="text-[10px] text-gray-500 dark:text-white/45 font-medium">
+                      {restaurant?.opening_time && restaurant?.closing_time
+                        ? `${restaurant.opening_time} - ${restaurant.closing_time}`
+                        : 'Details'}
+                    </span>
+                  </div>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-white/40" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-72 rounded-2xl p-4 shadow-brand-lg" data-testid="restaurant-quicklook">
+              {restaurantQuickLook(true)}
+            </PopoverContent>
+          </Popover>
 
           {/* Standalone Day Open/Close control */}
           <button
@@ -564,12 +638,12 @@ export default function POSLayout() {
               </button>
             </div>
           </div>
-          {/* Row 2: restaurant identity strip — tap opens Restaurant details */}
+          {/* Row 2: restaurant identity strip — tap opens quick-look sheet */}
           <button
-            onClick={() => navigate('/pos/restaurant')}
+            onClick={() => setRestSheetOpen(true)}
             className="w-full flex items-center gap-2 px-3 py-1.5 border-t border-gray-100 dark:border-white/[0.05] min-w-0 active:bg-gray-50 dark:active:bg-white/[0.04] transition-colors"
             data-testid="restaurant-chip"
-            title="View restaurant details"
+            title="Restaurant quick look"
           >
             <span
               className={`inline-flex items-center gap-1 flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
@@ -669,6 +743,24 @@ export default function POSLayout() {
           </button>
         </div>
       </nav>
+
+      {/* ──────────── RESTAURANT QUICK-LOOK SHEET (mobile) ──────────── */}
+      <Sheet open={restSheetOpen} onOpenChange={setRestSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl bg-white dark:bg-[#161A20] px-5 pt-2 pb-8" data-testid="restaurant-quicklook-sheet">
+          <div className="flex justify-center pb-2" aria-hidden="true">
+            <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-white/20" />
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-xl flex-shrink-0" aria-hidden="true">🍩</div>
+            <div className="min-w-0">
+              <SheetTitle className="text-base font-heading font-extrabold text-gray-900 dark:text-white truncate">{restaurant?.name || 'Restaurant'}</SheetTitle>
+              <p className="text-[11px] text-gray-400 dark:text-white/40 capitalize">{(restaurant?.restaurant_type || 'restaurant').replace(/_/g, ' ')} · {restaurant?.num_tables ?? '—'} tables</p>
+            </div>
+          </div>
+          {restaurantQuickLook(false)}
+          <div aria-hidden="true" style={{ height: 'env(safe-area-inset-bottom)' }} />
+        </SheetContent>
+      </Sheet>
 
       {/* ──────────── MORE SHEET (mobile) ──────────── */}
       <Sheet open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>

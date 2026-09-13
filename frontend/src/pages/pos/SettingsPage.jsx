@@ -159,7 +159,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="flex gap-2">
               {restaurant.delivery_platforms?.includes('swiggy') && (
-                <Badge className="bg-black">Swiggy</Badge>
+                <Badge className="bg-black dark:bg-zinc-100 dark:text-zinc-900">Swiggy</Badge>
               )}
               {restaurant.delivery_platforms?.includes('zomato') && (
                 <Badge className="bg-red-500">Zomato</Badge>

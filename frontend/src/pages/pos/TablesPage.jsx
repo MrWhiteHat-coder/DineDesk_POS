@@ -17,9 +17,9 @@ import {
 import { Plus, Users, UtensilsCrossed, Clock } from 'lucide-react';
 
 const statusColors = {
-  available: 'bg-green-100 border-green-300 text-green-700',
-  occupied: 'bg-slate-100 border-slate-300 text-slate-700',
-  reserved: 'bg-blue-100 border-blue-300 text-blue-700',
+  available: 'bg-green-100 border-green-300 text-green-700 dark:bg-green-950/40 dark:border-green-800 dark:text-green-300',
+  occupied: 'bg-slate-100 border-slate-300 text-slate-700 dark:bg-slate-800/60 dark:border-slate-600 dark:text-slate-300',
+  reserved: 'bg-blue-100 border-blue-300 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300',
 };
 
 export default function TablesPage() {
@@ -114,38 +114,38 @@ export default function TablesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800/60">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <UtensilsCrossed className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+              <UtensilsCrossed className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-sm text-green-600">Available</p>
-              <p className="font-numbers text-2xl font-bold text-green-700">{stats.available}</p>
+              <p className="text-sm text-green-600 dark:text-green-400">Available</p>
+              <p className="font-numbers text-2xl font-bold text-green-700 dark:text-green-300">{stats.available}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-50 border-slate-200">
+        <Card className="bg-slate-50 border-slate-200 dark:bg-slate-900/60 dark:border-slate-700/60">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-slate-800" />
+            <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+              <Users className="w-5 h-5 text-slate-800 dark:text-slate-300" />
             </div>
             <div>
-              <p className="text-sm text-slate-800">Occupied</p>
-              <p className="font-numbers text-2xl font-bold text-slate-700">{stats.occupied}</p>
+              <p className="text-sm text-slate-800 dark:text-slate-300">Occupied</p>
+              <p className="font-numbers text-2xl font-bold text-slate-700 dark:text-slate-200">{stats.occupied}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800/60">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm text-blue-600">Reserved</p>
-              <p className="font-numbers text-2xl font-bold text-blue-700">{stats.reserved}</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">Reserved</p>
+              <p className="font-numbers text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.reserved}</p>
             </div>
           </CardContent>
         </Card>

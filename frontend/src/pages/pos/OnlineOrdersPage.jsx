@@ -127,7 +127,7 @@ export default function OnlineOrdersPage() {
             This is a demo integration. In production, orders would automatically appear here via
             webhooks. Webhook endpoints are ready at:
           </p>
-          <div className="mt-2 space-y-1 text-xs font-mono bg-blue-100 p-2 rounded">
+          <div className="mt-2 space-y-1 text-xs font-mono bg-blue-100 dark:bg-slate-800/80 p-2 rounded dark:text-blue-200">
             <p>POST /api/webhooks/swiggy</p>
             <p>POST /api/webhooks/zomato</p>
           </div>
