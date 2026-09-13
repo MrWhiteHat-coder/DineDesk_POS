@@ -602,26 +602,27 @@ export default function POSLayout() {
         </header>
 
         {/* ──────────── TOP BAR (mobile / tablet) ──────────── */}
-        <header className="lg:hidden flex-shrink-0 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] z-30">
-          {/* Row 1: brand · day control · theme · profile */}
-          <div className="h-12 flex items-center justify-between gap-2 pl-3 pr-2">
-            <img src={logoUrl} alt="DineDesk" className="lp-logo lp-logo-nav h-5 w-auto flex-shrink-0" loading="eager" />
+        {/* Floating glass pill — the Zomato/Instagram pattern: content stays
+            a calm floating island instead of a full-width slab. */}
+        <header className="lg:hidden flex-shrink-0 sticky top-0 z-30 px-2.5 pt-2 pb-1.5 bg-gradient-to-b from-white via-white/95 to-transparent dark:from-[#0B0D10] dark:via-[#0B0D10]/95 pointer-events-none">
+          <div className="pointer-events-auto flex items-center justify-between gap-2 h-12">
+            <img src={logoUrl} alt="DineDesk" className="lp-logo lp-logo-nav h-5 w-auto flex-shrink-0 ml-1" loading="eager" />
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
-                className={`h-8 px-2.5 rounded-full border text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
+                className={`h-8 px-2.5 rounded-full border text-[11px] font-bold flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap ${
                   isDayOpen
-                    ? 'border-emerald-200 dark:border-emerald-400/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-400/10'
+                    ? 'border-emerald-200/70 dark:border-emerald-400/25 text-emerald-700 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-400/10'
                     : 'border-gray-200 dark:border-white/[0.12] text-gray-500 dark:text-white/60 bg-white dark:bg-white/[0.04]'
                 }`}
                 data-testid={isDayOpen ? 'close-day-btn' : 'open-day-btn'}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`} aria-hidden="true" />
+                <span className={`w-1.5 h-1.5 rounded-full ${isDayOpen ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} aria-hidden="true" />
                 {isDayOpen ? 'Day open' : 'Day closed'}
               </button>
               <button
                 onClick={toggleTheme}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 dark:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors active:scale-95"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 dark:text-white/60 bg-white/80 dark:bg-white/[0.06] border border-gray-200/70 dark:border-white/[0.08] hover:bg-gray-100 dark:hover:bg-white/[0.1] transition-all active:scale-95"
                 data-testid="theme-toggle"
                 aria-label={dark ? 'Switch to light mode' : 'Switch to Night Shift'}
               >
@@ -629,7 +630,7 @@ export default function POSLayout() {
               </button>
             <button
               onClick={() => { haptics.press(); setMoreSheetOpen(true); }}
-              className="w-8 h-8 rounded-full bg-[#0F2417] dark:bg-white/[0.08] flex items-center justify-center transition-transform active:scale-95"
+              className="w-8 h-8 rounded-full bg-[#0F2417] dark:bg-white/[0.08] flex items-center justify-center transition-transform active:scale-95 shadow-sm ring-1 ring-black/5 dark:ring-white/10"
               aria-label="Open menu"
             >
                 {user
@@ -641,7 +642,7 @@ export default function POSLayout() {
           {/* Row 2: restaurant identity strip — tap opens quick-look sheet */}
           <button
             onClick={() => setRestSheetOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-1.5 border-t border-gray-100 dark:border-white/[0.05] min-w-0 active:bg-gray-50 dark:active:bg-white/[0.04] transition-colors"
+            className="pointer-events-auto w-full flex items-center gap-2 px-3 py-1.5 mt-0.5 rounded-full bg-white/85 dark:bg-white/[0.045] border border-gray-200/60 dark:border-white/[0.07] min-w-0 active:scale-[0.99] transition-transform backdrop-blur-sm"
             data-testid="restaurant-chip"
             title="Restaurant quick look"
           >
@@ -713,14 +714,15 @@ export default function POSLayout() {
                 key={item.to}
                 to={item.to}
                 end={item.exact}
-                className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 transition-all ${
+                className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 transition-all active:scale-95 ${
                   active ? 'text-[#217A42] dark:text-[#3FCE85]' : 'text-gray-400 dark:text-white/40'
                 }`}
               >
-                <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[#2E9E5B]/10 dark:bg-[#2E9E5B]/20' : ''}`}>
-                  <item.icon className={`w-5 h-5 ${active ? 'text-[#217A42] dark:text-[#3FCE85]' : ''}`} />
+                <div className={`relative p-1.5 rounded-2xl transition-all duration-300 ${active ? 'bg-gradient-to-b from-[#2E9E5B]/15 to-[#2E9E5B]/5 dark:from-[#2E9E5B]/25 dark:to-[#2E9E5B]/10 ring-1 ring-[#2E9E5B]/20 dark:ring-[#2E9E5B]/30' : ''}`}>
+                  {active && <span className="absolute -top-[9px] left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-[#2E9E5B] dark:bg-[#3FCE85]" aria-hidden="true" />}
+                  <item.icon className={`w-5 h-5 transition-transform duration-300 ${active ? 'text-[#217A42] dark:text-[#3FCE85] scale-110' : ''}`} />
                 </div>
-                <span className={`text-[10px] font-medium ${active ? 'text-[#217A42] dark:text-[#3FCE85]' : 'text-gray-400 dark:text-white/40'}`}>
+                <span className={`text-[10px] transition-font-weight ${active ? 'font-bold text-[#217A42] dark:text-[#3FCE85]' : 'font-medium text-gray-400 dark:text-white/40'}`}>
                   {item.label}
                 </span>
               </NavLink>

@@ -325,7 +325,7 @@ export default function POSMain() {
           <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
             <span className="text-xs text-slate-500 whitespace-nowrap font-medium">Running:</span>
             {runningOrders.map(ro => (
-              <button key={ro.id} onClick={() => selectRunningOrder(ro)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition-all ${selectedRunningOrder?.id === ro.id ? 'bg-black text-white border-black' : 'bg-slate-50 text-slate-600 hover:bg-slate-50'}`} data-testid={`running-order-${ro.id}`}>
+              <button key={ro.id} onClick={() => selectRunningOrder(ro)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition-all ${selectedRunningOrder?.id === ro.id ? 'bg-[#0F2417] text-white border-[#0F2417]' : 'bg-slate-50 text-slate-600 hover:bg-slate-50'}`} data-testid={`running-order-${ro.id}`}>
                 <Utensils className="w-3 h-3" /> T-{ro.table_number} #{ro.order_number?.slice(-4)}
               </button>
             ))}
@@ -336,11 +336,11 @@ export default function POSMain() {
         {/* Category Tabs + Search */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 mb-3 md:mb-4">
           <div className="flex items-center gap-2 overflow-x-auto flex-1 pb-1 w-full md:w-auto">
-            <button onClick={() => setSelectedCategory(null)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all min-h-[40px] ${!selectedCategory ? 'bg-black text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'}`} data-testid="category-all">
+            <button onClick={() => setSelectedCategory(null)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all min-h-[40px] ${!selectedCategory ? 'bg-[#0F2417] text-white shadow-md shadow-emerald-900/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'}`} data-testid="category-all">
               All <span className={`text-xs px-1.5 py-0.5 rounded-md ${!selectedCategory ? 'bg-white/20' : 'bg-gray-100'}`}>{menuItems.length}</span>
             </button>
             {categories.map(cat => (
-              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all min-h-[40px] ${selectedCategory === cat.id ? 'bg-black text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'}`} data-testid={`category-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}>
+              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all min-h-[40px] ${selectedCategory === cat.id ? 'bg-[#0F2417] text-white shadow-md shadow-emerald-900/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'}`} data-testid={`category-${cat.name.toLowerCase().replace(/\s+/g, '-')}`}>
                 {cat.name} <span className={`text-xs px-1.5 py-0.5 rounded-md ${selectedCategory === cat.id ? 'bg-white/20' : 'bg-gray-100'}`}>{getCategoryCount(cat.id)}</span>
               </button>
             ))}
@@ -358,30 +358,30 @@ export default function POSMain() {
         <div className="flex-1 lg:overflow-auto lg:-mr-2 lg:pr-2">
           {filteredItems.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 md:gap-3">
-              {filteredItems.map(item => {
+              {filteredItems.map((item, idx) => {
                 const qty = getCartQuantity(item.id);
                 const imgSrc = getImageUrl(item.image_url) || FALLBACK_IMG;
                 return (
-                  <div key={item.id} className="group relative bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-slate-200 hover:shadow-xl hover:-translate-y-1.5 active:scale-[0.98] transition-all duration-300 cursor-pointer animate-fade-in-up" data-testid={`menu-item-${item.id}`}>
+                  <div key={item.id} style={{ animationDelay: `${Math.min(idx * 40, 400)}ms` }} className="group relative bg-white dark:bg-white/[0.035] rounded-2xl overflow-hidden border border-slate-100 dark:border-white/[0.06] hover:border-emerald-200/70 dark:hover:border-emerald-400/25 hover:shadow-[0_20px_50px_-20px_rgba(46,158,91,0.35)] dark:hover:shadow-[0_20px_50px_-20px_rgba(46,158,91,0.2)] hover:-translate-y-1.5 active:scale-[0.98] transition-all duration-300 cursor-pointer animate-fade-in-up" data-testid={`menu-item-${item.id}`}>
                     <div className="relative aspect-[4/3] bg-slate-100">
                       <img src={imgSrc} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { e.target.src = FALLBACK_IMG; }} />
-                      <span className={`absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${item.is_available ? 'bg-white text-green-700' : 'bg-white text-red-600'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${item.is_available ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        {item.is_available ? 'Available' : 'Not Available'}
+                      <span className={`absolute top-2 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold tracking-wide backdrop-blur-md ${item.is_available ? 'bg-white/85 text-emerald-700 shadow-sm ring-1 ring-black/[0.04]' : 'bg-white/85 text-red-600 shadow-sm ring-1 ring-black/[0.04]'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${item.is_available ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                        {item.is_available ? 'Available' : 'Sold out'}
                       </span>
-                      {qty > 0 && <span className="absolute top-2.5 left-2.5 w-6 h-6 bg-black text-white rounded-full text-[11px] font-bold flex items-center justify-center">{qty}</span>}
+                      {qty > 0 && <span className="absolute top-2.5 left-2.5 w-6 h-6 bg-[#2E9E5B] text-white rounded-full ring-2 ring-white text-[11px] font-bold flex items-center justify-center">{qty}</span>}
                     </div>
                     <div className="p-3">
                       <div className="mb-2.5">
-                        <h3 className="text-[13px] font-semibold text-slate-900 leading-snug line-clamp-2 group-hover:text-slate-700 transition-colors">{item.name}</h3>
-                        <p className="text-sm font-bold text-slate-900 mt-1">₹{item.price.toFixed(2)}</p>
+                        <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white/90 leading-snug line-clamp-2 group-hover:text-slate-700 dark:group-hover:text-white transition-colors">{item.name}</h3>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">₹{item.price.toFixed(2)}</p>
                       </div>
                       {!item.is_available ? (
                         <button disabled className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-50 text-red-400 text-xs font-semibold cursor-not-allowed"><X className="w-3.5 h-3.5" /> Not Available</button>
                       ) : qty > 0 ? (
                         <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 active:scale-[0.97] transition-all duration-150" data-testid={`add-more-${item.id}`}>Add More ({qty})</button>
                       ) : (
-                        <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-black text-white text-xs font-semibold hover:bg-gray-800 active:scale-[0.97] transition-all duration-150 shadow-sm hover:shadow-md" data-testid={`add-item-${item.id}`}><Plus className="w-3.5 h-3.5" /> Add to Cart</button>
+                        <button onClick={() => addToCart(item)} className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-[#0F2417] dark:bg-[#2E9E5B] text-white text-xs font-bold hover:bg-[#1a3d28] dark:hover:bg-[#2ba765] active:scale-[0.97] transition-all duration-150 shadow-sm hover:shadow-lg hover:shadow-emerald-900/20" data-testid={`add-item-${item.id}`}><Plus className="w-3.5 h-3.5" /> Add to Cart</button>
                       )}
                     </div>
                   </div>
@@ -618,29 +618,34 @@ export default function POSMain() {
         )}
       </div>
 
-      {/* Mobile: sticky cart bar — checkout always one tap away */}
+      {/* Mobile: floating cart bar — the Zomato/Swiggy checkout anchor.
+          Deep-brand glass slab, glossy CTA, spring pop-in. */}
       {cart.length > 0 && !mobileCartOpen && (
         <div
-          className="lg:hidden fixed bottom-16 inset-x-3 z-40 flex items-center gap-3 rounded-2xl bg-[#0F2417] text-white p-3 shadow-2xl"
-          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+          className="lg:hidden fixed bottom-[4.75rem] inset-x-3 z-40 animate-cart-pop"
           data-testid="mobile-cart-bar"
         >
-          <div className="flex -space-x-2 flex-shrink-0">
-            {cart.slice(0, 3).map(c => (
-              <img key={c.item.id} src={getImageUrl(c.item.image_url) || FALLBACK_IMG} alt="" className="w-8 h-8 rounded-lg border-2 border-[#0F2417] object-cover" onError={e => { e.target.src = FALLBACK_IMG; }} />
-            ))}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold">{cart.reduce((s, c) => s + c.quantity, 0)} item{cart.reduce((s, c) => s + c.quantity, 0) > 1 ? 's' : ''} in cart</p>
-            <p className="text-sm font-bold font-numbers">₹{total.toFixed(2)}</p>
-          </div>
-          <button
-            onClick={() => setMobileCartOpen(true)}
-            className="px-4 h-10 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-110 active:scale-[0.97] transition-all flex-shrink-0"
-            data-testid="view-cart-btn"
+          <div
+            className="flex items-center gap-3 rounded-2xl bg-[#0F2417]/95 dark:bg-[#161A20]/95 backdrop-blur-xl text-white p-2.5 pr-2.5 ring-1 ring-white/10 shadow-[0_12px_40px_-8px_rgba(15,36,23,0.55)]"
+            style={{ paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))' }}
           >
-            View Cart
-          </button>
+            <div className="flex -space-x-2.5 flex-shrink-0 pl-0.5">
+              {cart.slice(0, 3).map(c => (
+                <img key={c.item.id} src={getImageUrl(c.item.image_url) || FALLBACK_IMG} alt="" className="w-9 h-9 rounded-xl border-2 border-white/15 object-cover ring-1 ring-black/20" onError={e => { e.target.src = FALLBACK_IMG; }} />
+              ))}
+            </div>
+            <div className="flex-1 min-w-0 pl-0.5">
+              <p className="text-[11px] font-semibold text-white/65 leading-tight">{cart.reduce((s, c) => s + c.quantity, 0)} item{cart.reduce((s, c) => s + c.quantity, 0) > 1 ? 's' : ''} added</p>
+              <p className="text-[15px] font-bold font-numbers leading-tight">₹{total.toFixed(2)}</p>
+            </div>
+            <button
+              onClick={() => { haptics.press(); setMobileCartOpen(true); }}
+              className="px-5 h-11 rounded-full bg-[#2E9E5B] text-white text-[13px] font-bold hover:brightness-110 active:scale-[0.96] transition-all flex-shrink-0 flex items-center gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_4px_14px_-4px_rgba(46,158,91,0.6)]"
+              data-testid="view-cart-btn"
+            >
+              View Cart <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -721,7 +726,7 @@ export default function POSMain() {
               disabled={checkoutLoading || totalPaid < total}
               className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
                 totalPaid >= total
-                  ? 'bg-black hover:bg-gray-800 text-white'
+                  ? 'bg-[#0F2417] hover:bg-[#1a3d28] text-white'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
               data-testid="confirm-payment-btn"

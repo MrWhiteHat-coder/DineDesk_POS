@@ -95,7 +95,7 @@ export default function PurchaseOrdersPage() {
       <div className="mb-4">
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-heading text-xl font-bold text-slate-900">Purchase Orders</h1>
-          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm flex-shrink-0" data-testid="create-po-btn">
+          <Button onClick={() => setShowModal(true)} className="h-9 px-3 rounded-lg bg-[#0F2417] hover:bg-[#1a3d28] text-sm flex-shrink-0" data-testid="create-po-btn">
             <Plus className="w-4 h-4 mr-1.5" /> New Order
           </Button>
         </div>
@@ -203,7 +203,7 @@ export default function PurchaseOrdersPage() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowModal(false)} className="rounded-lg">Cancel</Button>
-            <Button onClick={handleCreate} className="rounded-lg bg-black hover:bg-gray-800" data-testid="confirm-po-btn">Create Order</Button>
+            <Button onClick={handleCreate} className="rounded-lg bg-[#0F2417] hover:bg-[#1a3d28]" data-testid="confirm-po-btn">Create Order</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

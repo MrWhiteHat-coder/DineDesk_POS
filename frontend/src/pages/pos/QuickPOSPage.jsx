@@ -184,9 +184,9 @@ export default function QuickPOSPage() {
             <h1 className="font-bold text-lg">Quick POS</h1>
           </div>
           <div className="flex gap-1.5 overflow-x-auto flex-1 pb-1 sm:pb-0">
-            <button onClick={() => setSelectedCat(null)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${!selectedCat ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>All</button>
+            <button onClick={() => setSelectedCat(null)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${!selectedCat ? 'bg-[#0F2417] text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>All</button>
             {categories.map(c => (
-              <button key={c.id} onClick={() => setSelectedCat(c.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${selectedCat === c.id ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>{c.name}</button>
+              <button key={c.id} onClick={() => setSelectedCat(c.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${selectedCat === c.id ? 'bg-[#0F2417] text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>{c.name}</button>
             ))}
           </div>
           <div className="relative flex-shrink-0">
@@ -206,7 +206,7 @@ export default function QuickPOSPage() {
                 <p className="text-[11px] font-semibold text-gray-900 leading-tight truncate">{item.name}</p>
                 <p className="text-[11px] font-bold text-gray-700">{'\u20B9'}{item.price.toFixed(0)}</p>
                 {inCart && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black text-white rounded-full text-[10px] font-bold flex items-center justify-center">{inCart.qty}</span>
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#2E9E5B] text-white rounded-full ring-2 ring-white text-[10px] font-bold flex items-center justify-center">{inCart.qty}</span>
                 )}
               </button>
             );
@@ -219,7 +219,7 @@ export default function QuickPOSPage() {
         {/* Order Type Toggle */}
         <div className="p-2.5 border-b border-gray-100 flex gap-1.5">
           {['takeaway', 'dine_in'].map(t => (
-            <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${orderType === t ? 'bg-black text-white' : 'bg-gray-50 text-gray-600'}`}>
+            <button key={t} onClick={() => setOrderType(t)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${orderType === t ? 'bg-[#0F2417] text-white' : 'bg-gray-50 text-gray-600'}`}>
               {t === 'takeaway' ? 'Takeaway' : 'Dine-in'}
             </button>
           ))}
@@ -293,7 +293,7 @@ export default function QuickPOSPage() {
               <Input placeholder="Name *" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-name" />
               <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-email" />
             </div>
-            <button onClick={openPayModal} disabled={processing} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black text-white text-xs font-bold hover:bg-gray-800 transition-colors disabled:opacity-50" data-testid="quick-pay-btn">
+            <button onClick={openPayModal} disabled={processing} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#0F2417] text-white text-xs font-bold hover:bg-[#1a3d28] transition-colors disabled:opacity-50" data-testid="quick-pay-btn">
               <Wallet className="w-4 h-4" /> Pay ₹{total.toFixed(2)}
             </button>
           </div>
@@ -361,7 +361,7 @@ export default function QuickPOSPage() {
               )}
             </div>
             <button onClick={quickPay} disabled={processing || totalPaid < total}
-              className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${totalPaid >= total ? 'bg-black hover:bg-gray-800 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+              className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${totalPaid >= total ? 'bg-[#0F2417] hover:bg-[#1a3d28] text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
               {processing ? 'Processing...' : `Pay ₹${total.toFixed(2)}`}
             </button>
           </div>

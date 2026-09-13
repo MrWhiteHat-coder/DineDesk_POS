@@ -95,7 +95,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-black hover:bg-gray-800"
+            className="bg-[#0F2417] hover:bg-[#1a3d28]"
             data-testid="save-settings-btn"
           >
             <Save className="w-4 h-4 mr-2" />

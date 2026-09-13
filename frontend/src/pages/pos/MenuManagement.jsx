@@ -285,7 +285,7 @@ export default function MenuManagement() {
           </Button>
           <Button
             onClick={() => openItemModal()}
-            className="h-9 px-3 rounded-lg bg-black hover:bg-gray-800 text-sm"
+            className="h-9 px-3 rounded-lg bg-[#0F2417] hover:bg-[#1a3d28] text-sm"
             data-testid="add-item-btn"
           >
             <Plus className="w-4 h-4 mr-1.5" />
@@ -408,7 +408,7 @@ export default function MenuManagement() {
           <ChefPresenting className="w-28 h-28 mx-auto mb-4" />
           <p className="text-lg font-heading font-bold text-slate-600 mb-1">Your menu is empty</p>
           <p className="text-sm text-slate-400 mb-4">Add dishes to start taking orders!</p>
-          <Button onClick={() => openItemModal()} className="bg-black hover:bg-gray-800 rounded-xl">
+          <Button onClick={() => openItemModal()} className="bg-[#0F2417] hover:bg-[#1a3d28] rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Dish
           </Button>
@@ -450,7 +450,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleCreateCategory}
               disabled={categoryLoading}
-              className="bg-black hover:bg-gray-800 rounded-xl"
+              className="bg-[#0F2417] hover:bg-[#1a3d28] rounded-xl"
               data-testid="save-category-btn"
             >
               {categoryLoading ? 'Creating...' : 'Create Category'}
@@ -697,7 +697,7 @@ export default function MenuManagement() {
             <Button
               onClick={handleSaveItem}
               disabled={itemLoading}
-              className="bg-black hover:bg-gray-800 rounded-xl"
+              className="bg-[#0F2417] hover:bg-[#1a3d28] rounded-xl"
               data-testid="save-item-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Create Item'}

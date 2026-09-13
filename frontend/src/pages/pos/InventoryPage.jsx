@@ -174,7 +174,7 @@ export default function InventoryPage() {
           </Button>
           <Button
             onClick={() => openModal()}
-            className="bg-black hover:bg-gray-800"
+            className="bg-[#0F2417] hover:bg-[#1a3d28]"
             data-testid="add-inventory-btn"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -253,7 +253,7 @@ export default function InventoryPage() {
           <ChefWorried className="w-28 h-28 mx-auto mb-4" />
           <p className="text-lg font-heading font-bold text-slate-600 mb-1">No inventory items</p>
           <p className="text-sm text-slate-400 mb-4">Track raw materials and stock levels</p>
-          <Button onClick={() => openModal()} className="bg-black hover:bg-gray-800 rounded-xl">
+          <Button onClick={() => openModal()} className="bg-[#0F2417] hover:bg-[#1a3d28] rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>
@@ -344,7 +344,7 @@ export default function InventoryPage() {
             <Button
               onClick={handleSave}
               disabled={itemLoading}
-              className="bg-black hover:bg-gray-800"
+              className="bg-[#0F2417] hover:bg-[#1a3d28]"
               data-testid="save-inventory-btn"
             >
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Add Item'}
