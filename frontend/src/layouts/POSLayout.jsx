@@ -9,6 +9,7 @@ import { initOfflineSync, syncOfflineOrders, onSyncEvent } from '../lib/offlineS
 import { getPendingCount } from '../lib/offlineOrders';
 import { toast } from 'sonner';
 import haptics from '../lib/haptics';
+import useDragToDismiss from '../lib/useDragToDismiss';
 import DayCloseReport from '../components/pos/DayCloseReport';
 import {
   Home,
@@ -148,6 +149,9 @@ export default function POSLayout() {
 
   /* ── mobile more sheet ── */
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const { dragRef: moreDragRef, dragHandlers: moreDragHandlers } = useDragToDismiss({
+    onDismiss: () => setMoreSheetOpen(false),
+  });
 
   /* ── offline state: connection + queued order count ── */
   const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -669,6 +673,10 @@ export default function POSLayout() {
       {/* ──────────── MORE SHEET (mobile) ──────────── */}
       <Sheet open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto bg-white dark:bg-[#161A20] px-4 pt-1 pb-7" data-testid="more-sheet">
+          {/* Grab handle — swipe down to dismiss */}
+          <div ref={moreDragRef} {...moreDragHandlers} className="flex justify-center pt-2 pb-1 -mx-4 cursor-grab active:cursor-grabbing" aria-hidden="true">
+            <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-white/20" />
+          </div>
           <SheetTitle className="text-lg font-heading font-extrabold text-gray-900 dark:text-white pt-1 pr-12">Explore DineDesk</SheetTitle>
           <p className="text-[11px] text-gray-400 dark:text-white/40 -mt-0.5 pr-12">Everything your restaurant needs, one tap away.</p>
 

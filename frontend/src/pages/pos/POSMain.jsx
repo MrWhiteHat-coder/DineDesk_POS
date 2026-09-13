@@ -11,6 +11,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { ChefShrugging, ChefWinking } from '../../components/illustrations/ChefBot';
 import haptics from '../../lib/haptics';
+import useDragToDismiss from '../../lib/useDragToDismiss';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
@@ -21,6 +22,7 @@ import {
 import {
   Plus, Minus, Trash2, ShoppingCart, Search, AlertCircle, X, RefreshCw, Tag,
   Banknote, CreditCard, Smartphone, Utensils, Printer, Check, User, Wallet,
+  StickyNote, ChevronRight, Sparkles,
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -39,6 +41,12 @@ export default function POSMain() {
   const [orderType, setOrderType] = useState('dine_in');
   const [tableNumber, setTableNumber] = useState('');
   const [applyDiscount, setApplyDiscount] = useState(false);
+  const [editingNotesId, setEditingNotesId] = useState(null);
+
+  /* Mobile cart sheet: swipe down to close (native feel) */
+  const { dragRef: cartDragRef, dragHandlers: cartDragHandlers } = useDragToDismiss({
+    onDismiss: () => setMobileCartOpen(false),
+  });
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
   const [runningOrders, setRunningOrders] = useState([]);
@@ -110,6 +118,13 @@ export default function POSMain() {
   const discountAmount = applyDiscount && subtotal >= 50 ? subtotal * 0.1 : 0;
   const taxAmount = (subtotal - discountAmount) * 0.05;
   const total = subtotal + taxAmount - discountAmount;
+
+  /* "Complete your meal with" — top 6 available items not already in cart,
+     sorted by price desc (chef's picks feel, like the reference app). */
+  const availableUpsell = menuItems
+    .filter(i => i.is_available && !cart.some(c => c.item.id === i.id))
+    .sort((a, b) => b.price - a.price)
+    .slice(0, 6);
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0) { toast.error('Cart is empty'); return; }
@@ -233,6 +248,36 @@ export default function POSMain() {
     </div>
   );
 
+  /* "Complete your meal with" strip — renders in cart (with items) and empty state */
+  const upsellStrip = availableUpsell.length > 0 && (
+    <div className="pt-1" data-testid="cart-upsell">
+      <p className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5 mb-2.5">
+        <Sparkles className="w-3.5 h-3.5 text-emerald-500" /> Complete your meal with
+      </p>
+      <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1">
+        {availableUpsell.map(item => (
+          <div key={item.id} className="relative w-24 flex-shrink-0 rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm">
+            <div className="relative aspect-square bg-slate-100">
+              <img src={getImageUrl(item.image_url) || FALLBACK_IMG} alt={item.name} className="w-full h-full object-cover" onError={e => { e.target.src = FALLBACK_IMG; }} />
+              <button
+                onClick={() => addToCart(item)}
+                className="absolute bottom-1 right-1 w-7 h-7 rounded-lg bg-[#2E9E5B] text-white flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                aria-label={`Add ${item.name}`}
+                data-testid={`upsell-add-${item.id}`}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-1.5">
+              <p className="text-[10px] font-semibold text-slate-800 truncate leading-tight">{item.name}</p>
+              <p className="text-[10px] font-bold text-slate-500 font-numbers">₹{item.price.toFixed(0)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:h-[calc(100vh-7rem)] animate-fade-in" data-testid="pos-main">
       {/* Left: Menu Area */}
@@ -312,7 +357,13 @@ export default function POSMain() {
       </div>
 
       {/* Right: Order Summary */}
-      <div className={`${mobileCartOpen ? 'fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] rounded-t-2xl flex pb-[env(safe-area-inset-bottom,0px)]' : 'hidden'} lg:static lg:flex lg:w-[340px] lg:max-h-none lg:flex-shrink-0 lg:h-full lg:pb-0 flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-md`} data-testid="cart-panel">
+      <div ref={mobileCartOpen ? cartDragRef : undefined} {...(mobileCartOpen ? cartDragHandlers : {})} className={`${mobileCartOpen ? 'fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] rounded-t-2xl flex pb-[env(safe-area-inset-bottom,0px)] transition-transform' : 'hidden'} lg:static lg:flex lg:w-[340px] lg:max-h-none lg:flex-shrink-0 lg:h-full lg:pb-0 flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-md`} data-testid="cart-panel">
+        {/* Grab handle — drag anywhere on it to dismiss (mobile) */}
+        {mobileCartOpen && (
+          <div className="lg:hidden flex justify-center pt-2 pb-1 flex-shrink-0" aria-hidden="true">
+            <div className="w-10 h-1 rounded-full bg-slate-200" />
+          </div>
+        )}
         <div className="px-4 py-3 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-slate-900">{selectedRunningOrder ? `Table ${selectedRunningOrder.table_number}` : 'Order Summary'}</h2>
@@ -334,31 +385,86 @@ export default function POSMain() {
                   <div key={cartItem.item.id} className="flex gap-3" data-testid={`cart-item-${cartItem.item.id}`}>
                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100"><img src={imgSrc} alt={cartItem.item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={e => { e.target.src = FALLBACK_IMG; }} /></div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0 pr-1">
-                          <h4 className="text-sm font-semibold text-slate-900 leading-tight truncate">{cartItem.item.name} ({cartItem.quantity})</h4>
-                          <input type="text" placeholder="Notes..." value={cartItem.notes} onChange={e => updateNotes(cartItem.item.id, e.target.value)} className="text-[11px] text-slate-400 bg-transparent border-none outline-none w-full mt-0.5" />
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-slate-900 leading-tight truncate">{cartItem.item.name}</h4>
+                          <p className="text-[11px] text-slate-400 mt-0.5">₹{cartItem.item.price.toFixed(2)} each</p>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button onClick={() => updateQuantity(cartItem.item.id, -1)} className="text-slate-400 hover:text-slate-600 p-0.5"><Minus className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => updateQuantity(cartItem.item.id, 1)} className="text-slate-400 hover:text-slate-600 p-0.5"><Plus className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => removeFromCart(cartItem.item.id)} className="text-slate-400 hover:text-red-500 p-0.5" data-testid={`remove-item-${cartItem.item.id}`}><Trash2 className="w-3.5 h-3.5" /></button>
+                        {/* Quantity stepper — green, like the reference */}
+                        <div className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-1 py-0.5 flex-shrink-0" data-testid={`qty-stepper-${cartItem.item.id}`}>
+                          <button
+                            onClick={() => (cartItem.quantity === 1 ? removeFromCart(cartItem.item.id) : updateQuantity(cartItem.item.id, -1))}
+                            className="w-7 h-7 rounded-md flex items-center justify-center text-emerald-700 hover:bg-emerald-100 active:scale-90 transition-all"
+                            aria-label={`Decrease ${cartItem.item.name}`}
+                            data-testid={`qty-minus-${cartItem.item.id}`}
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="w-6 text-center text-sm font-bold font-numbers text-emerald-800">{cartItem.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(cartItem.item.id, 1)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center text-emerald-700 hover:bg-emerald-100 active:scale-90 transition-all"
+                            aria-label={`Increase ${cartItem.item.name}`}
+                            data-testid={`qty-plus-${cartItem.item.id}`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                      <p className="text-sm font-bold text-slate-900 mt-1">₹{(cartItem.item.price * cartItem.quantity).toFixed(2)}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <button
+                          onClick={() => setEditingNotesId(editingNotesId === cartItem.item.id ? null : cartItem.item.id)}
+                          className={`text-[11px] font-semibold flex items-center gap-0.5 transition-colors ${cartItem.notes ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                          data-testid={`edit-notes-${cartItem.item.id}`}
+                        >
+                          {cartItem.notes ? `Note: ${cartItem.notes}` : 'Edit'} {!cartItem.notes && <ChevronRight className="w-3 h-3" />}
+                        </button>
+                        <p className="text-sm font-bold font-numbers text-slate-900">₹{(cartItem.item.price * cartItem.quantity).toFixed(2)}</p>
+                      </div>
+                      {editingNotesId === cartItem.item.id && (
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Add a note for the kitchen..."
+                          value={cartItem.notes}
+                          onChange={e => updateNotes(cartItem.item.id, e.target.value)}
+                          onBlur={() => setEditingNotesId(null)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setEditingNotesId(null); }}
+                          className="mt-1.5 w-full text-[11px] text-slate-700 bg-emerald-50/60 border border-emerald-100 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-300 transition-colors"
+                          data-testid={`notes-input-${cartItem.item.id}`}
+                        />
+                      )}
                     </div>
                   </div>
                 );
               })}
+
+              {/* Reference-style action pills row */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => { setSearchQuery(''); setSelectedCategory(null); }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-50 active:scale-95 transition-all"
+                  data-testid="add-more-items-btn"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add more items
+                </button>
+                <button
+                  onClick={() => setEditingNotesId(cart[0]?.item?.id || null)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 active:scale-95 transition-all"
+                >
+                  <StickyNote className="w-3.5 h-3.5" /> Add a note
+                </button>
+              </div>
             </div>
           ) : !selectedRunningOrder ? (
-            <div className="flex flex-col items-center justify-center h-40 text-slate-300"><ShoppingCart className="w-10 h-10 mb-2" /><p className="text-sm font-medium text-slate-400">Cart is empty</p></div>
+            upsellStrip
           ) : null}
         </ScrollArea>
 
-        <div className="px-4 py-3 border-t border-slate-100 space-y-3">
+        {/* ── Zomato-style bill summary + upsell + coupon (scrolls inside) ── */}
+        <ScrollArea className="flex-1 min-h-0 px-4 pb-2">
           {cart.length > 0 && (
-            <div className="space-y-1.5 text-sm">
+            <div className="space-y-1.5 text-sm py-2">
               <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-semibold text-slate-900">₹{subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">Taxes (5%)</span><span className="font-semibold text-slate-900">₹{taxAmount.toFixed(2)}</span></div>
               {discountAmount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span className="font-semibold">-₹{discountAmount.toFixed(2)}</span></div>}
@@ -366,8 +472,17 @@ export default function POSMain() {
             </div>
           )}
 
+          {cart.length > 0 && upsellStrip}
+
+          {cart.length > 0 && (
+            <button onClick={() => setApplyDiscount(!applyDiscount)} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-xs transition-colors ${applyDiscount ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`} data-testid="discount-toggle">
+              <Tag className="w-4 h-4" /><div className="text-left"><p className="font-semibold">{applyDiscount ? 'Applied: 10% off' : 'Save 10% on this bill'}</p><p className="text-[10px] opacity-70">Minimum buy ₹50.00 · tap to {applyDiscount ? 'remove' : 'apply'}</p></div>
+              <span className={`ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full ${applyDiscount ? 'bg-green-500 text-white' : 'bg-emerald-600 text-white'}`}>{applyDiscount ? '✓ APPLIED' : 'APPLY'}</span>
+            </button>
+          )}
+
           {!selectedRunningOrder && cart.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 pt-2">
               <div>
                 <Label className="text-[11px] text-slate-400 mb-1 block">Order Type</Label>
                 <Select value={orderType} onValueChange={setOrderType}>
@@ -388,14 +503,7 @@ export default function POSMain() {
           )}
 
           {cart.length > 0 && (
-            <button onClick={() => setApplyDiscount(!applyDiscount)} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-xs transition-colors ${applyDiscount ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`} data-testid="discount-toggle">
-              <Tag className="w-4 h-4" /><div className="text-left"><p className="font-semibold">10% Discount</p><p className="text-[10px] opacity-70">Minimum Buy ₹50.00</p></div>
-              {applyDiscount && <div className="ml-auto w-2 h-2 rounded-full bg-green-500"></div>}
-            </button>
-          )}
-
-          {cart.length > 0 && (
-            <div className="space-y-2 pt-1 border-t border-slate-100">
+            <div className="space-y-2 pt-2 pb-3">
               <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1"><User className="w-3.5 h-3.5" /> Customer Details</p>
               <div className="relative">
                 <Input placeholder="Phone *" value={customerPhone} onChange={e => { setCustomerPhone(e.target.value); lookupCustomer(e.target.value); }} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-phone" />
@@ -414,21 +522,53 @@ export default function POSMain() {
             </div>
           )}
 
-          {cart.length > 0 && (
-            <Button onClick={handlePlaceOrder} className="w-full h-11 rounded-lg bg-black hover:bg-gray-800 text-white font-semibold text-sm" disabled={!isDayOpen || checkoutLoading} data-testid="place-order-btn">
-              {checkoutLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : selectedRunningOrder ? 'Update Order' : orderType === 'dine_in' ? 'Place Order & Hold Table' : 'Proceed to Payment'}
-            </Button>
-          )}
-
           {selectedRunningOrder && (
-            <div className="space-y-2">
-              <p className="text-[11px] font-medium text-slate-500 text-center">Release Table & Collect Payment</p>
-              <button onClick={() => { openPaymentModal(); }} className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-black hover:bg-gray-800 text-white text-sm font-semibold transition-all" data-testid="pay-split-btn">
-                <Wallet className="w-4 h-4" /> Pay ₹{total.toFixed(2)}
-              </button>
-            </div>
+            <p className="text-[11px] font-medium text-slate-500 text-center py-3">Release table & collect payment below</p>
           )}
-        </div>
+        </ScrollArea>
+
+        {/* ── STICKY PAY BAR (always visible, exact reference placement) ── */}
+        {cart.length > 0 && (
+          <div className="flex items-center gap-3 px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }} data-testid="place-order-bar">
+            {/* Left: context — like "PAY USING / Google Pay UPI" slot */}
+            <div className="flex flex-col min-w-0 flex-shrink-0">
+              <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase leading-none">{orderType === 'dine_in' ? 'Dine-in' : 'Takeaway'}</p>
+              <p className="text-[11px] font-semibold text-slate-700 truncate mt-1">
+                {orderType === 'dine_in' ? (tableNumber ? `Table ${tableNumber}` : 'Select table ↑') : 'Billing counter'}
+              </p>
+            </div>
+            {/* Right: total + CTA block — like the ₹230.69 / Place Order pill */}
+            <Button
+              onClick={handlePlaceOrder}
+              className="flex-1 h-12 rounded-xl bg-[#2E9E5B] hover:bg-[#288A50] text-white font-bold text-sm flex items-center justify-between px-4 active:scale-[0.98] transition-all"
+              disabled={!isDayOpen || checkoutLoading}
+              data-testid="place-order-btn"
+            >
+              {checkoutLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+              ) : (
+                <>
+                  <span className="flex flex-col items-start leading-none">
+                    <span className="font-numbers text-base">₹{total.toFixed(2)}</span>
+                    <span className="text-[9px] font-semibold opacity-80 mt-0.5">TOTAL</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-sm">
+                    {selectedRunningOrder ? 'Update' : orderType === 'dine_in' ? 'Place Order' : 'Pay Now'}
+                    <ChevronRight className="w-4 h-4" />
+                  </span>
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {selectedRunningOrder && cart.length === 0 && (
+          <div className="px-4 py-3 border-t border-slate-100 flex-shrink-0">
+            <button onClick={() => { openPaymentModal(); }} className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-[#2E9E5B] hover:bg-[#288A50] text-white text-sm font-bold transition-all" data-testid="pay-split-btn">
+              <Wallet className="w-4 h-4" /> Pay ₹{total.toFixed(2)}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Mobile: sticky cart bar — checkout always one tap away */}

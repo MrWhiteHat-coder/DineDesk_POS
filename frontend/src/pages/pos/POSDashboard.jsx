@@ -3,10 +3,10 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI, tableAPI, kdsAPI } from '../../lib/api';
 import { toast } from 'sonner';
+import haptics from '../../lib/haptics';
 import { Card, CardContent } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import CountUp from '../../components/ui/CountUp';
-import haptics from '../../lib/haptics';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '../../components/ui/dialog';
@@ -28,6 +28,7 @@ import {
   Receipt,
   Sparkles,
   Users,
+  Gift,
   ChevronDown,
   Maximize2,
   ArrowRightLeft,
@@ -112,6 +113,94 @@ function Spark({ data, color = '#2E9E5B' }) {
   );
 }
 
+/* ───────── PROMO BANNER (z3 reference — offers carousel) ───────── */
+const PROMO_SLIDES = [
+  {
+    id: 'off150',
+    tag: 'LIMITED TIME',
+    title: 'Minimum ₹150 OFF',
+    sub: 'On your next order above ₹500 — auto-applied at billing',
+    cta: 'Order now',
+  },
+  {
+    id: 'combo',
+    tag: 'COMBO WEEK',
+    title: 'Buy 1 Get 1 on Combos',
+    sub: 'Select combo items — discount applies to the cheaper one',
+    cta: 'See combos',
+  },
+  {
+    id: 'upi',
+    tag: 'PAY DAY',
+    title: '5% back on UPI payments',
+    sub: 'Trident Coins credited instantly on every UPI bill',
+    cta: 'Pay via UPI',
+  },
+];
+
+function PromoBanner({ onClaim }) {
+  const [slide, setSlide] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused) return undefined;
+    const iv = setInterval(() => setSlide(s => (s + 1) % PROMO_SLIDES.length), 4500);
+    return () => clearInterval(iv);
+  }, [paused]);
+
+  const current = PROMO_SLIDES[slide];
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0F2417] via-[#1B5A38] to-[#2E9E5B] text-white animate-fade-in"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onTouchStart={() => setPaused(true)}
+      onTouchEnd={() => setPaused(false)}
+      data-testid="promo-banner"
+    >
+      {/* Soft decorative dots (calm, brand-tinted) */}
+      <div className="absolute -left-6 -top-10 w-32 h-32 rounded-full bg-white/[0.06] pointer-events-none" aria-hidden="true" />
+      <div className="absolute right-10 -bottom-14 w-40 h-40 rounded-full bg-white/[0.05] pointer-events-none" aria-hidden="true" />
+
+      <div className="relative px-4 md:px-6 py-4 md:py-5 flex items-center gap-4">
+        {/* Gift icon in a glass chip */}
+        <div className="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+          <Gift className="w-5 h-5 md:w-6 md:h-6 text-amber-300" />
+        </div>
+
+        {/* Copy — swaps with the slide */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[9px] md:text-[10px] font-bold tracking-[0.14em] text-emerald-200/90">{current.tag}</p>
+          <h3 key={current.id} className="font-heading font-extrabold text-base md:text-xl leading-tight mt-0.5 animate-promo-in">
+            {current.title}
+          </h3>
+          <p className="text-[11px] md:text-xs text-white/70 mt-0.5 truncate">{current.sub}</p>
+        </div>
+
+        <button
+          onClick={onClaim}
+          className="hidden sm:flex items-center gap-1 px-4 h-10 rounded-full bg-white text-[#0F2417] text-xs font-bold hover:bg-emerald-50 active:scale-95 transition-all flex-shrink-0"
+        >
+          {current.cta} <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Slide dots */}
+      <div className="relative flex items-center justify-center gap-1.5 pb-2.5">
+        {PROMO_SLIDES.map((s, i) => (
+          <button
+            key={s.id}
+            onClick={() => setSlide(i)}
+            aria-label={`Show offer ${i + 1}`}
+            className={`promo-dot h-1.5 rounded-full transition-all ${i === slide ? 'w-5 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════
    CONTROL ROOM DASHBOARD
    ═══════════════════════════════════════════════════════ */
@@ -130,6 +219,9 @@ export default function POSDashboard() {
   const [mapTab, setMapTab] = useState('floor');
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [newOrderPulse, setNewOrderPulse] = useState(false);
+  const [longPressTable, setLongPressTable] = useState(null);
+  const [tableActionLoading, setTableActionLoading] = useState(false);
+  const longPressTimerRef = useRef(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [receiptData, setReceiptData] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -327,22 +419,93 @@ export default function POSDashboard() {
     win.print();
   };
 
+  /* ── long-press table quick actions (mobile power move) ── */
+  const startTableLongPress = (table) => {
+    cancelTableLongPress();
+    longPressTimerRef.current = setTimeout(() => {
+      haptics.warning();
+      setLongPressTable(table);
+    }, 480);
+  };
+  const cancelTableLongPress = () => {
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+  };
+  useEffect(() => () => cancelTableLongPress(), []);
+
+  const applyTableAction = async (action) => {
+    if (!longPressTable) return;
+    setTableActionLoading(true);
+    try {
+      await tableAPI.updateStatus(longPressTable.id, action);
+      toast.success(`Table ${longPressTable.table_number} → ${action}`);
+      haptics.success();
+      setLongPressTable(null);
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to update table');
+    } finally {
+      setTableActionLoading(false);
+    }
+  };
+
+  /* Live Service Map: Floor → Orders → Kitchen swipe navigation */
+  const TAB_ORDER = ['floor', 'orders', 'kitchen'];
+  const tabTouch = useRef(null);
+  const handleTabTouchStart = (e) => { tabTouch.current = e.touches[0]?.clientX ?? null; };
+  const handleTabTouchEnd = (e) => {
+    if (tabTouch.current === null) return;
+    const endX = e.changedTouches[0]?.clientX;
+    if (endX === undefined) { tabTouch.current = null; return; }
+    const dx = endX - tabTouch.current;
+    tabTouch.current = null;
+    if (Math.abs(dx) < 56) return; // too short — not a swipe
+    const idx = TAB_ORDER.indexOf(mapTab);
+    const next = dx < 0 ? Math.min(TAB_ORDER.length - 1, idx + 1) : Math.max(0, idx - 1);
+    if (next !== idx) { setMapTab(TAB_ORDER[next]); setSelectedTableId(null); haptics.press(); }
+  };
+
   /* ── greeting ── */
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = (user?.name || 'Chef').split(' ')[0];
   const dateLabel = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
-  /* ═════════ SKELETON ═════════ */
+  /* ═════════ SKELETON (z2-style structured placeholders) ═════════ */
   if (loading) {
     return (
       <div className="space-y-5 animate-fade-in" data-testid="pos-dashboard-skeleton">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
-          <Skeleton className="h-20 w-72 rounded-2xl" />
-          <div className="grid grid-cols-3 gap-3 flex-1 max-w-xl"><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-20 rounded-2xl" /><Skeleton className="h-20 rounded-2xl" /></div>
+        {/* Greeting block */}
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-52 rounded-lg" />
+          <Skeleton className="h-4 w-72 max-w-full rounded-md" />
         </div>
+        {/* Metric cards — same 3-col grid as real content */}
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-3 md:p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Skeleton className="w-7 h-7 rounded-lg" />
+                <Skeleton className="w-14 h-6 rounded-md hidden sm:block" />
+              </div>
+              <Skeleton className="h-6 w-20 rounded-md" />
+              <Skeleton className="h-3 w-16 rounded-sm" />
+            </div>
+          ))}
+        </div>
+        {/* Promo banner slot (matches new promo banner) */}
+        <Skeleton className="h-24 md:h-28 rounded-2xl" />
+        {/* Service map + side column */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <Skeleton className="h-96 rounded-2xl lg:col-span-2" />
+          <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4 md:p-5 lg:col-span-2 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-2"><Skeleton className="h-5 w-36 rounded-md" /><Skeleton className="h-3 w-28 rounded-sm" /></div>
+              <Skeleton className="h-9 w-44 rounded-xl" />
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[74px] rounded-2xl" />)
+              }
+            </div>
+          </div>
           <div className="space-y-4"><Skeleton className="h-44 rounded-2xl" /><Skeleton className="h-72 rounded-2xl" /></div>
         </div>
         <Skeleton className="h-28 rounded-2xl" />
@@ -436,6 +599,9 @@ export default function POSDashboard() {
         </div>
       </div>
 
+      {/* ═══ PROMO BANNER — offers carousel (z3 reference) ═══ */}
+      <PromoBanner onClaim={() => navigate('/pos/orders')} />
+
       {/* ═══ DAY CLOSED NOTE (replaces old amber banner — calm, actionable) ═══ */}
       {!isDayOpen && (
         <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] border border-amber-200/70 dark:border-amber-400/20 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm">
@@ -476,6 +642,11 @@ export default function POSDashboard() {
               </div>
             </div>
 
+            {/* Swipe between Floor → Orders → Kitchen (touch devices) */}
+            <div
+              onTouchStart={handleTabTouchStart}
+              onTouchEnd={handleTabTouchEnd}
+            >
             {/* FLOOR */}
             {mapTab === 'floor' && (
               tables.length === 0 ? (
@@ -497,6 +668,10 @@ export default function POSDashboard() {
                         <button
                           key={table.id}
                           onClick={() => setSelectedTableId(isSelected ? null : table.id)}
+                          onContextMenu={(e) => { e.preventDefault(); setLongPressTable(table); }}
+                          onTouchStart={() => startTableLongPress(table)}
+                          onTouchEnd={cancelTableLongPress}
+                          onTouchMove={cancelTableLongPress}
                           className={`relative rounded-2xl p-2.5 ring-1 ${vis.ring} text-left transition-all hover:scale-[1.03] ${isSelected ? 'ring-2 ring-gray-900 dark:ring-white scale-[1.03] shadow-lg' : ''}`}
                           data-testid={`floor-table-${table.table_number}`}
                         >
@@ -632,6 +807,7 @@ export default function POSDashboard() {
                 </div>
               )
             )}
+            </div>
           </CardContent>
         </Card>
 
@@ -887,6 +1063,39 @@ export default function POSDashboard() {
           >
             <Printer className="w-4 h-4" /> Print Receipt
           </button>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Long-press table quick actions ── */}
+      <Dialog open={!!longPressTable} onOpenChange={(open) => { if (!open) setLongPressTable(null); }}>
+        <DialogContent className="rounded-2xl max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg">
+              Table {longPressTable ? String(longPressTable.table_number).padStart(2, '0') : ''}
+            </DialogTitle>
+            <p className="text-xs text-gray-400">Quick actions</p>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2 py-2" data-testid="table-quick-actions">
+            {[
+              { action: 'available', label: 'Free up', tone: 'bg-gray-50 dark:bg-white/[0.05] text-gray-700 dark:text-white/70 border-gray-200 dark:border-white/[0.08]' },
+              { action: 'occupied', label: 'Seat now', tone: 'bg-emerald-50 dark:bg-emerald-400/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-400/20' },
+              { action: 'reserved', label: 'Reserve', tone: 'bg-blue-50 dark:bg-blue-400/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-400/20' },
+              { action: 'available', label: 'Reset', tone: 'bg-amber-50 dark:bg-amber-400/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-400/20' },
+            ].map(({ action, label, tone }) => (
+              <button
+                key={label}
+                onClick={() => applyTableAction(action)}
+                disabled={tableActionLoading}
+                className={`py-3 rounded-xl border text-xs font-bold active:scale-95 transition-all disabled:opacity-50 ${tone}`}
+                data-testid={`table-action-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {longPressTable && longPressTable.capacity && (
+            <p className="text-[11px] text-gray-400 text-center">{longPressTable.capacity} seats</p>
+          )}
         </DialogContent>
       </Dialog>
     </div>

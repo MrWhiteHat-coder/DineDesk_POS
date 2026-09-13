@@ -544,6 +544,15 @@ html.dark .calm-mode .shadow-sm {
     animation: contentReveal 0.9s ease forwards;
 }
 
+/* Promo banner slide swap: gentle rise-in, no layout shift. */
+@keyframes promoIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-promo-in {
+    animation: promoIn 0.35s ease forwards;
+}
+
 .overflow-x-auto::-webkit-scrollbar {
     height: 2px;
 }
@@ -581,6 +590,10 @@ html.dark .calm-mode .shadow-sm {
     }
     /* Restore compact intended sizes for icon-only buttons */
     .w-8.h-8, .w-9.h-9, .w-10.h-10 {
+        min-height: 0;
+    }
+    /* Carousel dots are decorative + inside a padded strip — exempt */
+    .promo-dot {
         min-height: 0;
     }
     /* Theme/Profile round buttons in the mobile topbar keep 32px height
