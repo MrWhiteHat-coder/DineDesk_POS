@@ -32,7 +32,8 @@ except Exception:
     genai = None
     GEMINI_READY = False
 
-GEMINI_MODEL = "gemini-2.0-flash"
+# Env-overridable so a future deprecation is a Render env change, not a redeploy
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 # Simple in-process cache so analytics bursts don't burn Gemini quota.
 _CACHE = {}

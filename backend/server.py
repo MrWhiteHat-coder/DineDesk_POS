@@ -1209,7 +1209,7 @@ async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Res
         ) % restaurant_name
 
         model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
+            model_name=os.environ.get("GEMINI_MODEL", "gemini-3.6-flash"),
             system_instruction=system_prompt
         )
         
