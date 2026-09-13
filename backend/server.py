@@ -8,7 +8,14 @@ from fastapi.staticfiles import StaticFiles
 import os
 import re
 import logging
-import intelligence
+
+# DineDesk Intelligence service — import works both ways:
+#   local dev:  uvicorn server:app  (cwd = backend/)
+#   Render:     uvicorn backend.server:app  (cwd = repo root)
+try:
+    import intelligence
+except ImportError:  # pragma: no cover
+    from backend import intelligence
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import List, Optional, Dict, Any
