@@ -85,7 +85,7 @@ function tableVisual(table, order) {
 function Spark({ data, color = '#2E9E5B' }) {
   if (!data || data.length < 2) return null;
   return (
-    <div className="w-16 h-8 flex-shrink-0" aria-hidden="true">
+    <div className="w-16 h-8 hidden sm:block flex-shrink-0" aria-hidden="true">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
           <defs>

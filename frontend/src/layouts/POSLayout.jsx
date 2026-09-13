@@ -503,12 +503,12 @@ export default function POSLayout() {
 
         {/* ──────────── TOP BAR (mobile / tablet) ──────────── */}
         <header className="lg:hidden h-14 flex items-center justify-between px-3 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] flex-shrink-0 z-30">
-          <div className="flex items-center gap-2 min-w-0">
-            <img src={logoUrl} alt="DineDesk" className="lp-logo-white h-7 w-auto flex-shrink-0" loading="eager" />
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <img src={logoUrl} alt="DineDesk" className="lp-logo-white h-6 w-auto flex-shrink-0" loading="eager" />
             <div className="min-w-0 leading-tight">
               <button
                 onClick={() => navigate('/pos/restaurant')}
-                className="font-heading font-bold text-gray-900 dark:text-white text-xs truncate block"
+                className="font-heading font-bold text-gray-900 dark:text-white text-xs truncate block max-w-[42vw]"
                 data-testid="restaurant-chip"
                 title="View restaurant details"
               >
@@ -522,7 +522,7 @@ export default function POSLayout() {
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={() => (isDayOpen ? setShowDayCloseModal(true) : setShowDayOpenModal(true))}
-              className={`h-8 px-2 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-colors ${
+              className={`h-9 px-3 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-colors ${
                 isDayOpen
                   ? 'border-emerald-300 dark:border-emerald-400/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-400/10'
                   : 'border-gray-200 dark:border-white/[0.12] text-gray-500 dark:text-white/60'

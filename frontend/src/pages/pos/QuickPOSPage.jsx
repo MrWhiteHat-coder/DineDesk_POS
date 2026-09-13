@@ -37,6 +37,11 @@ export default function QuickPOSPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestTimeout = useRef(null);
 
+  /* Mobile: cart becomes a bottom sheet + sticky bar (same pattern as the
+     Create Order page). Desktop keeps the inline right column. */
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  React.useEffect(() => { if (cart.length === 0) setMobileCartOpen(false); }, [cart.length]);
+
   const lookupCustomer = useCallback((phone) => {
     if (suggestTimeout.current) clearTimeout(suggestTimeout.current);
     if (phone.length < 3) { setSuggestions([]); return; }
@@ -205,7 +210,7 @@ export default function QuickPOSPage() {
       </div>
 
       {/* Right: Cart + Payment */}
-      <div className="w-full lg:w-[260px] flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden lg:flex-shrink-0 lg:max-h-none">
+      <div className={`${mobileCartOpen ? 'fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] rounded-t-2xl flex pb-[env(safe-area-inset-bottom,0px)]' : 'hidden'} lg:static lg:flex lg:w-[260px] lg:max-h-none lg:flex-shrink-0 lg:pb-0 flex-col bg-white rounded-xl border border-gray-200 overflow-hidden`} data-testid="quick-cart-panel">
         {/* Order Type Toggle */}
         <div className="p-2.5 border-b border-gray-100 flex gap-1.5">
           {['takeaway', 'dine_in'].map(t => (
@@ -213,6 +218,11 @@ export default function QuickPOSPage() {
               {t === 'takeaway' ? 'Takeaway' : 'Dine-in'}
             </button>
           ))}
+          {mobileCartOpen && (
+            <button onClick={() => setMobileCartOpen(false)} aria-label="Close cart" className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {orderType === 'dine_in' && (
@@ -284,6 +294,27 @@ export default function QuickPOSPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile: sticky cart bar */}
+      {cart.length > 0 && !mobileCartOpen && (
+        <div
+          className="lg:hidden fixed bottom-16 inset-x-3 z-40 flex items-center gap-3 rounded-2xl bg-[#0F2417] text-white p-3 shadow-2xl"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+          data-testid="quick-mobile-cart-bar"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold">{cart.reduce((s, c) => s + c.qty, 0)} item{cart.reduce((s, c) => s + c.qty, 0) > 1 ? 's' : ''} · Quick POS</p>
+            <p className="text-sm font-bold font-numbers">₹{total.toFixed(2)}</p>
+          </div>
+          <button
+            onClick={() => setMobileCartOpen(true)}
+            className="px-4 h-10 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-110 active:scale-[0.97] transition-all flex-shrink-0"
+            data-testid="quick-view-cart-btn"
+          >
+            View Cart
+          </button>
+        </div>
+      )}
 
       {/* Payment Modal - Split Payment */}
       <Dialog open={showPayModal} onOpenChange={setShowPayModal}>

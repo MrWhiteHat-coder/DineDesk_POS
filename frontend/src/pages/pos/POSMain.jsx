@@ -212,6 +212,12 @@ export default function POSMain() {
 
   const getCategoryCount = (catId) => menuItems.filter(i => i.category_id === catId).length;
 
+  /* Mobile: the cart panel becomes a bottom sheet so checkout is always
+     one tap away instead of buried below the menu. Desktop keeps the
+     inline sidebar — same panel, two presentations. */
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  useEffect(() => { if (cart.length === 0) setMobileCartOpen(false); }, [cart.length]);
+
   if (loading) return (
     <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:h-[calc(100vh-7rem)] animate-fade-in">
       <div className="flex-1">
@@ -303,11 +309,16 @@ export default function POSMain() {
       </div>
 
       {/* Right: Order Summary */}
-      <div className="w-full lg:w-[340px] flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden lg:flex-shrink-0 lg:h-full shadow-sm lg:shadow-md">
+      <div className={`${mobileCartOpen ? 'fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] rounded-t-2xl flex pb-[env(safe-area-inset-bottom,0px)]' : 'hidden'} lg:static lg:flex lg:w-[340px] lg:max-h-none lg:flex-shrink-0 lg:h-full lg:pb-0 flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-md`} data-testid="cart-panel">
         <div className="px-4 py-3 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-base text-slate-900">{selectedRunningOrder ? `Table ${selectedRunningOrder.table_number}` : 'Order Summary'}</h2>
             <span className="text-xs text-slate-400 font-numbers">{selectedRunningOrder ? `#${selectedRunningOrder.order_number}` : `#${orderNumber}`}</span>
+            {mobileCartOpen && (
+              <button onClick={() => setMobileCartOpen(false)} aria-label="Close cart" className="lg:hidden ml-3 p-1.5 -mr-1 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -416,6 +427,32 @@ export default function POSMain() {
           )}
         </div>
       </div>
+
+      {/* Mobile: sticky cart bar — checkout always one tap away */}
+      {cart.length > 0 && !mobileCartOpen && (
+        <div
+          className="lg:hidden fixed bottom-16 inset-x-3 z-40 flex items-center gap-3 rounded-2xl bg-[#0F2417] text-white p-3 shadow-2xl"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+          data-testid="mobile-cart-bar"
+        >
+          <div className="flex -space-x-2 flex-shrink-0">
+            {cart.slice(0, 3).map(c => (
+              <img key={c.item.id} src={getImageUrl(c.item.image_url) || FALLBACK_IMG} alt="" className="w-8 h-8 rounded-lg border-2 border-[#0F2417] object-cover" onError={e => { e.target.src = FALLBACK_IMG; }} />
+            ))}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold">{cart.reduce((s, c) => s + c.quantity, 0)} item{cart.reduce((s, c) => s + c.quantity, 0) > 1 ? 's' : ''} in cart</p>
+            <p className="text-sm font-bold font-numbers">₹{total.toFixed(2)}</p>
+          </div>
+          <button
+            onClick={() => setMobileCartOpen(true)}
+            className="px-4 h-10 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-110 active:scale-[0.97] transition-all flex-shrink-0"
+            data-testid="view-cart-btn"
+          >
+            View Cart
+          </button>
+        </div>
+      )}
 
       {/* Payment Modal - Split Payment */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
