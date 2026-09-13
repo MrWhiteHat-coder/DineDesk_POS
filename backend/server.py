@@ -296,6 +296,20 @@ async def lifespan(app_instance: FastAPI):
         await db.branches.create_index("restaurant_id")
         await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
         logger.info("Database indexes created")
+
+        # --- Data repair: normalize legacy order statuses ---
+        # Old KDS clients could store literal 'served' which sits outside the
+        # received → preparing → ready → completed lifecycle map, stranding
+        # orders as forever-'running' and blocking day close. Map them to 'ready'.
+        try:
+            repaired = await db.orders.update_many(
+                {"status": "served"},
+                {"$set": {"status": "ready"}}
+            )
+            if repaired.modified_count:
+                logger.info(f"Normalized {repaired.modified_count} legacy 'served' order(s) to 'ready'")
+        except Exception as e:
+            logger.warning(f"Legacy status normalization skipped: {e}")
         reverify_task = asyncio.create_task(license_reverification_loop())
         background_tasks.append(reverify_task)
     except Exception as e:
@@ -2626,21 +2640,28 @@ async def get_kds_orders(user: dict = Depends(get_current_user)):
 
 @api_router.put("/kds/orders/{order_id}/status")
 async def update_kds_order_status(order_id: str, new_status: str, user: dict = Depends(get_current_user)):
-    """Update order status from KDS (received -> preparing -> ready -> served)."""
+    """Update order status from KDS (received -> preparing -> ready).
+
+    Only lifecycle statuses are ever stored. Any legacy 'served' value is
+    treated as 'ready' so an old client can never strand an order in a
+    status outside the received → preparing → ready → completed map.
+    """
     check_role(user, "kds")
     valid = ["preparing", "ready", "served"]
     if new_status not in valid:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid}")
+
+    # 'served' is a legacy alias for 'ready' — normalize before anything else
+    # so the stored status always stays inside the lifecycle map.
+    if new_status == "served":
+        new_status = "ready"
 
     order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
     # KDS may not skip backwards or revive completed/cancelled orders.
-    # 'served' maps to the completed state's post-payment display, so allow it
-    # only from 'ready' via the same lifecycle rules.
-    target = "ready" if new_status == "served" else new_status
-    _validate_order_transition(order["status"], target)
+    _validate_order_transition(order["status"], new_status)
 
     await db.orders.update_one(
         {"id": order_id, "restaurant_id": user.get("restaurant_id")},

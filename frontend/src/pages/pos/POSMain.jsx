@@ -28,6 +28,7 @@ import {
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const getImageUrl = (url) => { if (!url) return null; if (url.startsWith('http')) return url; return `${API_URL}${url}`; };
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=400&fit=crop';
+const round2 = (n) => Math.round(n * 100) / 100;
 
 export default function POSMain() {
   const { isDayOpen } = useOutletContext();
@@ -117,7 +118,21 @@ export default function POSMain() {
   const subtotal = cart.reduce((s, c) => s + c.item.price * c.quantity, 0);
   const discountAmount = applyDiscount && subtotal >= 50 ? subtotal * 0.1 : 0;
   const taxAmount = (subtotal - discountAmount) * 0.05;
-  const total = subtotal + taxAmount - discountAmount;
+  /* Running order: charge only the DELTA on top of the server's authoritative
+     total — extra units of existing items AND brand-new items. The original
+     order was already priced by the backend; re-computing from the merged
+     cart double-counts existing items, and ignoring quantity increases on
+     existing items silently undercharges. */
+  const serverQtyMap = {};
+  (selectedRunningOrder?.items || []).forEach(i => { serverQtyMap[i.menu_item_id] = (serverQtyMap[i.menu_item_id] || 0) + i.quantity; });
+  const deltaSubtotal = selectedRunningOrder
+    ? cart.reduce((s, c) => s + c.item.price * Math.max(0, c.quantity - (serverQtyMap[c.item.id] || 0)), 0)
+    : 0;
+  const deltaDiscount = applyDiscount && deltaSubtotal >= 50 ? deltaSubtotal * 0.1 : 0;
+  const deltaTax = (deltaSubtotal - deltaDiscount) * 0.05;
+  const total = selectedRunningOrder
+    ? round2(selectedRunningOrder.total_amount + deltaSubtotal + deltaTax - deltaDiscount)
+    : round2(subtotal + taxAmount - discountAmount);
 
   /* "Complete your meal with" — top 6 available items not already in cart,
      sorted by price desc (chef's picks feel, like the reference app). */
@@ -134,8 +149,20 @@ export default function POSMain() {
       if (selectedRunningOrder) {
         setCheckoutLoading(true);
         try {
-          const newItems = cart.filter(c => !c.isExisting);
-          if (newItems.length > 0) await orderAPI.addItems(selectedRunningOrder.id, { items: newItems.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })) });
+          /* Compute the delta per item against the server's current quantities:
+             - qty grew (2x → 4x)  → add the difference (2)
+             - qty same            → nothing
+             - qty shrank or item removed → blocked below (bills only grow) */
+          const serverQty = {};
+          (selectedRunningOrder.items || []).forEach(i => { serverQty[i.menu_item_id] = (serverQty[i.menu_item_id] || 0) + i.quantity; });
+          const deltas = [];
+          for (const c of cart) {
+            const base = serverQty[c.item.id] || 0;
+            if (c.quantity > base) deltas.push({ menu_item_id: c.item.id, quantity: c.quantity - base, notes: c.notes || null });
+          }
+          if (deltas.length === 0) { toast.info('No changes to add — quantities match the running order'); setCheckoutLoading(false); return; }
+          await orderAPI.addItems(selectedRunningOrder.id, { items: deltas });
+          haptics.success();
           toast.success('Order updated!'); clearCart(); fetchRunningOrders(); fetchTables();
         } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
         return;
@@ -225,7 +252,18 @@ export default function POSMain() {
     setCustomerName(order.customer_name || '');
     setCustomerPhone(order.customer_phone || '');
     setCustomerEmail(order.customer_email || '');
-    setCart((order.items || []).map(item => { const mi = menuItems.find(m => m.id === item.menu_item_id); return { item: mi || { id: item.menu_item_id, name: item.name, price: item.price, image_url: null, is_available: true }, quantity: item.quantity, notes: item.notes || '', isExisting: true }; }));
+    /* Merge server lines by menu_item_id so repeated lines of the same dish
+       (e.g. two rounds of coffee added separately) become one cart row —
+       otherwise delta math and the qty stepper desync from the server. */
+    const merged = {};
+    (order.items || []).forEach(item => {
+      if (merged[item.menu_item_id]) { merged[item.menu_item_id].quantity += item.quantity; merged[item.menu_item_id].notes = [merged[item.menu_item_id].notes, item.notes].filter(Boolean).join(' · '); }
+      else {
+        const mi = menuItems.find(m => m.id === item.menu_item_id);
+        merged[item.menu_item_id] = { item: mi || { id: item.menu_item_id, name: item.name, price: item.price, image_url: null, is_available: true }, quantity: item.quantity, notes: item.notes || '', isExisting: true };
+      }
+    });
+    setCart(Object.values(merged));
   };
 
   const getCategoryCount = (catId) => menuItems.filter(i => i.category_id === catId).length;
