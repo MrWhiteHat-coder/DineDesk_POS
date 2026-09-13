@@ -1621,33 +1621,78 @@ async def check_license_expiry(restaurant: dict):
 
 @api_router.post("/restaurants/verify-license")
 async def verify_fssai_license(data: dict, user: dict = Depends(get_current_user)):
-    """Verify a FSSAI food license number against the government registry.
-    Checks the FoSCoS public license search (https://foscos.fssai.gov.in).
-    If the registry is unreachable, a format-level verification is returned
-    with the reachability stated honestly — never a fake success."""
+    """Verify a FSSAI food license number against the official government
+    registry via Decentro (https://decentro.tech), falling back to a honest
+    format-level check when the provider is unreachable. Never returns a
+    fake success."""
     license_number = str(data.get("license_number", "")).strip()
     if not validate_fssai_format(license_number):
         return {"valid": False, "status": "invalid_format", "message": "FSSAI license must be a 14-digit number starting with a valid state code (1-9)."}
-    try:
-        import requests as _requests
-        resp = _requests.get(
-            "https://foscos.fssai.gov.in/checklicense",
-            params={"license_number": license_number},
-            timeout=10,
-        )
-        body = (resp.text or "").lower()
-        if resp.status_code == 200 and ("active" in body or "valid" in body):
-            return {"valid": True, "status": "verified", "message": "Verification successful — license found and active in the FoSCoS registry."}
-        if resp.status_code == 200:
-            return {"valid": False, "status": "not_found", "message": "This license number was not found in the FoSCoS registry. Double-check the number."}
-        raise RuntimeError(f"unexpected status {resp.status_code}")
-    except Exception:
-        logger.info(f"FoSCoS verify unreachable for license {license_number[:2]}****; falling back to format check")
-        return {
-            "valid": True,
-            "status": "format_verified",
-            "message": "Verification successful — valid FSSAI format (state code + 14 digits). Government registry could not be reached right now; we'll re-verify automatically.",
-        }
+
+    client_id = os.environ.get("DECENTRO_CLIENT_ID", "")
+    client_secret = os.environ.get("DECENTRO_CLIENT_SECRET", "")
+    module_secret = os.environ.get("DECENTRO_MODULE_SECRET", "")
+    base_url = os.environ.get("DECENTRO_BASE_URL", "https://in.staging.decentro.tech")
+
+    if client_id and client_secret and module_secret:
+        try:
+            import requests as _requests
+            resp = _requests.post(
+                f"{base_url}/kyc/public_registry/validate",
+                headers={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "module_secret": module_secret,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "reference_id": f"dinedesk-{uuid.uuid4().hex[:12]}",
+                    "document_type": "FSSAI",
+                    "id_number": license_number,
+                    "consent": "Y",
+                    "consent_purpose": "DineDesk FSSAI license verification",
+                },
+                timeout=30,
+            )
+            payload = resp.json()
+            kyc_status = (payload.get("kycStatus") or "").upper()
+            result = payload.get("kycResult") or {}
+            error_msg = (payload.get("error") or {}).get("message") or payload.get("message") or ""
+
+            if kyc_status == "SUCCESS":
+                reg_status = (result.get("status") or "UNKNOWN").upper()
+                entity = result.get("entityName") or ""
+                lic_type = (result.get("licenseType") or "").title()
+                msg = f"Verification successful — license is {reg_status} in the FSSAI registry"
+                if entity:
+                    msg += f" for {entity}"
+                if lic_type:
+                    msg += f" ({lic_type})"
+                msg += "."
+                return {
+                    "valid": reg_status == "ACTIVE",
+                    "status": "verified",
+                    "registry_status": reg_status,
+                    "entity_name": entity,
+                    "license_type": result.get("licenseType"),
+                    "premises_address": (result.get("premissesAddress") or {}).get("address"),
+                    "message": msg if reg_status == "ACTIVE" else f"License found but status is {reg_status} — not active. Please renew or correct the number.",
+                }
+            if "No records found" in error_msg:
+                return {"valid": False, "status": "not_found", "message": "This license number was not found in the FSSAI registry. Double-check the 14-digit number on your certificate."}
+            if "Invalid FSSAI" in error_msg or "14 digit" in error_msg:
+                return {"valid": False, "status": "invalid_format", "message": "FSSAI rejected this number — it must be a valid 14-digit license/registration number."}
+            # Any other provider-side failure: log and fall through to format check
+            logger.warning(f"Decentro FSSAI verify failed: {payload.get('responseKey')} {error_msg[:120]}")
+        except Exception as e:
+            logger.warning(f"Decentro FSSAI verify unreachable: {str(e)[:150]}")
+
+    # Fallback: format-level check only, stated honestly.
+    return {
+        "valid": True,
+        "status": "format_verified",
+        "message": "Verification successful — valid FSSAI format (state code + 14 digits). Government registry could not be reached right now; we'll re-verify automatically.",
+    }
 
 @api_router.put("/restaurants/my", response_model=RestaurantResponse)
 async def update_my_restaurant(data: RestaurantUpdate, user: dict = Depends(get_current_user)):

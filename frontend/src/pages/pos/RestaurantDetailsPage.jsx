@@ -229,7 +229,12 @@ export default function RestaurantDetailsPage() {
                 data-testid="details-verify-result"
               >
                 {licenseResult.valid ? <BadgeCheck className="w-4 h-4 mt-px flex-shrink-0" /> : <BadgeX className="w-4 h-4 mt-px flex-shrink-0" />}
-                <span>{licenseResult.message}</span>
+                <span>
+                  {licenseResult.message}
+                  {licenseResult.registry_status === 'ACTIVE' && licenseResult.premises_address && (
+                    <span className="block mt-1 text-emerald-700/80">Registered premises: {licenseResult.premises_address}</span>
+                  )}
+                </span>
               </div>
             )}
           </div>

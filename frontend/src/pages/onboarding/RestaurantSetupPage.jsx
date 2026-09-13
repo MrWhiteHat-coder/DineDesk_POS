@@ -351,7 +351,12 @@ export default function RestaurantSetupPage() {
                       {licenseResult.valid
                         ? <BadgeCheck className="w-4 h-4 mt-px flex-shrink-0 text-emerald-600" />
                         : <BadgeX className="w-4 h-4 mt-px flex-shrink-0 text-red-500" />}
-                      <span>{licenseResult.message}</span>
+                      <span>
+                        {licenseResult.message}
+                        {licenseResult.registry_status === 'ACTIVE' && licenseResult.premises_address && (
+                          <span className="block mt-1 text-emerald-700/80">Registered premises: {licenseResult.premises_address}</span>
+                        )}
+                      </span>
                     </div>
                   )}
                   <div className="space-y-2">
