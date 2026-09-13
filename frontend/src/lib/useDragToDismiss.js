@@ -19,6 +19,9 @@ export default function useDragToDismiss({ onDismiss, threshold = 110 } = {}) {
   const lastY = useRef(null);
   const lastT = useRef(null);
   const elRef = useRef(null);
+  /** True while the current gesture began inside a scrollable area that is
+   *  not at its top — the gesture belongs to scrolling, not dragging. */
+  const scrollLocked = useRef(false);
 
   const setTransform = (y) => {
     const el = elRef.current;
@@ -29,10 +32,26 @@ export default function useDragToDismiss({ onDismiss, threshold = 110 } = {}) {
     startY.current = e.touches[0].clientY;
     lastY.current = startY.current;
     lastT.current = performance.now();
+    // Walk up from the touch target to the sheet root: if the gesture starts
+    // inside any scrollable container that still has scroll-up room, lock
+    // dragging for this gesture so the content scrolls instead of the sheet
+    // following the finger (the "can't scroll back up" bug).
+    scrollLocked.current = false;
+    let node = e.target;
+    while (node && node !== elRef.current && node !== document.body) {
+      if (node.nodeType === 1) {
+        const cs = getComputedStyle(node);
+        if (/(auto|scroll)/.test(cs.overflowY) && node.scrollTop > 0) {
+          scrollLocked.current = true;
+          break;
+        }
+      }
+      node = node.parentElement;
+    }
   }, []);
 
   const onTouchMove = useCallback((e) => {
-    if (startY.current === null) return;
+    if (startY.current === null || scrollLocked.current) return;
     const y = e.touches[0].clientY;
     const dy = y - startY.current;
     if (dy > 0) {
@@ -47,6 +66,7 @@ export default function useDragToDismiss({ onDismiss, threshold = 110 } = {}) {
 
   const onTouchEnd = useCallback(() => {
     if (startY.current === null) return;
+    scrollLocked.current = false;
     const dy = (lastY.current ?? 0) - (startY.current ?? 0);
     const dt = Math.max(1, performance.now() - (lastT.current ?? performance.now()));
     const velocity = dy / dt; // px per ms
