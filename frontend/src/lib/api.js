@@ -182,6 +182,12 @@ export const analyticsAPI = {
   getAiInsights: () => api.post('/analytics/ai-insights'),
 };
 
+// DineDesk Intelligence (AI) — answers come from verified backend-computed data only
+export const intelligenceAPI = {
+  getInsights: () => api.post('/intelligence/insights'),
+  ask: (question) => api.post('/intelligence/ask', { question }),
+};
+
 // Notification APIs
 export const notificationAPI = {
   getAll: () => api.get('/notifications'),

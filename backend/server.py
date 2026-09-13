@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 import re
 import logging
+import intelligence
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import List, Optional, Dict, Any
@@ -2985,6 +2986,45 @@ async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = N
         "selected_date": date or day_start.strftime("%Y-%m-%d")
     }
 
+@api_router.post("/intelligence/insights")
+async def intelligence_insights(user: dict = Depends(get_current_user)):
+    """AI Insights — verified weekly snapshot, Gemini explains it. Advisory only."""
+    check_role(user, "analytics")
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0, "name": 1})
+    try:
+        return await intelligence.build_insights(
+            db, user["restaurant_id"],
+            restaurant.get("name", "Restaurant") if restaurant else "Restaurant")
+    except Exception as e:
+        logger.error(f"Intelligence insights error: {e}")
+        return {"insights": [], "ai_generated": False,
+                "snapshot_summary": {"has_data": False}}
+
+
+class AskQuestion(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500)
+
+
+@api_router.post("/intelligence/ask")
+async def intelligence_ask(data: AskQuestion, user: dict = Depends(get_current_user)):
+    """Ask DineDesk — answers only from real computed restaurant data."""
+    check_role(user, "analytics")
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0, "name": 1})
+    try:
+        return await intelligence.ask(
+            db, user["restaurant_id"],
+            restaurant.get("name", "Restaurant") if restaurant else "Restaurant",
+            data.question.strip())
+    except Exception as e:
+        logger.error(f"Intelligence ask error: {e}")
+        return {"answer": "Something went wrong on my side — please try again in a moment.",
+                "ai_generated": False, "intent": "general"}
+
+
 @api_router.post("/analytics/ai-insights")
 async def get_ai_insights(user: dict = Depends(get_current_user)):
     """Generate AI-powered analytics insights using Gemini."""
@@ -3505,21 +3545,29 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         except:
             pass
 
-    # Generate AI insights for PDF
+    # Generate AI insights via the shared DineDesk Intelligence service
+    # (verified snapshot → Gemini phrasing; falls back to computed text)
     ai_insights = "AI insights unavailable."
     try:
         pdf_analytics = {
-            "daily_sales": total_sales,
-            "weekly_sales": total_sales,
-            "monthly_sales": total_sales,
-            "total_orders": len(paid_orders),
-            "top_items": [{"name": k, "count": v} for k, v in item_counts.items()],
-            "order_type_breakdown": order_types,
-            "payment_breakdown": payment_methods,
-            "hourly_orders": [{"hour": h, "orders": v["orders"], "revenue": v["revenue"]} for h, v in sorted(hourly.items())],
-            "selected_date": session.get("date", "")
+            "sales": {
+                "last7": total_sales, "prev7": 0, "change_pct": None,
+                "orders_last7": len(paid_orders), "aov": avg_order,
+                "order_types": order_types, "payment_methods": payment_methods,
+                "daily_series": [],
+            },
+            "item_movers": {"risers": [], "decliners": []},
+            "combos": [],
+            "peak_hours": [{"hour": h, "orders": v["orders"]} for h, v in sorted(hourly.items(), key=lambda x: -x[1]["orders"])[:3]],
+            "inventory": {"watch": []},
+            "margins": {"low": [], "high": []},
+            "data_gaps": {"waste_tracking": False, "expenses": False},
         }
-        ai_insights = await generate_ai_insights(pdf_analytics, restaurant.get("name", "Restaurant") if restaurant else "Restaurant", "day_close")
+        _intel = await intelligence.day_close_summary(
+            db, user["restaurant_id"],
+            restaurant.get("name", "Restaurant") if restaurant else "Restaurant",
+            session, pdf_analytics)
+        ai_insights = _intel
     except Exception as e:
         logger.error(f"PDF AI insights error: {e}")
 

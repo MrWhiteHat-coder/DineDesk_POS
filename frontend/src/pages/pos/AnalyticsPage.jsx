@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analyticsAPI, branchAPI } from '../../lib/api';
+import { analyticsAPI, branchAPI, intelligenceAPI } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -15,6 +15,33 @@ import { Button } from '../../components/ui/button';
 import ReactMarkdown from 'react-markdown';
 
 const COLORS = ['#3B82F6', '#22C55E', '#EAB308', '#8B5CF6', '#EF4444'];
+
+const TAG_STYLE = {
+  GROWTH: { bg: 'bg-emerald-50 dark:bg-emerald-400/10', border: 'border-emerald-100 dark:border-emerald-400/20', dot: 'bg-emerald-500', label: 'text-emerald-700 dark:text-emerald-300', icon: '🟢' },
+  WATCH: { bg: 'bg-amber-50 dark:bg-amber-400/10', border: 'border-amber-100 dark:border-amber-400/20', dot: 'bg-amber-500', label: 'text-amber-700 dark:text-amber-300', icon: '🟠' },
+  OPPORTUNITY: { bg: 'bg-blue-50 dark:bg-blue-400/10', border: 'border-blue-100 dark:border-blue-400/20', dot: 'bg-blue-500', label: 'text-blue-700 dark:text-blue-300', icon: '🔵' },
+  STOCK: { bg: 'bg-violet-50 dark:bg-violet-400/10', border: 'border-violet-100 dark:border-violet-400/20', dot: 'bg-violet-500', label: 'text-violet-700 dark:text-violet-300', icon: '📦' },
+};
+
+function InsightCard({ card }) {
+  const style = TAG_STYLE[card.tag] || TAG_STYLE.GROWTH;
+  return (
+    <div className={`rounded-2xl border p-3.5 ${style.bg} ${style.border}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} aria-hidden="true" />
+        <span className={`text-[9px] font-bold tracking-wider uppercase ${style.label}`}>{card.tag}</span>
+      </div>
+      <p className="text-[13px] font-bold text-slate-900 dark:text-white leading-snug">{card.title}</p>
+      <p className="text-[11.5px] text-slate-600 dark:text-white/60 mt-1 leading-relaxed">{card.detail}</p>
+      {card.suggestion && (
+        <div className="flex items-start gap-1.5 mt-2 pt-2 border-t border-black/[0.04] dark:border-white/[0.06]">
+          <span className="text-[11px]" aria-hidden="true">💡</span>
+          <p className="text-[11px] text-slate-600 dark:text-white/55 leading-snug">{card.suggestion}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -50,10 +77,11 @@ export default function AnalyticsPage() {
   const fetchAiInsights = async () => {
     setInsightsLoading(true);
     try {
-      const res = await analyticsAPI.getAiInsights();
+      const res = await intelligenceAPI.getInsights();
       setAiInsights(res.data);
     } catch (err) {
       console.error('AI insights error:', err);
+      setAiInsights({ insights: [], ai_generated: false, snapshot_summary: { has_data: false } });
     } finally {
       setInsightsLoading(false);
     }
@@ -225,13 +253,41 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className="lg:col-span-3">
-              <div className="bg-white rounded-2xl border border-slate-200/60 p-5">
-                <h3 className="font-heading font-bold text-slate-900 text-base mb-4">AI-Powered Insights</h3>
-                <button onClick={fetchAiInsights} disabled={insightsLoading} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-60 mb-4">
-                  {insightsLoading ? (<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />) : (<Sparkles className="w-4 h-4" />)}
-                  {insightsLoading ? 'Analyzing...' : 'Generate Insights'}
-                </button>
-                {aiInsights ? (<div className="prose prose-sm prose-slate max-w-none text-xs" data-testid="ai-insights-content"><ReactMarkdown>{aiInsights.insights}</ReactMarkdown></div>) : (<div className="text-center py-6 text-slate-400"><Sparkles className="w-8 h-8 mx-auto mb-2 opacity-40" /><p className="text-xs font-medium">Click to get AI-powered sales analysis</p><p className="text-[10px] mt-1 text-slate-300">Powered by Gemini AI</p></div>)}
+              <div className="bg-white dark:bg-white/[0.035] rounded-2xl border border-slate-200/60 dark:border-white/[0.06] p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-heading font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center"><Sparkles className="w-4 h-4 text-white" /></span>
+                    AI Insights
+                  </h3>
+                  {aiInsights && (
+                    <button onClick={fetchAiInsights} disabled={insightsLoading} className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:brightness-110 flex items-center gap-1 disabled:opacity-50">
+                      <RefreshCw className={`w-3 h-3 ${insightsLoading ? 'animate-spin' : ''}`} /> Refresh
+                    </button>
+                  )}
+                </div>
+                {insightsLoading ? (
+                  <div className="space-y-3 py-2">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
+                    <p className="text-[11px] text-center text-slate-400 pt-1">Reading your real numbers...</p>
+                  </div>
+                ) : aiInsights?.insights?.length > 0 ? (
+                  <div className="space-y-3" data-testid="ai-insights-content">
+                    {aiInsights.insights.map((card, i) => (
+                      <InsightCard key={`${card.tag}-${i}`} card={card} />
+                    ))}
+                    <p className="text-[10px] text-slate-300 dark:text-white/25 text-center pt-1">
+                      {aiInsights.ai_generated ? 'Powered by Gemini · computed from your real data' : 'Computed from your real data'} · suggestions only — you decide
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <Sparkles className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-white/20" />
+                    <p className="text-xs font-medium text-slate-500 dark:text-white/50">Weekly AI insights from your real sales data</p>
+                    <button onClick={fetchAiInsights} className="mt-3 px-5 py-2.5 rounded-full bg-[#0F2417] dark:bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-110 active:scale-95 transition-all">
+                      <Sparkles className="w-3.5 h-3.5 inline mr-1.5" />Generate Insights
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { useFeatures } from '../contexts/FeatureContext';
 import { useTheme } from '../contexts/ThemeContext';
 import logoUrl from '../assets/dinedesk-logo.png';
 import { daySessionAPI } from '../lib/api';
+import AskDineDesk from '../components/pos/AskDineDesk';
 import { initOfflineSync, syncOfflineOrders, onSyncEvent } from '../lib/offlineSync';
 import { getPendingCount } from '../lib/offlineOrders';
 import { toast } from 'sonner';
@@ -702,6 +703,9 @@ export default function POSLayout() {
             <Outlet context={{ isDayOpen, currentSession, refreshSession: fetchDaySession }} />
           </div>
         </main>
+
+        {/* Ask DineDesk — AI assistant floating on every POS page */}
+        <AskDineDesk />
       </div>
 
       {/* ──────────── BOTTOM NAV BAR (mobile only) ──────────── */}
