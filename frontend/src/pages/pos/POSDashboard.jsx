@@ -207,7 +207,7 @@ function PromoBanner({ onClaim }) {
    ═══════════════════════════════════════════════════════ */
 export default function POSDashboard() {
   const { user, restaurant } = useAuth();
-  const { isDayOpen } = useOutletContext();
+  const { isDayOpen, refreshSession } = useOutletContext();
   const navigate = useNavigate();
 
   const [analytics, setAnalytics] = useState(null);
@@ -603,11 +603,25 @@ export default function POSDashboard() {
       {/* ═══ PROMO BANNER — offers carousel (z3 reference) ═══ */}
       <PromoBanner onClaim={() => navigate('/pos/orders')} />
 
-      {/* ═══ DAY CLOSED NOTE (replaces old amber banner — calm, actionable) ═══ */}
+      {/* ═══ DAY CLOSED NOTE (replaces old amber banner — calm, actionable, one-tap open) ═══ */}
       {!isDayOpen && (
-        <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] border border-amber-200/70 dark:border-amber-400/20 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm">
+        <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] border border-amber-200/70 dark:border-amber-400/20 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm" data-testid="day-closed-banner">
           <Timer className="w-5 h-5 text-amber-500 flex-shrink-0" />
-          <p className="text-amber-800 dark:text-amber-200 flex-1 min-w-0">Day is not open yet — open the day from the restaurant card above to start taking orders.</p>
+          <p className="text-amber-800 dark:text-amber-200 flex-1 min-w-0">Day is not open yet — billing is paused until you open the day.</p>
+          <button
+            onClick={async () => {
+              try {
+                await daySessionAPI.open(0);
+                toast.success('Day opened — good service! 🌱');
+                haptics.success();
+                refreshSession();
+              } catch { toast.error('Could not open the day — try again'); }
+            }}
+            className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#0F2417] dark:bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-110 active:scale-[0.97] transition-all min-h-[40px]"
+            data-testid="open-day-banner-btn"
+          >
+            Open Day
+          </button>
         </div>
       )}
 
