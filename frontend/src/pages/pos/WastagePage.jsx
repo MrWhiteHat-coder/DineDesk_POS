@@ -3,6 +3,7 @@ import { wastageAPI, inventoryAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { haptics } from '../../lib/haptics';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import CountUp from '../../components/ui/CountUp';
@@ -180,8 +181,17 @@ export default function WastagePage() {
           <span className="text-[11px] text-slate-400 dark:text-white/40">Last 30 days</span>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-[3px] border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-3" data-testid="wastage-skeleton">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.06]">
+                <Skeleton className="w-10 h-10 rounded-xl flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-36 max-w-[50%] rounded-md" />
+                  <Skeleton className="h-3 w-24 rounded-md" />
+                </div>
+                <Skeleton className="h-4 w-14 rounded-md" />
+              </div>
+            ))}
           </div>
         ) : logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4" data-testid="waste-empty">

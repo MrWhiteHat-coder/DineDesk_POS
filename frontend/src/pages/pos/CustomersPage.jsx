@@ -6,6 +6,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Label } from '../../components/ui/label';
 import {
   Users, Search, Plus, Phone, Mail, Star, Crown,
@@ -82,8 +83,36 @@ export default function CustomersPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-gray-900 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-5" data-testid="customers-skeleton">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-44 rounded-lg" />
+          <Skeleton className="h-10 w-36 rounded-xl" />
+        </div>
+        {/* Tier stats — same 4-col grid as real content */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-[#161A20] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-24 rounded-md" />
+                <Skeleton className="w-5 h-5 rounded-md" />
+              </div>
+              <Skeleton className="h-8 w-16 rounded-lg" />
+            </div>
+          ))}
+        </div>
+        {/* Customer rows */}
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06]">
+              <Skeleton className="w-9 h-9 rounded-full flex-shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-32 max-w-[45%] rounded-md" />
+                <Skeleton className="h-3 w-24 rounded-md" />
+              </div>
+              <Skeleton className="h-4 w-12 rounded-md" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
