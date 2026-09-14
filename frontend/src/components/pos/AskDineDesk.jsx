@@ -67,7 +67,7 @@ export default function AskDineDesk() {
       {/* Chat window */}
       {open && (
         <div
-          className="fixed z-50 right-3 bottom-20 lg:bottom-6 w-[calc(100vw-1.5rem)] max-w-[380px] h-[480px] max-h-[70dvh] flex flex-col rounded-3xl bg-white dark:bg-[#161A20] border border-slate-200/70 dark:border-white/[0.08] shadow-[0_24px_70px_-12px_rgba(15,36,23,0.45)] overflow-hidden animate-cart-pop"
+          className="fixed z-50 right-3 bottom-20 lg:bottom-6 w-[calc(100vw_-_1.5rem)] max-w-[380px] h-[480px] max-h-[70dvh] flex flex-col rounded-3xl bg-white dark:bg-[#161A20] border border-slate-200/70 dark:border-white/[0.08] shadow-[0_24px_70px_-12px_rgba(15,36,23,0.45)] overflow-hidden animate-cart-pop"
           data-testid="ask-dinedesk-panel"
           role="dialog"
           aria-label="Ask DineDesk AI chat"

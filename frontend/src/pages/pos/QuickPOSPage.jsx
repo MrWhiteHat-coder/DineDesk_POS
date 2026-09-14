@@ -175,7 +175,7 @@ export default function QuickPOSPage() {
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-gray-800 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-3 lg:h-[calc(100vh-7rem)]" data-testid="quick-pos-page">
+    <div className="flex flex-col lg:flex-row gap-3 lg:h-[calc(100vh_-_7rem)]" data-testid="quick-pos-page">
       {/* Left: Items Grid */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">

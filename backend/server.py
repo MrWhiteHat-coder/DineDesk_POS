@@ -303,6 +303,7 @@ async def lifespan(app_instance: FastAPI):
         await db.wallet_transactions.create_index([("restaurant_id", 1), ("created_at", -1)])
         await db.branches.create_index("restaurant_id")
         await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
+        await db.wastage.create_index([("restaurant_id", 1), ("created_at", -1)])
         logger.info("Database indexes created")
 
         # --- Data repair: normalize legacy order statuses ---
@@ -2083,6 +2084,122 @@ async def delete_category(category_id: str, user: dict = Depends(get_current_use
         raise HTTPException(status_code=404, detail="Category not found")
     return {"message": "Category deleted"}
 
+# ============== WASTAGE TRACKING ==============
+
+class WasteLogCreate(BaseModel):
+    inventory_item_id: str
+    quantity: float
+    reason: str  # spoiled | expired | damaged | overprep | spillage | other
+    notes: Optional[str] = None
+
+class WasteLogResponse(BaseModel):
+    id: str
+    restaurant_id: str
+    inventory_item_id: str
+    item_name: str
+    unit: str
+    quantity: float
+    reason: str
+    notes: Optional[str] = None
+    estimated_cost: float
+    logged_by_name: Optional[str] = None
+    created_at: str
+
+REASON_LABELS = {
+    "spoiled": "Spoilage",
+    "expired": "Past expiry",
+    "damaged": "Damaged",
+    "overprep": "Over-preparation",
+    "spillage": "Spillage",
+    "other": "Other",
+}
+
+@api_router.get("/wastage", response_model=List[WasteLogResponse])
+async def list_wastage(days: int = 30, user: dict = Depends(get_current_user)):
+    """Waste logs for this restaurant, newest first."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    logs = await db.wastage.find(
+        {"restaurant_id": user["restaurant_id"], "created_at": {"$gte": cutoff}},
+        {"_id": 0},
+    ).sort("created_at", -1).to_list(1000)
+    return logs
+
+@api_router.post("/wastage", response_model=WasteLogResponse)
+async def create_waste_log(data: WasteLogCreate, user: dict = Depends(get_current_user)):
+    """Log wastage for an inventory item — deducts stock immediately and
+    records the estimated cost impact (restaurant Intelligence feed)."""
+    if not user.get("restaurant_id"):
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    if data.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Waste quantity must be greater than zero")
+    if data.reason not in REASON_LABELS:
+        raise HTTPException(status_code=400, detail="Invalid waste reason")
+
+    inv = await db.inventory.find_one({"id": data.inventory_item_id, "restaurant_id": user["restaurant_id"]})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+
+    unit_cost = inv.get("cost_per_unit", 0) or 0
+    estimated_cost = round(data.quantity * unit_cost, 2)
+    new_qty = max(0, inv.get("quantity", 0) - data.quantity)
+    await db.inventory.update_one(
+        {"id": inv["id"]},
+        {"$set": {"quantity": new_qty, "is_low_stock": new_qty <= inv.get("min_quantity", 0)}}
+    )
+
+    log = {
+        "id": str(uuid.uuid4()),
+        "restaurant_id": user["restaurant_id"],
+        "inventory_item_id": inv["id"],
+        "item_name": inv.get("name", "Unknown"),
+        "unit": inv.get("unit", ""),
+        "quantity": data.quantity,
+        "reason": data.reason,
+        "reason_label": REASON_LABELS[data.reason],
+        "notes": (data.notes or "").strip() or None,
+        "estimated_cost": estimated_cost,
+        "logged_by_name": user.get("name") or user.get("email", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.wastage.insert_one(log)
+    await log_action("wastage", "waste_logged", user_id=user["id"],
+                     restaurant_id=user["restaurant_id"],
+                     details=f"{data.quantity}{inv.get('unit', '')} {inv.get('name')} ({data.reason}) — Rs.{estimated_cost}")
+    return WasteLogResponse(**{k: v for k, v in log.items() if k != "_id"})
+
+@api_router.get("/wastage/summary")
+async def wastage_summary(days: int = 7, user: dict = Depends(get_current_user)):
+    """Aggregated waste stats for the Wastage page header cards."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    logs = await db.wastage.find(
+        {"restaurant_id": user["restaurant_id"], "created_at": {"$gte": cutoff}},
+        {"_id": 0, "quantity": 1, "estimated_cost": 1, "reason": 1, "item_name": 1, "unit": 1},
+    ).to_list(2000)
+    total_cost = round(sum(l.get("estimated_cost", 0) for l in logs), 2)
+    entries = len(logs)
+    by_reason = {}
+    for l in logs:
+        r = l.get("reason", "other")
+        by_reason[r] = round(by_reason.get(r, 0) + l.get("estimated_cost", 0), 2)
+    by_item = {}
+    for l in logs:
+        n = l.get("item_name", "Unknown")
+        by_item[n] = round(by_item.get(n, 0) + l.get("estimated_cost", 0), 2)
+    top_item = max(by_item.items(), key=lambda kv: kv[1]) if by_item else None
+    prev_cutoff = (datetime.now(timezone.utc) - timedelta(days=days * 2)).isoformat()
+    prev_logs = await db.wastage.find(
+        {"restaurant_id": user["restaurant_id"],
+         "created_at": {"$gte": prev_cutoff, "$lt": cutoff}},
+        {"_id": 0, "estimated_cost": 1},
+    ).to_list(2000)
+    prev_cost = round(sum(l.get("estimated_cost", 0) for l in prev_logs), 2)
+    change_pct = round((total_cost - prev_cost) / prev_cost * 100, 1) if prev_cost > 0 else None
+    return {
+        "days": days, "total_cost": total_cost, "entries": entries,
+        "by_reason": by_reason, "top_item": top_item,
+        "prev_cost": prev_cost, "change_pct": change_pct,
+    }
+
 # ============== MENU ITEM ROUTES ==============
 
 @api_router.post("/menu/items", response_model=MenuItemResponse)
@@ -3596,6 +3713,31 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
     prev_aov = round((prev.get("total_sales") or 0) / prev["total_orders"], 2) if prev and prev.get("total_orders") else None
     chg_aov = _chg(aov, prev_aov)
 
+    # Wastage logged for this session's date (section renders ONLY if real
+    # entries exist — honest-data rule)
+    waste_day = None
+    try:
+        if date_str:
+            d_next = (this_date + timedelta(days=1)).isoformat() if this_date else None
+            if d_next:
+                wlogs = await db.wastage.find(
+                    {"restaurant_id": rid,
+                     "created_at": {"$gte": f"{date_str}T00:00:00", "$lt": f"{d_next}T00:00:00"}},
+                    {"_id": 0, "estimated_cost": 1, "reason_label": 1, "reason": 1},
+                ).to_list(500)
+                if wlogs:
+                    reasons = {}
+                    for w in wlogs:
+                        lbl = w.get("reason_label") or w.get("reason", "Other")
+                        reasons[lbl] = round(reasons.get(lbl, 0) + w.get("estimated_cost", 0), 2)
+                    waste_day = {
+                        "cost": round(sum(w.get("estimated_cost", 0) for w in wlogs), 2),
+                        "entries": len(wlogs),
+                        "top_reason": max(reasons.items(), key=lambda kv: kv[1])[0] if reasons else None,
+                    }
+    except Exception as e:
+        logger.warning(f"PDF wastage section skipped: {e}")
+
     # AI blocks — shared DineDesk Intelligence service (verified numbers only)
     day_stats = {
         "sales": {
@@ -3612,7 +3754,13 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         "peak_hours": [{"hour": h, "orders": hourly[h]["orders"]} for h in sorted(hourly, key=lambda x: -hourly[x]["orders"])[:3]],
         "inventory": {"watch": []},
         "margins": {"low": [], "high": []},
-        "data_gaps": {"waste_tracking": False, "expenses": False},
+        "wastage": (None if not waste_day else {
+            "cost_last7": waste_day["cost"], "cost_prev7": 0, "change_pct": None,
+            "entries_last7": waste_day["entries"],
+            "by_reason": {waste_day["top_reason"]: waste_day["cost"]} if waste_day.get("top_reason") else {},
+            "top_item": None,
+        }),
+        "data_gaps": {"waste_tracking": waste_day is None, "expenses": False},
     }
     try:
         blocks = await intelligence.day_close_brief_blocks(db, rid, rname, session, day_stats)
@@ -3870,6 +4018,24 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         pdf.set_font("Helvetica", "", 9.2)
         pdf.set_text_color(*MUTED)
         pdf.cell(0, 6.6, "No payments recorded.", new_x="LMARGIN", new_y="NEXT")
+
+    # Wastage section — rendered ONLY when real waste was logged that day
+    if waste_day:
+        section_title("WASTAGE TODAY")
+        waste_rows = [
+            ("Entries logged", str(waste_day["entries"])),
+            ("Estimated cost impact", f"Rs.{waste_day['cost']:,.2f}"),
+        ]
+        if waste_day.get("top_reason"):
+            waste_rows.append(("Main reason", waste_day["top_reason"]))
+        for l, v in waste_rows:
+            pdf.set_x(19)
+            pdf.set_font("Helvetica", "", 9.2)
+            pdf.set_text_color(*MUTED)
+            pdf.cell(90, 6.6, l)
+            pdf.set_font("Helvetica", "B", 9.2)
+            pdf.set_text_color(*(AMBER if l == "Estimated cost impact" else INK))
+            pdf.cell(0, 6.6, v, align="R", new_x="LMARGIN", new_y="NEXT")
 
     opening_cash = session.get("opening_cash", 0) or 0
     closing_cash = session.get("closing_cash")

@@ -25,6 +25,7 @@ import MenuManagement from './pages/pos/MenuManagement';
 import OrderManagement from './pages/pos/OrderManagement';
 import TablesPage from './pages/pos/TablesPage';
 import InventoryPage from './pages/pos/InventoryPage';
+import WastagePage from './pages/pos/WastagePage';
 import AnalyticsPage from './pages/pos/AnalyticsPage';
 import StaffPage from './pages/pos/StaffPage';
 import SettingsPage from './pages/pos/SettingsPage';
@@ -148,6 +149,7 @@ function AppRoutes() {
         <Route path="order-management" element={<OrderManagement />} />
         <Route path="tables" element={<TablesPage />} />
         <Route path="inventory" element={<FeatureGate featureKey="inventory"><InventoryPage /></FeatureGate>} />
+        <Route path="wastage" element={<FeatureGate featureKey="inventory"><WastagePage /></FeatureGate>} />
         <Route path="analytics" element={<FeatureGate featureKey="analytics"><AnalyticsPage /></FeatureGate>} />
         <Route path="staff" element={<StaffPage />} />
         <Route path="settings" element={<SettingsPage />} />

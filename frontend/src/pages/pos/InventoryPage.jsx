@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -35,6 +36,7 @@ import { Plus, Pencil, Trash2, AlertTriangle, Package } from 'lucide-react';
 const units = ['kg', 'g', 'l', 'ml', 'pieces'];
 
 export default function InventoryPage() {
+  const navigate = useNavigate();
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -163,7 +165,7 @@ export default function InventoryPage() {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant={showLowStock ? 'default' : 'outline'}
             onClick={() => setShowLowStock(!showLowStock)}
@@ -171,6 +173,14 @@ export default function InventoryPage() {
           >
             <AlertTriangle className="w-4 h-4 mr-2" />
             Low Stock ({lowStockCount})
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/pos/wastage')}
+            data-testid="wastage-link-btn"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Wastage
           </Button>
           <Button
             onClick={() => openModal()}

@@ -18,6 +18,13 @@ import logging
 from datetime import datetime, timedelta, timezone
 from collections import Counter
 
+# Reason label fallback (mirrors server.REASON_LABELS; kept local to avoid a
+# circular import — server.py imports this module).
+REASON_LABELS_FALLBACK = {
+    "spoiled": "Spoilage", "expired": "Past expiry", "damaged": "Damaged",
+    "overprep": "Over-preparation", "spillage": "Spillage", "other": "Other",
+}
+
 logger = logging.getLogger("uvicorn.error")
 
 try:
@@ -171,6 +178,40 @@ async def compute_snapshot(db, restaurant_id: str) -> dict:
     except Exception as e:
         logger.warning(f"Inventory snapshot skipped: {e}")
 
+    # ---- Wastage: real logged waste (cost-weighted), last 7d vs prev 7d ----
+    waste_stats = None
+    try:
+        w_now = now.isoformat()
+        w7 = (now - timedelta(days=7)).isoformat()
+        w14 = (now - timedelta(days=14)).isoformat()
+        wlogs = await db.wastage.find(
+            {"restaurant_id": restaurant_id, "created_at": {"$gte": w14}},
+            {"_id": 0, "quantity": 1, "unit": 1, "item_name": 1, "reason": 1,
+             "reason_label": 1, "estimated_cost": 1, "created_at": 1},
+        ).to_list(2000)
+        w_last7 = [w for w in wlogs if (w.get("created_at") or "") >= w7]
+        w_prev7 = [w for w in wlogs if (w.get("created_at") or "") < w7]
+        cost7 = round(sum(w.get("estimated_cost", 0) for w in w_last7), 2)
+        cost_prev7 = round(sum(w.get("estimated_cost", 0) for w in w_prev7), 2)
+        by_reason = {}
+        by_item = {}
+        for w in w_last7:
+            lbl = w.get("reason_label") or REASON_LABELS_FALLBACK.get(w.get("reason"), w.get("reason", "Other"))
+            by_reason[lbl] = round(by_reason.get(lbl, 0) + w.get("estimated_cost", 0), 2)
+            n = w.get("item_name", "Unknown")
+            by_item[n] = by_item.get(n, 0) + w.get("quantity", 0)
+        top_waste_item = max(by_item.items(), key=lambda kv: kv[1]) if by_item else None
+        if wlogs:
+            waste_stats = {
+                "cost_last7": cost7, "cost_prev7": cost_prev7,
+                "change_pct": _pct(cost_prev7, cost7),
+                "entries_last7": len(w_last7),
+                "by_reason": by_reason,
+                "top_item": (f"{top_waste_item[0]} ({round(top_waste_item[1], 2)} units last 7d)" if top_waste_item else None),
+            }
+    except Exception as e:
+        logger.warning(f"Wastage snapshot skipped: {e}")
+
     # ---- Gross margin proxy (recipe cost vs menu price, current items) ----
     margins = []
     try:
@@ -219,7 +260,8 @@ async def compute_snapshot(db, restaurant_id: str) -> dict:
         "peak_hours": peak,
         "inventory": {"watch": inv_days},
         "margins": {"low": low_margin, "high": high_margin},
-        "data_gaps": {"waste_tracking": False, "expenses": False},
+        "wastage": waste_stats,
+        "data_gaps": {"waste_tracking": waste_stats is None, "expenses": False},
     }
 
 
@@ -280,8 +322,22 @@ def format_facts(snap: dict, scope: str = "insights") -> str:
     if snap["sales"]["payment_methods"]:
         lines.append(f"Payments: {snap['sales']['payment_methods']}")
 
+    w = snap.get("wastage")
+    if w:
+        lines.append("")
+        lines.append(f"WASTAGE (real logged waste): last 7d Rs.{w['cost_last7']:,.2f} across {w['entries_last7']} entries, previous 7d Rs.{w['cost_prev7']:,.2f}")
+        if w.get("change_pct") is not None:
+            lines.append(f"Waste change: {w['change_pct']}% vs previous week")
+        if w.get("by_reason"):
+            lines.append(f"Waste by reason: {w['by_reason']}")
+        if w.get("top_item"):
+            lines.append(f"Most wasted item: {w['top_item']}")
+
     lines.append("")
-    lines.append("NOTE: Waste and expense data are NOT tracked in DineDesk — never mention waste or net profit.")
+    if not w:
+        lines.append("NOTE: No waste data is logged yet — never mention or imply waste. (Expense data is also not tracked; never mention net profit.)")
+    else:
+        lines.append("NOTE: Expense data is NOT tracked — never mention net profit. Waste numbers above are the ONLY waste facts.")
     lines.append("If a number is not on this sheet, you do not know it. Never estimate, round up, or invent figures.")
     return "\n".join(lines)
 
@@ -481,7 +537,12 @@ async def ask(db, restaurant_id: str, restaurant_name: str, question: str) -> di
         "why_down": "The user asks why sales dropped. Compare the daily series and item decliners; give the most data-backed explanation. If sales are actually UP, say so honestly.",
         "prep": "The user asks what to prepare tomorrow. Base it on risers, peak hours and stock watch facts.",
         "stock": "The user asks about stock. Use I-facts (days left, low stock).",
-        "waste": "The user asks about waste. DineDesk does NOT track waste — clearly say you don't have waste data and cannot answer reliably.",
+        "waste": (
+            "The user asks about waste. Use the WASTAGE facts when present — total cost, change vs "
+            "previous week, reasons and the most wasted item. Give one advisory prep/storage suggestion. "
+            "If NO wastage facts exist on the sheet, say waste logging hasn't started yet and suggest "
+            "logging spoilage in the Wastage page — do not invent waste numbers."
+        ),
         "general": "Answer the user's question from the fact sheet as directly as possible.",
     }
 
@@ -530,7 +591,12 @@ def _fallback_answer(snap: dict, intent: str) -> str:
         dl = f"about {it['days_left']} days left" if it["days_left"] is not None else "needs attention"
         return f"{it['name']} is closest to running out — {dl}."
     if intent == "waste":
-        return "DineDesk doesn't track waste yet, so I can't answer that reliably. Start logging waste and I'll analyse it."
+        w = snap.get("wastage")
+        if not w:
+            return "Waste logging hasn't started yet, so I can't answer that reliably. Log spoilage, damage or over-prep in the Wastage page and I'll analyse the trend."
+        chg = f", {w['change_pct']}% vs the week before" if w.get("change_pct") is not None else ""
+        top = f" {w['top_item']} leads the waste." if w.get("top_item") else ""
+        return f"Waste cost last week: Rs.{w['cost_last7']:,.2f} across {w['entries_last7']} entries{chg}.{top} Advisory only — review prep quantities where it hurts."
     if intent == "why_down":
         if s["change_pct"] is not None and s["change_pct"] < 0:
             return f"Sales are {abs(s['change_pct'])}% below last week (Rs.{s['prev7']:,.2f} → Rs.{s['last7']:,.2f}). Busiest recent day: " + max(series, key=lambda d: d["sales"])["date"] + "."

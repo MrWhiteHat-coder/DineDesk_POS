@@ -170,6 +170,13 @@ export const inventoryAPI = {
   delete: (id) => api.delete(`/inventory/${id}`),
 };
 
+// Wastage APIs
+export const wastageAPI = {
+  list: (days = 30) => api.get('/wastage', { params: { days } }),
+  create: (data) => api.post('/wastage', data),
+  summary: (days = 7) => api.get('/wastage/summary', { params: { days } }),
+};
+
 // Table APIs
 export const tableAPI = {
   getAll: () => api.get('/tables'),
