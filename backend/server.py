@@ -2100,6 +2100,7 @@ class WasteLogResponse(BaseModel):
     unit: str
     quantity: float
     reason: str
+    reason_label: Optional[str] = None
     notes: Optional[str] = None
     estimated_cost: float
     logged_by_name: Optional[str] = None

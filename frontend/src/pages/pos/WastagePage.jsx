@@ -207,7 +207,7 @@ export default function WastagePage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{log.item_name}</p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${REASON_STYLES[log.reason] || REASON_STYLES.other}`}>
-                      {log.reason_label || log.reason}
+                      {log.reason_label || REASONS.find(r => r.value === log.reason)?.label || log.reason}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 dark:text-white/40 mt-0.5 truncate">
