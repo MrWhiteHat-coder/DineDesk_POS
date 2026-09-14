@@ -153,7 +153,7 @@ export default function WastagePage() {
         <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm">
           <p className="text-[11px] font-bold tracking-wide text-slate-400 dark:text-white/40 uppercase">Most wasted item</p>
           <p className="text-base font-bold text-slate-900 dark:text-white mt-2 truncate">{summary?.top_item?.[0] || '—'}</p>
-          <p className="text-[11px] text-slate-400 dark:text-white/40 mt-1">{summary?.top_item ? `${summary.top_item[1]} units · 7d` : 'Nothing wasted'}</p>
+          <p className="text-[11px] text-slate-400 dark:text-white/40 mt-1">{summary?.top_item ? `${summary.top_item[1]} units · ${fmt(summary.top_item[2])} lost` : 'Nothing wasted'}</p>
         </div>
       </div>
 
@@ -163,9 +163,9 @@ export default function WastagePage() {
           <Sparkles className="w-4 h-4 text-amber-300 mt-0.5 flex-shrink-0" />
           <p className="text-xs leading-relaxed text-white/90">
             <span className="font-bold">DineDesk Intelligence:</span>{' '}
-            {summary?.change_pct !== null && summary?.change_pct > 15
+            {summary?.change_pct !== null && summary?.change_pct !== undefined && summary.change_pct > 15
               ? `Waste cost is up ${summary.change_pct}% vs last week — review ${summary?.top_item?.[0] || 'top wasted items'} before tomorrow's prep.`
-              : summary?.change_pct !== null && summary?.change_pct < -15
+              : summary?.change_pct !== null && summary?.change_pct !== undefined && summary.change_pct < -15
                 ? `Waste is down ${Math.abs(summary.change_pct)}% vs last week — current prep quantities are working well.`
                 : `Waste held ${summary?.change_pct === 0 ? 'flat' : 'steady'} this week (${fmt(summary?.total_cost)}). Log every event to sharpen the trend.`}
             {' '}Advisory only — you decide.

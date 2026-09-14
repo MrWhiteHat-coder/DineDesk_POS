@@ -2179,13 +2179,16 @@ async def wastage_summary(days: int = 7, user: dict = Depends(get_current_user))
     entries = len(logs)
     by_reason = {}
     for l in logs:
-        r = l.get("reason", "other")
+        r = l.get("reason_label") or REASON_LABELS.get(l.get("reason"), l.get("reason", "Other"))
         by_reason[r] = round(by_reason.get(r, 0) + l.get("estimated_cost", 0), 2)
-    by_item = {}
+    by_item_cost = {}
+    by_item_qty = {}
     for l in logs:
         n = l.get("item_name", "Unknown")
-        by_item[n] = round(by_item.get(n, 0) + l.get("estimated_cost", 0), 2)
-    top_item = max(by_item.items(), key=lambda kv: kv[1]) if by_item else None
+        by_item_cost[n] = round(by_item_cost.get(n, 0) + l.get("estimated_cost", 0), 2)
+        by_item_qty[n] = round(by_item_qty.get(n, 0) + l.get("quantity", 0), 2)
+    top_item_name = max(by_item_cost, key=by_item_cost.get) if by_item_cost else None
+    top_item = [top_item_name, by_item_qty[top_item_name], by_item_cost[top_item_name]] if top_item_name else None
     prev_cutoff = (datetime.now(timezone.utc) - timedelta(days=days * 2)).isoformat()
     prev_logs = await db.wastage.find(
         {"restaurant_id": user["restaurant_id"],
