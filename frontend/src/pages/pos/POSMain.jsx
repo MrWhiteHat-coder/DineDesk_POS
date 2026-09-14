@@ -395,7 +395,7 @@ export default function POSMain() {
       </div>
 
       {/* Right: Order Summary */}
-      <div ref={mobileCartOpen ? cartDragRef : undefined} {...(mobileCartOpen ? cartDragHandlers : {})} className={`${mobileCartOpen ? 'fixed inset-x-0 bottom-0 z-50 h-[calc(85dvh_-_1rem)] rounded-t-2xl flex flex-col pb-[calc(3.5rem_+_env(safe-area-inset-bottom,0px))] transition-transform' : 'hidden'} lg:static lg:flex lg:w-[340px] lg:max-h-none lg:h-full lg:flex-shrink-0 lg:pb-0 bg-white dark:bg-[#161A20] rounded-2xl border border-slate-200 dark:border-white/[0.06] overflow-hidden shadow-md`} data-testid="cart-panel">
+      <div ref={mobileCartOpen ? cartDragRef : undefined} {...(mobileCartOpen ? cartDragHandlers : {})} className={`${mobileCartOpen ? 'fixed inset-x-0 bottom-0 z-50 h-[calc(85dvh_-_1rem)] rounded-t-2xl flex flex-col pb-[calc(3.5rem_+_env(safe-area-inset-bottom,0px))] transition-transform' : 'hidden'} lg:static lg:flex lg:flex-col lg:w-[340px] lg:max-h-none lg:h-full lg:flex-shrink-0 lg:pb-0 bg-white dark:bg-[#161A20] rounded-2xl border border-slate-200 dark:border-white/[0.06] overflow-hidden shadow-md`} data-testid="cart-panel">
         {/* Grab handle — drag anywhere on it to dismiss (mobile) */}
         {mobileCartOpen && (
           <div className="lg:hidden flex justify-center pt-2 pb-1 flex-shrink-0" aria-hidden="true">
