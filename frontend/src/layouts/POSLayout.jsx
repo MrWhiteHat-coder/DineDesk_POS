@@ -294,6 +294,9 @@ export default function POSLayout() {
     finally { setLoading(false); }
   };
 
+  // NOTE: force must default to false WITHOUT relying on implicit event args —
+  // onClick={handleCloseDay} used to pass the click event as `force`, producing
+  // ?force=[object Object] → 422 → app crash. Explicit wrapper below.
   const handleCloseDay = async (force = false) => {
     setLoading(true);
     try {
@@ -954,7 +957,7 @@ export default function POSLayout() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowDayOpenModal(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleOpenDay} disabled={loading} className="bg-[#0F2417] dark:bg-[#2E9E5B] hover:bg-[#14301F] dark:hover:bg-[#288A50] rounded-xl text-white" data-testid="confirm-open-day-btn">
+            <Button onClick={() => handleOpenDay()} disabled={loading} className="bg-[#0F2417] dark:bg-[#2E9E5B] hover:bg-[#14301F] dark:hover:bg-[#288A50] rounded-xl text-white" data-testid="confirm-open-day-btn">
               {loading ? 'Opening...' : 'Open Day'}
             </Button>
           </DialogFooter>
@@ -979,7 +982,7 @@ export default function POSLayout() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowDayCloseModal(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleCloseDay} disabled={loading} variant="destructive" className="rounded-xl" data-testid="confirm-close-day-btn">
+            <Button onClick={() => handleCloseDay(false)} disabled={loading} variant="destructive" className="rounded-xl" data-testid="confirm-close-day-btn">
               {loading ? 'Closing...' : 'Close Day'}
             </Button>
           </DialogFooter>

@@ -69,6 +69,26 @@ api.interceptors.response.use(
         }
       }
     }
+    // Normalize FastAPI error bodies into a readable string on error.detail.
+    // FastAPI 422 responses carry `detail` as an ARRAY of validation objects —
+    // passing that straight to toast.error() renders an object as a React
+    // child and crashes the whole app (white page). Normalizing here means
+    // every catch block can safely show err.response?.data?.detail.
+    const rawDetail = error.response?.data?.detail;
+    if (rawDetail !== undefined && rawDetail !== null && typeof rawDetail !== 'string') {
+      if (Array.isArray(rawDetail)) {
+        // 422 validation array: [{type, loc, msg, input, url}, …]
+        const parts = rawDetail.map((d) => {
+          const loc = Array.isArray(d?.loc) ? d.loc.filter((p) => p !== 'body' && p !== 'query').join('.') : '';
+          const field = loc ? `${loc}: ` : '';
+          const input = d?.input !== undefined && typeof d.input !== 'object' ? ` (got "${d.input}")` : '';
+          return `${field}${d?.msg || 'Invalid value'}${input}`;
+        });
+        error.response.data.detail = parts.join('; ');
+      } else {
+        error.response.data.detail = String(rawDetail);
+      }
+    }
     return Promise.reject(error);
   }
 );

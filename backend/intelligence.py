@@ -561,6 +561,73 @@ async def day_close_summary(db, restaurant_id: str, restaurant_name: str, sessio
 # cache helpers
 # ────────────────────────────────────────────────────────────────────
 
+# ────────────────────────────────────────────────────────────────────
+# Day-close performance brief (4 structured blocks for the PDF)
+# ────────────────────────────────────────────────────────────────────
+
+async def day_close_brief_blocks(db, restaurant_id: str, restaurant_name: str, session: dict, day_stats: dict) -> dict:
+    """Four blocks for the Daily Performance Brief PDF. Gemini phrases from
+    the verified fact sheet; falls back to purely computed text."""
+    ai_text = await gemini_explain(
+        format_facts(day_stats),
+        f"Restaurant: {restaurant_name}. This is the END-OF-DAY brief for {session.get('date', 'today')}. "
+        "Write exactly 4 blocks, each on its own line with this prefix:\n"
+        "WENT_WELL: 1-2 sentences on what went well today, using exact numbers from the sheet.\n"
+        "NEEDS_ATTENTION: 1-2 sentences on the one thing worth watching (peak-hour load, a declining "
+        "item, payment mix). If nothing is concerning, say service ran smoothly and why.\n"
+        "OPPORTUNITY: 1-2 sentences - strongest items or a natural pairing worth trying as a combo.\n"
+        "NEXT_CHECK: one sentence - the single thing to verify before or during tomorrow's service.\n"
+        "Facts only from the sheet. Never invent numbers. Max 45 words per block. Plain text.",
+        max_words=200,
+    )
+    blocks = {"went_well": "", "needs_attention": "", "opportunity": "", "next_check": ""}
+    if ai_text:
+        for raw in ai_text.splitlines():
+            line = raw.strip()
+            upper = line.upper()
+            if upper.startswith("WENT_WELL:"):
+                blocks["went_well"] = line[10:].strip()
+            elif upper.startswith("NEEDS_ATTENTION:"):
+                blocks["needs_attention"] = line[16:].strip()
+            elif upper.startswith("OPPORTUNITY:"):
+                blocks["opportunity"] = line[12:].strip()
+            elif upper.startswith("NEXT_CHECK:"):
+                blocks["next_check"] = line[11:].strip()
+        if blocks["went_well"]:
+            return blocks
+
+    # ── computed fallback (no Gemini, no invented content) ──
+    s = day_stats.get("sales", {})
+    movers = day_stats.get("item_movers", {})
+    peak = (day_stats.get("peak_hours") or [{}])[0]
+    pay = s.get("payment_methods", {})
+    top_pay = max(pay.items(), key=lambda kv: kv[1]) if pay else None
+
+    blocks["went_well"] = (
+        f"Closed at Rs.{s.get('last7', 0):,.2f} from {s.get('orders_last7', 0)} orders "
+        f"(average Rs.{s.get('aov', 0):,.2f})."
+    )
+    riser = (movers.get("risers") or [{}])[0]
+    if riser.get("name"):
+        blocks["went_well"] += f" {riser['name']} was the strongest performer ({riser.get('sold_last7', 0)} sold)."
+    if peak.get("hour") is not None:
+        blocks["needs_attention"] = f"Demand peaked around {peak['hour']}:00 - review prep and staffing before tomorrow's peak."
+    else:
+        blocks["needs_attention"] = "Service ran smoothly with no unusual load patterns today."
+    combo = (day_stats.get("combos") or [{}])[0]
+    if combo.get("pair"):
+        blocks["opportunity"] = f"{combo['pair']} frequently ordered together - worth testing as a simple combo."
+    elif riser.get("name"):
+        blocks["opportunity"] = f"{riser['name']} is trending - keep it prominent on the menu tomorrow."
+    else:
+        blocks["opportunity"] = "Build a few days of item-level history to unlock pairing suggestions."
+    if top_pay:
+        blocks["next_check"] = f"{top_pay[0].upper()} led today's payments - reconcile it against your settlement records."
+    else:
+        blocks["next_check"] = "Verify cash, UPI and card totals against your settlement records."
+    return blocks
+
+
 def _cache_get(key):
     hit = _CACHE.get(key)
     if hit and (datetime.now(timezone.utc) - hit["t"]).total_seconds() < CACHE_TTL_SECONDS:

@@ -1155,11 +1155,11 @@ async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Res
             "Report Period: Today (%s)\n"
             "\n"
             "SALES SUMMARY:\n"
-            "- Daily Sales: Rs.%,.2f\n"
-            "- Weekly Sales: Rs.%,.2f\n"
-            "- Monthly Sales: Rs.%,.2f\n"
+            "- Daily Sales: Rs.%.2f\n"
+            "- Weekly Sales: Rs.%.2f\n"
+            "- Monthly Sales: Rs.%.2f\n"
             "- Total Orders: %s\n"
-            "- Average Order Value: Rs.%,.2f\n"
+            "- Average Order Value: Rs.%.2f\n"
             "\n"
             "TOP SELLING ITEMS:\n"
             "%s\n"
@@ -3502,7 +3502,7 @@ async def customer_lookup(phone: str = "", user: dict = Depends(get_current_user
 
 @api_router.get("/day-session/{session_id}/report-pdf")
 async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None, user: dict = Depends(get_current_user)):
-    """Generate a premium PDF day close report."""
+    """DineDesk Daily Performance Brief — premium A4 print-ready PDF."""
     from fastapi.responses import Response
     from fpdf import FPDF
 
@@ -3511,292 +3511,491 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         raise HTTPException(status_code=404, detail="Session not found")
 
     restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    rname = (restaurant or {}).get("name", "Restaurant")
+    rid = user["restaurant_id"]
+
     orders = await db.orders.find({"day_session_id": session_id}, {"_id": 0, "created_by": 0}).to_list(5000)
+    paid = [o for o in orders if o.get("payment_status") == "paid"]
+    pending = [o for o in orders if o.get("payment_status") == "pending" and o.get("status") != "cancelled"]
+    cancelled = [o for o in orders if o.get("status") == "cancelled"]
 
-    paid_orders = [o for o in orders if o.get("payment_status") == "paid"]
-    pending_orders = [o for o in orders if o.get("payment_status") == "pending"]
-    cancelled_orders = [o for o in orders if o.get("status") == "cancelled"]
-
-    total_sales = sum(o["total_amount"] for o in paid_orders)
-    total_tax = sum(o.get("tax_amount", 0) for o in paid_orders)
-    total_discount = sum(o.get("discount_amount", 0) for o in paid_orders)
-    avg_order = total_sales / len(paid_orders) if paid_orders else 0
+    total_sales = round(sum(o["total_amount"] for o in paid), 2)
+    total_tax = round(sum(o.get("tax_amount", 0) for o in paid), 2)
+    total_discount = round(sum(o.get("discount_amount", 0) for o in paid), 2)
+    net_sales = round(total_sales - total_discount, 2)
+    n_orders = len(paid)
+    aov = round(total_sales / n_orders, 2) if paid else 0
 
     payment_methods = {}
-    for o in paid_orders:
+    for o in paid:
         pm = o.get("payment_method", "unknown")
-        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
+        payment_methods[pm] = round(payment_methods.get(pm, 0) + o["total_amount"], 2)
 
-    order_types = {}
-    for o in paid_orders:
-        ot = o.get("order_type", "unknown")
-        order_types[ot] = order_types.get(ot, 0) + 1
-
-    item_counts = {}
-    item_revenue = {}
-    for o in paid_orders:
+    item_counts, item_revenue = {}, {}
+    for o in paid:
         for item in o.get("items", []):
             name = item.get("name", "Unknown")
-            qty = item.get("quantity", 1)
-            item_counts[name] = item_counts.get(name, 0) + qty
-            item_revenue[name] = item_revenue.get(name, 0) + item.get("total", 0)
-    top_items = sorted([{"name": k, "quantity": item_counts[k], "revenue": item_revenue.get(k, 0)} for k in item_counts], key=lambda x: -x["revenue"])[:10]
+            item_counts[name] = item_counts.get(name, 0) + item.get("quantity", 1)
+            item_revenue[name] = round(item_revenue.get(name, 0) + item.get("total", 0), 2)
+    top_items = sorted(
+        [{"name": k, "quantity": item_counts[k], "revenue": item_revenue.get(k, 0)} for k in item_counts],
+        key=lambda x: -x["revenue"],
+    )
 
     hourly = {}
-    for o in paid_orders:
+    for o in paid:
         try:
-            hour = datetime.fromisoformat(o["created_at"]).hour
-            hourly[hour] = hourly.get(hour, {"orders": 0, "revenue": 0})
-            hourly[hour]["orders"] += 1
-            hourly[hour]["revenue"] += o["total_amount"]
-        except:
+            h = datetime.fromisoformat(o["created_at"]).hour
+            hourly[h] = hourly.get(h, {"orders": 0, "revenue": 0})
+            hourly[h]["orders"] += 1
+            hourly[h]["revenue"] = round(hourly[h]["revenue"] + o["total_amount"], 2)
+        except Exception:
             pass
 
-    # Generate AI insights via the shared DineDesk Intelligence service
-    # (verified snapshot → Gemini phrasing; falls back to computed text)
-    ai_insights = "AI insights unavailable."
+    def _band(h: int) -> str:
+        def f(x):
+            ampm = "AM" if x < 12 else "PM"
+            return f"{x % 12 or 12}:00 {ampm}"
+        return f"{f(h)}-{f((h + 2) % 24)}"
+
+    peak_hour = max(hourly, key=lambda h: hourly[h]["orders"]) if hourly else None
+
+    # Tables snapshot (capacity vs occupied at close time)
+    tables_total = await db.tables.count_documents({"restaurant_id": rid})
+    tables_occupied = await db.tables.count_documents({"restaurant_id": rid, "status": {"$ne": "available"}})
+
+    # Previous same-weekday closed session → honest comparison line
+    date_str = session.get("date", "")
+    this_date, weekday_name = None, ""
     try:
-        pdf_analytics = {
-            "sales": {
-                "last7": total_sales, "prev7": 0, "change_pct": None,
-                "orders_last7": len(paid_orders), "aov": avg_order,
-                "order_types": order_types, "payment_methods": payment_methods,
-                "daily_series": [],
-            },
-            "item_movers": {"risers": [], "decliners": []},
-            "combos": [],
-            "peak_hours": [{"hour": h, "orders": v["orders"]} for h, v in sorted(hourly.items(), key=lambda x: -x[1]["orders"])[:3]],
-            "inventory": {"watch": []},
-            "margins": {"low": [], "high": []},
-            "data_gaps": {"waste_tracking": False, "expenses": False},
-        }
-        _intel = await intelligence.day_close_summary(
-            db, user["restaurant_id"],
-            restaurant.get("name", "Restaurant") if restaurant else "Restaurant",
-            session, pdf_analytics)
-        ai_insights = _intel
+        this_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        weekday_name = this_date.strftime("%A")
+    except Exception:
+        pass
+    prev = None
+    if this_date:
+        past = await db.day_sessions.find(
+            {"restaurant_id": rid, "status": "closed", "date": {"$lt": date_str}},
+            {"_id": 0, "date": 1, "total_sales": 1, "total_orders": 1},
+        ).sort("date", -1).to_list(60)
+        for s in past:
+            try:
+                if datetime.strptime(s["date"], "%Y-%m-%d").date().weekday() == this_date.weekday():
+                    prev = s
+                    break
+            except Exception:
+                continue
+
+    def _chg(cur, old):
+        if old in (None, 0) or cur is None:
+            return None
+        return round((cur - old) / old * 100, 1)
+
+    chg_sales = _chg(total_sales, prev.get("total_sales") if prev else None)
+    chg_orders = _chg(n_orders, prev.get("total_orders") if prev else None)
+    prev_aov = round((prev.get("total_sales") or 0) / prev["total_orders"], 2) if prev and prev.get("total_orders") else None
+    chg_aov = _chg(aov, prev_aov)
+
+    # AI blocks — shared DineDesk Intelligence service (verified numbers only)
+    day_stats = {
+        "sales": {
+            "last7": total_sales, "prev7": (prev or {}).get("total_sales", 0),
+            "change_pct": chg_sales, "orders_last7": n_orders, "aov": aov,
+            "order_types": {ot: sum(1 for o in paid if o.get("order_type") == ot) for ot in {o.get("order_type", "unknown") for o in paid}},
+            "payment_methods": payment_methods, "daily_series": [],
+        },
+        "item_movers": {
+            "risers": [{"name": t["name"], "sold_last7": t["quantity"], "revenue_last7": t["revenue"]} for t in top_items[:3]],
+            "decliners": [],
+        },
+        "combos": [],
+        "peak_hours": [{"hour": h, "orders": hourly[h]["orders"]} for h in sorted(hourly, key=lambda x: -hourly[x]["orders"])[:3]],
+        "inventory": {"watch": []},
+        "margins": {"low": [], "high": []},
+        "data_gaps": {"waste_tracking": False, "expenses": False},
+    }
+    try:
+        blocks = await intelligence.day_close_brief_blocks(db, rid, rname, session, day_stats)
     except Exception as e:
-        logger.error(f"PDF AI insights error: {e}")
+        logger.error(f"PDF intelligence blocks error: {e}")
+        blocks = {"went_well": "", "needs_attention": "", "opportunity": "", "next_check": ""}
 
-    pdf = FPDF()
+    # ───────────────────────── PDF BUILD ─────────────────────────
+    GREEN_DARK = (15, 36, 23)      # brand deep green (header band, title)
+    GREEN = (27, 90, 56)           # accent / positive
+    INK = (22, 30, 26)             # body text
+    MUTED = (108, 118, 112)        # secondary text
+    TILE_BG = (240, 244, 240)      # KPI tile fill
+    LINE = (224, 230, 224)         # hairlines / borders
+    AMBER = (172, 118, 20)         # watch signal
+
+    def _san(s: str) -> str:
+        """Core fonts are latin-1 — map pretty punctuation, drop the rest."""
+        s = str(s or "")
+        for a, b in {"\u2013": "-", "\u2014": "-", "\u2022": "-", "\u2192": "->",
+                     "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"', "\u20b9": "Rs."}.items():
+            s = s.replace(a, b)
+        return s.encode("latin-1", "replace").decode("latin-1")
+
+    pdf = FPDF(format="A4")
+    pdf.set_margins(14, 12, 14)
+    pdf.set_auto_page_break(True, margin=16)
+    CONTENT_W = 182
+
+    def top_strip():
+        pdf.set_fill_color(*GREEN_DARK)
+        pdf.rect(0, 0, 210, 7.5, style="F")
+        pdf.set_y(2.3)
+        pdf.set_font("Helvetica", "B", 7.5)
+        pdf.set_text_color(235, 245, 238)
+        pdf.set_x(14)
+        pdf.cell(60, 3.4, "DineDesk", align="L")
+        pdf.set_x(75)
+        pdf.cell(60, 3.4, "Absorbs chaos. Serves calm.", align="C")
+        pdf.set_x(156)
+        pdf.cell(40, 3.4, f"Page {pdf.page_no()}", align="R")
+        pdf.set_y(14)
+        pdf.set_text_color(*INK)
+
+    def ensure_space(h: float):
+        if pdf.get_y() + h > 281:
+            pdf.add_page()
+            top_strip()
+
+    def section_title(txt: str):
+        ensure_space(26)
+        pdf.ln(4)
+        pdf.set_fill_color(*GREEN_DARK)
+        pdf.rect(14, pdf.get_y() + 0.6, 2.6, 4.2, style="F")
+        pdf.set_x(19)
+        pdf.set_font("Helvetica", "B", 10.5)
+        pdf.set_text_color(*INK)
+        pdf.cell(0, 5.6, txt, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(1.2)
+
+    def kpi_tile(x: float, y: float, w: float, label: str, value: str, sub: str, sub_color=MUTED):
+        pdf.set_draw_color(*LINE)
+        pdf.set_fill_color(*TILE_BG)
+        pdf.set_line_width(0.2)
+        pdf.rect(x, y, w, 21, style="DF")
+        pdf.set_xy(x + 2.5, y + 2.6)
+        pdf.set_font("Helvetica", "B", 6.6)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(w - 5, 3, label[:22])
+        pdf.set_xy(x + 2.5, y + 6.6)
+        pdf.set_font("Helvetica", "B", 12.5)
+        pdf.set_text_color(*INK)
+        pdf.cell(w - 5, 6, value[:16])
+        pdf.set_xy(x + 2.5, y + 14.6)
+        pdf.set_font("Helvetica", "", 6.6)
+        pdf.set_text_color(*sub_color)
+        pdf.cell(w - 5, 3, sub[:30])
+
+    # ── PAGE 1 ──
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    top_strip()
+    pdf.set_y(17)
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*INK)
+    pdf.cell(0, 6.5, _san(rname.upper()), align="C", new_x="LMARGIN", new_y="NEXT")
+    if this_date:
+        date_pretty = f"{this_date.strftime('%A')}, {this_date.day} {this_date.strftime('%B')} {this_date.year}"
+    else:
+        date_pretty = date_str
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*MUTED)
+    pdf.cell(0, 5, _san(date_pretty), align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3.5)
+    pdf.set_font("Helvetica", "B", 21)
+    pdf.set_text_color(*GREEN_DARK)
+    pdf.cell(0, 9, "DAILY PERFORMANCE BRIEF", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(1.5)
+    pdf.set_font("Helvetica", "", 9.5)
+    pdf.set_text_color(*MUTED)
+    pdf.multi_cell(0, 4.4, "Today at a glance.\nA calm, decision-ready view of your restaurant's service.", align="C")
+    pdf.ln(4)
 
-    pdf.set_fill_color(30, 41, 59)
-    pdf.rect(0, 0, 210, 40, 'F')
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 22)
-    pdf.set_y(8)
-    pdf.cell(0, 10, restaurant.get("name", "Restaurant") if restaurant else "Restaurant", align="C", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Daily Sales Report - {session.get('date', '')}", align="C", new_x="LMARGIN", new_y="NEXT")
+    # KPI tiles
+    tile_w = (CONTENT_W - 3 * 4) / 4
+    y0 = pdf.get_y()
+    prev_wd = f"last {weekday_name}" if weekday_name else "previous day"
+    occ_pct = round(tables_occupied / tables_total * 100) if tables_total else 0
+    kpis = [
+        ("SALES TODAY", f"Rs.{total_sales:,.0f}", f"{chg_sales:+.1f}% vs {prev_wd}" if chg_sales is not None else ("First " + prev_wd if not prev else "Level vs " + prev_wd), GREEN if (chg_sales or 0) >= 0 else AMBER),
+        ("ORDERS", str(n_orders), f"{chg_orders:+.1f}% vs {prev_wd}" if chg_orders is not None else ("First " + prev_wd if not prev else "Level vs " + prev_wd), GREEN if (chg_orders or 0) >= 0 else AMBER),
+        ("AVG. ORDER", f"Rs.{aov:,.2f}", ("Stable vs " + prev_wd) if chg_aov is not None and abs(chg_aov) < 1 else (f"{chg_aov:+.1f}% vs {prev_wd}" if chg_aov is not None else "Per-order average"), MUTED),
+        ("TABLES", f"{tables_occupied} / {tables_total}" if tables_total else "-", f"{occ_pct}% occupied" if tables_total else "No tables configured", MUTED),
+    ]
+    for i, (l, v, s, sc) in enumerate(kpis):
+        kpi_tile(14 + i * (tile_w + 4), y0, tile_w, l, _san(v), _san(s), sc)
+    pdf.set_y(y0 + 26)
+
+    # Today's performance comparison table
+    section_title("TODAY'S PERFORMANCE")
+    hdr_y = pdf.get_y()
+    pdf.set_fill_color(*TILE_BG)
+    pdf.set_font("Helvetica", "B", 7.5)
+    pdf.set_text_color(*MUTED)
+    for w, label, al in [(62, "Metric", "L"), (40, "Today", "R"), (48, f"Previous {weekday_name}" if weekday_name else "Previous day", "R"), (32, "Change", "R")]:
+        pdf.cell(w, 6.5, f" {label}" if al == "L" else f"{label} ", fill=True, align=al)
+    pdf.ln()
+    perf_rows = [
+        ("Gross sales", f"Rs.{total_sales:,.2f}", f"Rs.{(prev or {}).get('total_sales', 0):,.2f}" if prev else "-", f"{chg_sales:+.1f}%" if chg_sales is not None else "-"),
+        ("Orders", str(n_orders), str((prev or {}).get("total_orders", "-")) if prev else "-", f"{chg_orders:+.1f}%" if chg_orders is not None else "-"),
+        ("Average order value", f"Rs.{aov:,.2f}", f"Rs.{prev_aov:,.2f}" if prev_aov is not None else "-", f"{chg_aov:+.1f}%" if chg_aov is not None else "-"),
+        ("Peak service", _band(peak_hour) if peak_hour is not None else "-", "-", "-"),
+    ]
+    pdf.set_font("Helvetica", "", 9)
+    for i, (m, today_v, prev_v, chg) in enumerate(perf_rows):
+        if i % 2 == 1:
+            pdf.set_fill_color(248, 250, 248)
+            pdf.rect(14, pdf.get_y(), CONTENT_W, 7, style="F")
+        pdf.set_x(14)
+        pdf.set_text_color(*INK)
+        pdf.cell(62, 7, f" {m}")
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(40, 7, f"{today_v} ", align="R")
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(48, 7, f"{prev_v} ", align="R")
+        if chg not in ("-", None):
+            pdf.set_text_color(*(GREEN if not chg.startswith("-") else AMBER))
+            pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(32, 7, f"{chg} ", align="R")
+        pdf.set_font("Helvetica", "", 9)
+        pdf.ln()
+    pdf.set_draw_color(*LINE)
+    pdf.set_line_width(0.2)
+    pdf.line(14, pdf.get_y(), 196, pdf.get_y())
+
+    # DineDesk Intelligence blocks
+    section_title("DineDesk Intelligence")
+    intel_blocks = [
+        ("WHAT WENT WELL", blocks.get("went_well") or "Service completed with recorded sales across the day."),
+        ("NEEDS ATTENTION", blocks.get("needs_attention") or "Nothing unusual flagged for today."),
+        ("OPPORTUNITY", blocks.get("opportunity") or "Build a few more days of history to unlock pairing suggestions."),
+        ("NEXT CHECK", blocks.get("next_check") or "Reconcile payment totals against your settlement records."),
+    ]
+    for title, body in intel_blocks:
+        ensure_space(18)
+        pdf.set_font("Helvetica", "B", 7.3)
+        pdf.set_text_color(*MUTED)
+        pdf.set_x(19)
+        pdf.cell(0, 3.8, title, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(19)
+        pdf.set_font("Helvetica", "", 8.8)
+        pdf.set_text_color(*INK)
+        pdf.multi_cell(CONTENT_W - 5, 4.4, _san(body))
+        pdf.ln(1.6)
+
+    # Menu pulse
+    section_title("MENU PULSE")
+    pulse = top_items[:8]
+    if pulse:
+        pdf.set_font("Helvetica", "B", 7.5)
+        pdf.set_text_color(*MUTED)
+        pdf.set_fill_color(*TILE_BG)
+        pdf.cell(84, 6.5, " Item", fill=True)
+        pdf.cell(28, 6.5, "Qty sold", fill=True, align="R")
+        pdf.cell(38, 6.5, "Sales", fill=True, align="R")
+        pdf.cell(32, 6.5, "Signal ", fill=True, align="R")
+        pdf.ln()
+        max_rev = pulse[0]["revenue"] or 1
+        pdf.set_font("Helvetica", "", 9)
+        for i, it in enumerate(pulse):
+            ensure_space(8)
+            if i % 2 == 1:
+                pdf.set_fill_color(248, 250, 248)
+                pdf.rect(14, pdf.get_y(), CONTENT_W, 7, style="F")
+            pdf.set_x(14)
+            pdf.set_text_color(*INK)
+            pdf.cell(84, 7, f" {_san(it['name'][:38])}")
+            pdf.cell(28, 7, f"{it['quantity']} ", align="R")
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.cell(38, 7, f"Rs.{it['revenue']:,.0f} ", align="R")
+            share = it["revenue"] / max_rev
+            if len(pulse) == 1 or share >= 0.6:
+                signal, color = "Strong", GREEN
+            elif share >= 0.3:
+                signal, color = "Steady", INK
+            else:
+                signal, color = "Watch", AMBER
+            pdf.set_text_color(*color)
+            pdf.cell(32, 7, f"{signal} ", align="R")
+            pdf.set_font("Helvetica", "", 9)
+            pdf.ln()
+    else:
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(0, 6, " No paid item sales recorded this session.")
+
+    # ── PAGE 2+: money detail + day close note ──
+    ensure_space(120)
+    pdf.add_page()
+    top_strip()
+    section_title("SALES DETAIL")
+    detail_rows = [
+        ("Gross sales", f"Rs.{total_sales:,.2f}"),
+        ("Tax collected", f"Rs.{total_tax:,.2f}"),
+        ("Discounts given", f"Rs.{total_discount:,.2f}"),
+        ("Net sales", f"Rs.{net_sales:,.2f}"),
+        ("Paid orders", str(n_orders)),
+    ]
+    if pending:
+        detail_rows.append(("Pending (unpaid) orders", str(len(pending))))
+    if cancelled:
+        detail_rows.append(("Cancelled orders", str(len(cancelled))))
+    for i, (l, v) in enumerate(detail_rows):
+        pdf.set_x(19)
+        pdf.set_font("Helvetica", "", 9.2)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(90, 6.6, l)
+        pdf.set_font("Helvetica", "B", 9.2)
+        pdf.set_text_color(*INK)
+        pdf.cell(0, 6.6, v, align="R", new_x="LMARGIN", new_y="NEXT")
+
+    section_title("PAYMENT BREAKDOWN")
+    if payment_methods:
+        for m, amt in sorted(payment_methods.items(), key=lambda kv: -kv[1]):
+            pdf.set_x(19)
+            pdf.set_font("Helvetica", "", 9.2)
+            pdf.set_text_color(*MUTED)
+            pdf.cell(90, 6.6, m.upper())
+            pdf.set_font("Helvetica", "B", 9.2)
+            pdf.set_text_color(*INK)
+            pdf.cell(0, 6.6, f"Rs.{amt:,.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
+    else:
+        pdf.set_x(19)
+        pdf.set_font("Helvetica", "", 9.2)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(0, 6.6, "No payments recorded.", new_x="LMARGIN", new_y="NEXT")
+
+    opening_cash = session.get("opening_cash", 0) or 0
+    closing_cash = session.get("closing_cash")
+    cash_sales = payment_methods.get("cash", 0)
+    expected = opening_cash + cash_sales
+    section_title("CASH DRAWER")
+    cash_rows = [
+        ("Opening cash", f"Rs.{opening_cash:,.2f}"),
+        ("Cash sales", f"Rs.{cash_sales:,.2f}"),
+        ("Expected cash in drawer", f"Rs.{expected:,.2f}"),
+    ]
+    if closing_cash is not None:
+        cash_rows.append(("Counted closing cash", f"Rs.{closing_cash:,.2f}"))
+        diff = round(closing_cash - expected, 2)
+        cash_rows.append(("Difference", f"{'+' if diff >= 0 else '-'}Rs.{abs(diff):,.2f}"))
+    for i, (l, v) in enumerate(cash_rows):
+        last = i == len(cash_rows) - 1
+        pdf.set_x(19)
+        pdf.set_font("Helvetica", "", 9.2)
+        pdf.set_text_color(*MUTED)
+        pdf.cell(90, 6.6, l)
+        pdf.set_font("Helvetica", "B", 9.2)
+        if last and closing_cash is not None:
+            diff = round(closing_cash - expected, 2)
+            pdf.set_text_color(*(GREEN if diff >= 0 else AMBER))
+        else:
+            pdf.set_text_color(*INK)
+        pdf.cell(0, 6.6, v, align="R", new_x="LMARGIN", new_y="NEXT")
+
+    section_title("DAY CLOSE NOTE")
+    pdf.set_x(19)
+    pdf.set_font("Helvetica", "I", 8.8)
+    pdf.set_text_color(*MUTED)
+    pdf.multi_cell(CONTENT_W - 10, 4.6,
+                   "Review cash, UPI and card totals before closing the session. This report is a performance "
+                   "summary and does not replace your settlement records.")
+
+    pdf.ln(8)
     opened = session.get("opened_at", "")
     closed = session.get("closed_at", "")
     try:
         opened = datetime.fromisoformat(opened).strftime("%I:%M %p") if opened else ""
         closed = datetime.fromisoformat(closed).strftime("%I:%M %p") if closed else "Ongoing"
-    except:
+    except Exception:
         pass
-    pdf.cell(0, 6, f"Session: {opened} - {closed}", align="C", new_x="LMARGIN", new_y="NEXT")
-
-    pdf.set_y(48)
-    pdf.set_text_color(0, 0, 0)
-
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.set_fill_color(241, 245, 249)
-    pdf.cell(0, 10, "  Sales Summary", fill=True, new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(3)
-
-    pdf.set_font("Helvetica", "", 11)
-    summary_data = [
-        ("Total Sales", f"Rs.{total_sales:,.2f}"),
-        ("Total Orders", str(len(paid_orders))),
-        ("Average Order Value", f"Rs.{avg_order:,.2f}"),
-        ("Total Tax Collected", f"Rs.{total_tax:,.2f}"),
-        ("Total Discounts", f"Rs.{total_discount:,.2f}"),
-        ("Pending Orders", str(len(pending_orders))),
-        ("Cancelled Orders", str(len(cancelled_orders))),
-    ]
-    for label, value in summary_data:
-        pdf.cell(100, 7, f"  {label}", new_x="RIGHT")
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 7, value, new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 11)
-    pdf.ln(4)
-
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "  Payment Breakdown", fill=True, new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(3)
-    pdf.set_font("Helvetica", "", 11)
-    for method, amount in payment_methods.items():
-        pdf.cell(100, 7, f"  {method.upper()}", new_x="RIGHT")
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 7, f"Rs.{amount:,.2f}", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 11)
-    pdf.ln(4)
-
-    opening_cash = session.get("opening_cash", 0)
-    closing_cash = session.get("closing_cash")
-    cash_sales = payment_methods.get("cash", 0)
-    expected = opening_cash + cash_sales
-
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "  Cash Drawer", fill=True, new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(3)
-    pdf.set_font("Helvetica", "", 11)
-    cash_data = [("Opening Cash", f"Rs.{opening_cash:,.2f}"), ("Cash Sales", f"Rs.{cash_sales:,.2f}"), ("Expected Cash", f"Rs.{expected:,.2f}")]
-    if closing_cash is not None:
-        cash_data.append(("Closing Cash", f"Rs.{closing_cash:,.2f}"))
-        diff = closing_cash - expected
-        cash_data.append(("Difference", f"Rs.{diff:,.2f}"))
-    for label, value in cash_data:
-        pdf.cell(100, 7, f"  {label}", new_x="RIGHT")
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 7, value, new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 11)
-    pdf.ln(4)
-
-    if top_items:
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "  Top Selling Items", fill=True, new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_fill_color(226, 232, 240)
-        pdf.cell(10, 7, "#", border=1, fill=True, align="C")
-        pdf.cell(80, 7, "Item Name", border=1, fill=True)
-        pdf.cell(30, 7, "Qty Sold", border=1, fill=True, align="C")
-        pdf.cell(40, 7, "Revenue", border=1, fill=True, align="R")
-        pdf.ln()
-        pdf.set_font("Helvetica", "", 10)
-        for i, item in enumerate(top_items):
-            pdf.cell(10, 7, str(i + 1), border=1, align="C")
-            pdf.cell(80, 7, f"  {item['name'][:30]}", border=1)
-            pdf.cell(30, 7, str(item["quantity"]), border=1, align="C")
-            pdf.cell(40, 7, f"Rs.{item['revenue']:,.2f}  ", border=1, align="R")
-            pdf.ln()
-        pdf.ln(4)
-
-    if hourly:
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 10, "  Hourly Breakdown", fill=True, new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_fill_color(226, 232, 240)
-        pdf.cell(40, 7, "Hour", border=1, fill=True, align="C")
-        pdf.cell(40, 7, "Orders", border=1, fill=True, align="C")
-        pdf.cell(50, 7, "Revenue", border=1, fill=True, align="R")
-        pdf.ln()
-        pdf.set_font("Helvetica", "", 10)
-        for h in sorted(hourly.keys()):
-            pdf.cell(40, 7, f"{h:02d}:00", border=1, align="C")
-            pdf.cell(40, 7, str(hourly[h]["orders"]), border=1, align="C")
-            pdf.cell(50, 7, f"Rs.{hourly[h]['revenue']:,.2f}", border=1, align="R")
-            pdf.ln()
-        pdf.ln(4)
-
-    pdf.add_page()
-    pdf.set_fill_color(30, 41, 59)
-    pdf.rect(0, 0, 210, 25, 'F')
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.set_y(6)
-    pdf.cell(0, 12, "  AI-Powered Insights & Suggestions", align="C", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_y(32)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Helvetica", "", 11)
-    clean_insights = ai_insights.replace("**", "").replace("##", "").replace("# ", "")
-    clean_insights = clean_insights.replace("\u2022", "-").replace("\u2192", "->").replace("\u2014", "-")
-    for line in clean_insights.split("\n"):
-        line = line.strip()
-        if not line:
-            pdf.ln(3)
-            continue
-        if line.startswith("- ") or line.startswith("* "):
-            pdf.set_font("Helvetica", "", 11)
-            pdf.multi_cell(0, 6, f"  {line}", new_x="LMARGIN", new_y="NEXT")
-        elif any(line.startswith(f"{i}.") for i in range(1, 10)):
-            pdf.set_font("Helvetica", "", 11)
-            pdf.multi_cell(0, 6, f"  {line}", new_x="LMARGIN", new_y="NEXT")
-        else:
-            pdf.set_font("Helvetica", "B", 12)
-            pdf.multi_cell(0, 7, line, new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", "", 11)
-    pdf.ln(8)
-
-    pdf.set_font("Helvetica", "I", 9)
-    pdf.set_text_color(148, 163, 184)
-    pdf.cell(0, 8, f"Generated by DineDesk POS on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}", align="C")
+    pdf.set_font("Helvetica", "", 7.8)
+    pdf.set_text_color(*MUTED)
+    pdf.cell(0, 5, _san(f"Session {opened} - {closed}  |  Generated by DineDesk POS on {datetime.now(timezone.utc).strftime('%d %b %Y, %H:%M UTC')}  |  support@dinedesk.in"), align="C")
 
     pdf_bytes = pdf.output()
     return Response(
         content=bytes(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"inline; filename=day-report-{session.get('date', 'report')}.pdf"}
+        headers={"Content-Disposition": f"inline; filename=performance-brief-{session.get('date', 'report')}.pdf"}
     )
 
 @api_router.get("/day-session/{session_id}/ai-insights")
 async def get_day_close_ai_insights(session_id: str, user: dict = Depends(get_current_user)):
-    """Get AI insights for a day session for in-app display."""
+    """AI insights for a day session — shared DineDesk Intelligence service
+    (verified session numbers; honest fallback when data is thin)."""
     try:
-        session = await db.day_sessions.find_one({"id": session_id})
+        rid = user.get("restaurant_id")
+        session = await db.day_sessions.find_one({"id": session_id, "restaurant_id": rid})
         if not session:
             return {"insights": "Session not found."}
-        
-        restaurant_id = session.get("restaurant_id", user.get("restaurant_id", "default"))
-        restaurant = await db.restaurants.find_one({"id": restaurant_id})
+
+        restaurant = await db.restaurants.find_one({"id": rid})
         restaurant_name = restaurant.get("name", "Restaurant") if restaurant else "Restaurant"
-        
-        # Get orders for this session
-        session_start = session.get("opened_at", "")
-        session_end = session.get("closed_at", datetime.now(timezone.utc).isoformat())
-        
-        orders = await db.orders.find({
-            "restaurant_id": restaurant_id,
-            "created_at": {"$gte": session_start, "$lte": session_end},
-            "status": {"$in": ["completed", "paid"]}
-        }).to_list(10000)
-        
+
+        orders = await db.orders.find(
+            {"day_session_id": session_id, "payment_status": "paid"}, {"_id": 0}
+        ).to_list(5000)
+
         total_sales = sum(o.get("total_amount", 0) for o in orders)
         total_orders = len(orders)
-        
-        # Top items
+        aov = round(total_sales / total_orders, 2) if orders else 0
+
+        payment_map = {}
+        for o in orders:
+            m = o.get("payment_method", "unknown")
+            payment_map[m] = round(payment_map.get(m, 0) + o.get("total_amount", 0), 2)
+
         top_items_map = {}
         for o in orders:
             for item in o.get("items", []):
                 name = item.get("name", "Unknown")
                 top_items_map[name] = top_items_map.get(name, 0) + item.get("quantity", 1)
-        top_items = [{"name": k, "count": v} for k, v in sorted(top_items_map.items(), key=lambda x: -x[1])[:10]]
-        
-        # Payment breakdown
-        payment_map = {}
-        for o in orders:
-            method = o.get("payment_method", "unknown")
-            payment_map[method] = payment_map.get(method, 0) + o.get("total_amount", 0)
-        
-        # Hourly breakdown
+        top_items = [{"name": k, "count": v} for k, v in sorted(top_items_map.items(), key=lambda x: -x[1])[:5]]
+
         hourly = {}
         for o in orders:
             try:
                 h = datetime.fromisoformat(o["created_at"]).hour
                 hourly[h] = hourly.get(h, {"orders": 0, "revenue": 0})
                 hourly[h]["orders"] += 1
-                hourly[h]["revenue"] += o.get("total_amount", 0)
-            except:
+                hourly[h]["revenue"] = round(hourly[h]["revenue"] + o.get("total_amount", 0), 2)
+            except Exception:
                 pass
-        
-        analytics_data = {
-            "daily_sales": total_sales,
-            "weekly_sales": total_sales,
-            "monthly_sales": total_sales,
-            "total_orders": total_orders,
-            "top_items": top_items,
-            "payment_breakdown": payment_map,
-            "hourly_orders": [{"hour": h, "orders": v["orders"], "revenue": v["revenue"]} for h, v in sorted(hourly.items())],
-            "selected_date": session.get("date", "")
+
+        day_stats = {
+            "sales": {
+                "last7": total_sales, "prev7": 0, "change_pct": None,
+                "orders_last7": total_orders, "aov": aov,
+                "order_types": {ot: sum(1 for o in orders if o.get("order_type") == ot)
+                                for ot in {o.get("order_type", "unknown") for o in orders}},
+                "payment_methods": payment_map, "daily_series": [],
+            },
+            "item_movers": {
+                "risers": [{"name": t["name"], "sold_last7": t["count"], "revenue_last7": 0} for t in top_items[:3]],
+                "decliners": [],
+            },
+            "combos": [],
+            "peak_hours": [{"hour": h, "orders": hourly[h]["orders"]}
+                           for h in sorted(hourly, key=lambda x: -hourly[x]["orders"])[:3]],
+            "inventory": {"watch": []},
+            "margins": {"low": [], "high": []},
+            "data_gaps": {"waste_tracking": False, "expenses": False},
         }
-        
-        insights = await generate_ai_insights(analytics_data, restaurant_name, "day_close")
-        return {"insights": insights}
+
+        blocks = await intelligence.day_close_brief_blocks(db, rid, restaurant_name, session, day_stats)
+        text = "\n".join([
+            f"**What went well** — {blocks.get('went_well') or 'Service completed normally.'}",
+            f"\n**Needs attention** — {blocks.get('needs_attention') or 'Nothing unusual flagged.'}",
+            f"\n**Opportunity** — {blocks.get('opportunity') or 'More history will unlock pairing suggestions.'}",
+            f"\n**Next check** — {blocks.get('next_check') or 'Reconcile payments against settlement records.'}",
+        ])
+        return {"insights": text}
     except Exception as e:
         logger.error(f"Day close AI insights error: {e}")
         return {"insights": "AI insights temporarily unavailable."}
