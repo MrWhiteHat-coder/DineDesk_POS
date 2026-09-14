@@ -3830,7 +3830,8 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
         pdf.cell(0, 6, " No paid item sales recorded this session.")
 
     # ── PAGE 2+: money detail + day close note ──
-    ensure_space(120)
+    # (unconditional fresh page — no ensure_space here, it would double-break
+    #  and leave a blank page when page 1 still had room)
     pdf.add_page()
     top_strip()
     section_title("SALES DETAIL")

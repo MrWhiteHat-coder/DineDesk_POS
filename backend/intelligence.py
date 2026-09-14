@@ -246,9 +246,19 @@ def format_facts(snap: dict, scope: str = "insights") -> str:
 
     lines.append("")
     for i, m in enumerate(snap["item_movers"]["risers"], 1):
-        lines.append(f"R{i}: {m['name']} UP {m['change_pct']}% ({m['sold_prev7']}→{m['sold_last7']} sold, Rs.{m['revenue_last7']:,.2f} last 7d)")
+        prev, chg = m.get("sold_prev7"), m.get("change_pct")
+        cur = m.get("sold_last7", 0)
+        if chg is not None and prev is not None:
+            lines.append(f"R{i}: {m['name']} UP {chg}% ({prev}->{cur} sold, Rs.{m.get('revenue_last7', 0):,.2f} last 7d)")
+        else:
+            lines.append(f"R{i}: {m['name']} sold {cur} (Rs.{m.get('revenue_last7', 0):,.2f})")
     for i, m in enumerate(snap["item_movers"]["decliners"], 1):
-        lines.append(f"D{i}: {m['name']} DOWN {abs(m['change_pct'])}% ({m['sold_prev7']}→{m['sold_last7']} sold)")
+        prev, chg = m.get("sold_prev7"), m.get("change_pct")
+        cur = m.get("sold_last7", 0)
+        if chg is not None and prev is not None:
+            lines.append(f"D{i}: {m['name']} DOWN {abs(chg)}% ({prev}->{cur} sold)")
+        else:
+            lines.append(f"D{i}: {m['name']} sold {cur}")
 
     for i, c in enumerate(snap["combos"], 1):
         lines.append(f"C{i}: {c['items'][0]} + {c['items'][1]} ordered together in {c['orders']} orders")
