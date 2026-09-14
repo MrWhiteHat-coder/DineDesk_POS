@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI, tableAPI, kdsAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import haptics from '../../lib/haptics';
+import AskDineDesk from '../../components/pos/AskDineDesk';
 import { Card, CardContent } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import CountUp from '../../components/ui/CountUp';
@@ -1098,6 +1099,9 @@ export default function POSDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Ask DineDesk — AI assistant lives on the Dashboard only */}
+      <AskDineDesk />
     </div>
   );
 }

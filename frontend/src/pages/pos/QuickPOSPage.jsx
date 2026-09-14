@@ -35,6 +35,8 @@ export default function QuickPOSPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  /* Walk-in: customer declined to share details — skip name/phone requirement */
+  const [isWalkIn, setIsWalkIn] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestTimeout = useRef(null);
@@ -111,8 +113,10 @@ export default function QuickPOSPage() {
 
   const quickPay = async () => {
     if (cart.length === 0) return;
-    if (!customerName.trim()) { toast.error('Customer name is required'); return; }
-    if (!customerPhone.trim()) { toast.error('Customer phone is required'); return; }
+    if (!isWalkIn) {
+      if (!customerName.trim()) { toast.error('Customer name is required — or mark as Walk-in'); return; }
+      if (!customerPhone.trim()) { toast.error('Customer phone is required — or mark as Walk-in'); return; }
+    }
     if (totalPaid < total) { toast.error('Payment is less than total'); return; }
     setProcessing(true);
     try {
@@ -121,9 +125,9 @@ export default function QuickPOSPage() {
         table_number: orderType === 'dine_in' && tableNum ? parseInt(tableNum) : null,
         items: cart.map(c => ({ menu_item_id: c.id, quantity: c.qty, notes: null })),
         discount_amount: 0,
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        customer_email: customerEmail.trim() || null,
+        customer_name: isWalkIn ? 'Walk-in Customer' : customerName.trim(),
+        customer_phone: isWalkIn ? null : customerPhone.trim(),
+        customer_email: (!isWalkIn && customerEmail.trim()) || null,
         change_amount: change,
       };
       if (paymentSplits.length === 1) {
@@ -147,6 +151,7 @@ export default function QuickPOSPage() {
       setCart([]);
       setCustomerName('');
       setCustomerPhone('');
+      setIsWalkIn(false);
       setCustomerEmail('');
       setShowPayModal(false);
     } catch (err) {
@@ -276,7 +281,12 @@ export default function QuickPOSPage() {
             </div>
             {/* Customer Details */}
             <div className="space-y-1.5 pt-1 border-t border-gray-100">
-              <p className="text-[10px] font-semibold text-gray-500 flex items-center gap-1"><User className="w-3 h-3" /> Customer Details</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold text-gray-500 flex items-center gap-1"><User className="w-3 h-3" /> Customer Details</p>
+                <button type="button" onClick={() => setIsWalkIn(v => !v)} aria-pressed={isWalkIn} className={`flex items-center gap-1 px-2 py-1 rounded-full border text-[9px] font-bold transition-all active:scale-95 min-h-[32px] ${isWalkIn ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`} data-testid="quick-walkin-toggle">{isWalkIn ? '✓ Walk-in' : 'Walk-in?'}</button>
+              </div>
+              {isWalkIn && <p className="text-[9px] text-emerald-600 font-medium">Order will be punched without customer details</p>}
+              {!isWalkIn && (<>
               <div className="relative">
                 <Input placeholder="Phone *" value={customerPhone} onChange={e => { setCustomerPhone(e.target.value); lookupCustomer(e.target.value); }} className="h-7 text-xs rounded-lg" data-testid="quick-customer-phone" />
                 {showSuggestions && suggestions.length > 0 && (
@@ -292,6 +302,8 @@ export default function QuickPOSPage() {
               </div>
               <Input placeholder="Name *" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-name" />
               <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-7 text-xs rounded-lg" data-testid="quick-customer-email" />
+              </>
+              )}
             </div>
             <button onClick={openPayModal} disabled={processing} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#0F2417] text-white text-xs font-bold hover:bg-[#1a3d28] transition-colors disabled:opacity-50" data-testid="quick-pay-btn">
               <Wallet className="w-4 h-4" /> Pay ₹{total.toFixed(2)}

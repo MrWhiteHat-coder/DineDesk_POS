@@ -710,8 +710,7 @@ export default function POSLayout() {
           </div>
         </main>
 
-        {/* Ask DineDesk — AI assistant floating on every POS page */}
-        <AskDineDesk />
+        {/* Ask DineDesk now lives on the Dashboard page only (POSDashboard) */}
       </div>
 
       {/* ──────────── BOTTOM NAV BAR (mobile only) ──────────── */}
