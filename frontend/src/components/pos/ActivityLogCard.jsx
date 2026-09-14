@@ -36,17 +36,24 @@ const relTime = (iso) => {
 export default function ActivityLogCard({ canView }) {
   const [logs, setLogs] = useState(null);
   const [error, setError] = useState(false);
+  const [crashed, setCrashed] = useState(false);
 
   useEffect(() => {
     if (!canView) return;
     let alive = true;
     staffAPI.auditLogs({ limit: 30 })
-      .then((res) => { if (alive) setLogs(res.data); })
+      .then((res) => { if (alive) setLogs(Array.isArray(res.data) ? res.data : []); })
       .catch(() => { if (alive) setError(true); });
     return () => { alive = false; };
   }, [canView]);
 
-  if (!canView) return null;
+  useEffect(() => {
+    const onError = () => setCrashed(true);
+    window.addEventListener('error', onError);
+    return () => window.removeEventListener('error', onError);
+  }, []);
+
+  if (!canView || crashed) return null;
 
   return (
     <Card className="border-slate-100 dark:border-white/[0.06] shadow-sm overflow-hidden" data-testid="activity-log-card">
@@ -73,6 +80,7 @@ export default function ActivityLogCard({ canView }) {
               <p className="px-4 py-4 text-xs text-slate-400 dark:text-white/40">No sensitive actions recorded yet — a calm restaurant.</p>
             )}
             {logs && logs.map((log) => {
+              if (!log || !log.id) return null;
               const style = ACTION_STYLES[log.action] || { label: log.action, cls: 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/60' };
               return (
                 <div key={log.id} className="px-4 py-2.5 flex items-start gap-2.5" data-testid="audit-log-row">

@@ -191,6 +191,7 @@ export const staffAPI = {
   getAll: () => api.get('/staff'),
   create: (data) => api.post('/staff', data),
   delete: (id, reason) => api.delete(`/staff/${id}`, { params: { reason } }),
+  auditLogs: (params) => api.get('/audit-logs', { params }),
 };
 
 // KDS APIs
@@ -241,7 +242,6 @@ export const purchaseOrderAPI = {
   create: (data) => api.post('/purchase-orders', data),
   receive: (id) => api.put(`/purchase-orders/${id}/receive`),
   cancel: (id, reason) => api.put(`/purchase-orders/${id}/cancel`, null, { params: { reason } }),
-  auditLogs: (params) => api.get('/audit-logs', { params }),
 };
 
 // Receipt API
