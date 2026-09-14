@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { Plus, Pencil, Trash2, AlertTriangle, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, Package, History } from 'lucide-react';
 
 const units = ['kg', 'g', 'l', 'ml', 'pieces'];
 
@@ -42,6 +42,24 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  /* Stock ledger — full movement history for one item */
+  const [historyItem, setHistoryItem] = useState(null);
+  const [historyData, setHistoryData] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openHistory = async (item) => {
+    setHistoryItem(item);
+    setHistoryData(null);
+    setHistoryLoading(true);
+    try {
+      const res = await inventoryAPI.movements(item.id, 30);
+      setHistoryData(res.data);
+    } catch {
+      setHistoryData([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
   const [itemLoading, setItemLoading] = useState(false);
   const [showLowStock, setShowLowStock] = useState(false);
 
@@ -240,6 +258,16 @@ export default function InventoryPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => openHistory(item)}
+                      className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                      aria-label={`Stock history for ${item.name}`}
+                      data-testid={`history-inventory-${item.id}`}
+                    >
+                      <History className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => openModal(item)}
                       data-testid={`edit-inventory-${item.id}`}
                     >
@@ -362,6 +390,39 @@ export default function InventoryPage() {
               {itemLoading ? 'Saving...' : editingItem ? 'Update Item' : 'Add Item'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Ledger — every movement that shaped current stock */}
+      <Dialog open={!!historyItem} onOpenChange={(v) => { if (!v) setHistoryItem(null); }}>
+        <DialogContent className="max-w-md rounded-2xl" data-testid="stock-history-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Stock History — {historyItem?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto -mx-1 px-1">
+            {historyLoading && (
+              <div className="space-y-2 py-2">{[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded-lg bg-slate-100 dark:bg-white/5 animate-pulse" />)}</div>
+            )}
+            {!historyLoading && historyData && historyData.length === 0 && (
+              <p className="text-xs text-slate-400 dark:text-white/40 py-4 text-center">No stock movements in the last 30 days.</p>
+            )}
+            {!historyLoading && historyData && historyData.length > 0 && (
+              <div className="divide-y divide-slate-50 dark:divide-white/[0.04]">
+                {historyData.map((m) => (
+                  <div key={m.id} className="py-2.5 flex items-start gap-2.5" data-testid="stock-movement-row">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 ${m.delta >= 0 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300'}`}>
+                      {m.delta >= 0 ? '+' : ''}{m.delta}{m.unit ? ` ${m.unit}` : ''}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-white/70 capitalize">{String(m.movement_type).replace('_', ' ')}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-white/40">{m.note || ''}{m.user_name ? ` · ${m.user_name}` : ''} · {new Date(m.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                    {m.balance_after != null && <span className="text-[10px] font-numbers text-slate-400 dark:text-white/40 mt-1">bal {m.balance_after}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

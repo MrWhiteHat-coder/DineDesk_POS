@@ -868,6 +868,31 @@ def require_manager_pin(pin: str):
     if MANAGER_PIN and (not pin or str(pin).strip() != MANAGER_PIN):
         raise HTTPException(status_code=403, detail="Valid manager PIN is required for this action")
 
+async def record_stock_movement(restaurant_id: str, inventory_item_id: str, item_name: str, unit: str,
+                                delta: float, movement_type: str, ref_type: str = None, ref_id: str = None,
+                                user: dict = None, note: str = None, balance_after: float = None):
+    """Append-only stock ledger. Every quantity change (purchase, sale usage,
+    wastage, adjustment, cancel-restock) writes one row, so theoretical stock
+    is always explainable: opening + Σmovements = current. Foundation for
+    physical-vs-theoretical variance tracking."""
+    doc = {
+        "id": str(uuid.uuid4()),
+        "restaurant_id": restaurant_id,
+        "inventory_item_id": inventory_item_id,
+        "item_name": item_name,
+        "unit": unit,
+        "delta": round(delta, 4),          # +in / −out
+        "movement_type": movement_type,    # purchase | sale_usage | wastage | adjustment | cancel_restock | opening
+        "ref_type": ref_type,
+        "ref_id": ref_id,
+        "user_id": (user or {}).get("id"),
+        "user_name": (user or {}).get("name"),
+        "note": note,
+        "balance_after": round(balance_after, 4) if balance_after is not None else None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.stock_movements.insert_one(doc)
+
 async def deduct_inventory(restaurant_id: str, order_items_data: list):
     """Deduct inventory based on recipe for each ordered item."""
     for item_data in order_items_data:
@@ -889,6 +914,9 @@ async def deduct_inventory(restaurant_id: str, order_items_data: list):
                         "is_low_stock": new_qty <= inv_item["min_quantity"]
                     }}
                 )
+                await record_stock_movement(restaurant_id, ingredient["inventory_item_id"], inv_item.get("name", ""), inv_item.get("unit", ""),
+                                            -qty_to_deduct, "sale_usage", "menu_item", item_data.get("menu_item_id"),
+                                            note=f"Recipe usage: {menu_item.get('name')}", balance_after=new_qty)
 
 
 def _restock_inventory(restaurant_id: str, order_items: list):
@@ -918,6 +946,9 @@ def _restock_inventory(restaurant_id: str, order_items: list):
                                 "is_low_stock": new_qty <= inv_item["min_quantity"]
                             }}
                         )
+                        await record_stock_movement(restaurant_id, ingredient["inventory_item_id"], inv_item.get("name", ""), inv_item.get("unit", ""),
+                                                    qty_to_restore, "cancel_restock", "order", item_data.get("menu_item_id"),
+                                                    note="Order cancelled — stock restored", balance_after=new_qty)
         except Exception as e:
             logger.error(f"Inventory restock failed: {e}")
     asyncio.create_task(_run())
@@ -2192,6 +2223,9 @@ async def create_waste_log(data: WasteLogCreate, user: dict = Depends(get_curren
         {"id": inv["id"]},
         {"$set": {"quantity": new_qty, "is_low_stock": new_qty <= inv.get("min_quantity", 0)}}
     )
+    await record_stock_movement(user["restaurant_id"], inv["id"], inv.get("name", ""), inv.get("unit", ""),
+                                -data.quantity, "wastage", "wastage", None, user=user,
+                                note=data.reason + (f" — {data.notes}" if data.notes else ""), balance_after=new_qty)
 
     log = {
         "id": str(uuid.uuid4()),
@@ -2898,6 +2932,21 @@ async def create_inventory_item(data: InventoryItemCreate, user: dict = Depends(
     await db.inventory.insert_one(item)
     return InventoryItemResponse(**{k: v for k, v in item.items() if k != "_id"})
 
+@api_router.get("/inventory/{item_id}/movements")
+async def get_stock_movements(item_id: str, days: int = 30, limit: int = 100, user: dict = Depends(get_current_user)):
+    """Stock ledger for one inventory item — every purchase, sale usage,
+    wastage, adjustment and restock, oldest change explains current stock."""
+    check_role(user, "inventory")
+    inv = await db.inventory.find_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=min(max(days, 1), 365))).isoformat()
+    movements = await db.stock_movements.find(
+        {"restaurant_id": user.get("restaurant_id"), "inventory_item_id": item_id, "created_at": {"$gte": cutoff}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(min(max(limit, 1), 500))
+    return movements
+
 @api_router.get("/inventory", response_model=List[InventoryItemResponse])
 async def get_inventory(low_stock_only: bool = False,
                         skip: int = 0, limit: int = 500, user: dict = Depends(get_current_user)):
@@ -2921,7 +2970,12 @@ async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: d
             new_quantity = update_data.get("quantity", item["quantity"])
             new_min = update_data.get("min_quantity", item["min_quantity"])
             update_data["is_low_stock"] = new_quantity <= new_min
-        await db.inventory.update_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"$set": update_data})
+            await db.inventory.update_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"$set": update_data})
+            # Manual quantity change = audited stock adjustment in the ledger
+            if "quantity" in update_data and new_quantity != item["quantity"]:
+                await record_stock_movement(user.get("restaurant_id"), item_id, item.get("name", ""), item.get("unit", ""),
+                                            new_quantity - item["quantity"], "adjustment", "manual", item_id, user=user,
+                                            note="Manual stock adjustment", balance_after=new_quantity)
     item = await db.inventory.find_one({"id": item_id}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -3481,6 +3535,9 @@ async def receive_purchase_order(po_id: str, user: dict = Depends(get_current_us
                 {"id": item["inventory_item_id"]},
                 {"$set": {"quantity": new_qty, "is_low_stock": new_qty <= inv["min_quantity"]}}
             )
+            await record_stock_movement(user["restaurant_id"], inv["id"], inv.get("name", ""), inv.get("unit", ""),
+                                        item["quantity"], "purchase", "purchase_order", po_id, user=user,
+                                        note=f"PO received from {po.get('supplier', 'supplier')}", balance_after=new_qty)
 
     await db.purchase_orders.update_one(
         {"id": po_id},

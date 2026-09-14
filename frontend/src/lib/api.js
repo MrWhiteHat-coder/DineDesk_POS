@@ -168,6 +168,7 @@ export const inventoryAPI = {
   create: (data) => api.post('/inventory', data),
   update: (id, data) => api.put(`/inventory/${id}`, data),
   delete: (id, reason) => api.delete(`/inventory/${id}`, { params: { reason } }),
+  movements: (id, days) => api.get(`/inventory/${id}/movements`, { params: { days } }),
 };
 
 // Wastage APIs
