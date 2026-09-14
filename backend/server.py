@@ -137,9 +137,14 @@ async def lifespan(app_instance: FastAPI):
         # A ready-to-explore tenant (demo@dinedesk.in / 123456) with a
         # fully active subscription and every Store add-on enabled, so
         # reviewers see the complete product instead of empty screens.
+        # Fully isolated own-tenant data; set ENABLE_DEMO_ACCOUNT=false to
+        # skip seeding (e.g. a hardened private deployment).
+        demo_enabled = os.environ.get('ENABLE_DEMO_ACCOUNT', 'true').strip().lower() not in ('false', '0', 'no')
+        if not demo_enabled:
+            logger.info("Demo account seeding disabled (ENABLE_DEMO_ACCOUNT=false)")
         try:
             demo = await db.users.find_one({"email": DEMO_EMAIL})
-            if not demo:
+            if not demo and demo_enabled:
                 demo_user = {
                     "id": str(uuid.uuid4()),
                     "email": DEMO_EMAIL,
@@ -306,6 +311,11 @@ async def lifespan(app_instance: FastAPI):
         await db.wastage.create_index([("restaurant_id", 1), ("created_at", -1)])
         await db.audit_logs.create_index([("restaurant_id", 1), ("created_at", -1)])
         await db.stock_movements.create_index([("restaurant_id", 1), ("inventory_item_id", 1), ("created_at", -1)])
+        await db.day_sessions.create_index([("restaurant_id", 1), ("status", 1)])
+        await db.orders.create_index([("restaurant_id", 1), ("status", 1), ("created_at", -1)])
+        await db.orders.create_index([("restaurant_id", 1), ("client_uuid", 1)])
+        await db.inventory.create_index([("restaurant_id", 1), ("id", 1)])
+        await db.menu_items.create_index([("restaurant_id", 1), ("id", 1)])
         logger.info("Database indexes created")
 
         # --- Data repair: normalize legacy order statuses ---
@@ -334,6 +344,14 @@ async def lifespan(app_instance: FastAPI):
 
 # Create the main app
 app = FastAPI(title="DineDesk POS API", version="3.0.0", lifespan=lifespan)
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc):
+    """Last-resort handler: log the traceback server-side, return a clean JSON
+    500 — never leak stack traces to clients, never crash the worker."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    from starlette.responses import JSONResponse
+    return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side — please try again. If it repeats, contact support@dinedesk.in"})
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -2053,7 +2071,7 @@ async def update_branch(branch_id: str, data: BranchCreate, user: dict = Depends
         {"id": branch_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": update_data}
     )
-    branch = await db.branches.find_one({"id": branch_id}, {"_id": 0})
+    branch = await db.branches.find_one({"id": branch_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not branch:
         raise HTTPException(status_code=404, detail="Branch not found")
     return BranchResponse(**branch)
@@ -2355,7 +2373,8 @@ async def update_menu_item(item_id: str, data: MenuItemUpdate, user: dict = Depe
             {"id": item_id, "restaurant_id": user.get("restaurant_id")},
             {"$set": update_data}
         )
-    item = await db.menu_items.find_one({"id": item_id}, {"_id": 0})
+    # Tenant isolation: read-back scoped to the caller's restaurant
+    item = await db.menu_items.find_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
     if "recipe" not in item:
@@ -2964,21 +2983,21 @@ async def get_inventory(low_stock_only: bool = False,
 async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: dict = Depends(get_current_user)):
     check_role(user, "inventory")
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
-    if update_data:
-        item = await db.inventory.find_one({"id": item_id}, {"_id": 0})
-        if item:
-            new_quantity = update_data.get("quantity", item["quantity"])
-            new_min = update_data.get("min_quantity", item["min_quantity"])
-            update_data["is_low_stock"] = new_quantity <= new_min
-            await db.inventory.update_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"$set": update_data})
-            # Manual quantity change = audited stock adjustment in the ledger
-            if "quantity" in update_data and new_quantity != item["quantity"]:
-                await record_stock_movement(user.get("restaurant_id"), item_id, item.get("name", ""), item.get("unit", ""),
-                                            new_quantity - item["quantity"], "adjustment", "manual", item_id, user=user,
-                                            note="Manual stock adjustment", balance_after=new_quantity)
-    item = await db.inventory.find_one({"id": item_id}, {"_id": 0})
+    # Tenant isolation: every read/write is scoped to the caller's restaurant
+    item = await db.inventory.find_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
+    if update_data:
+        new_quantity = update_data.get("quantity", item["quantity"])
+        new_min = update_data.get("min_quantity", item["min_quantity"])
+        update_data["is_low_stock"] = new_quantity <= new_min
+        await db.inventory.update_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"$set": update_data})
+        # Manual quantity change = audited stock adjustment in the ledger
+        if "quantity" in update_data and new_quantity != item["quantity"]:
+            await record_stock_movement(user.get("restaurant_id"), item_id, item.get("name", ""), item.get("unit", ""),
+                                        new_quantity - item["quantity"], "adjustment", "manual", item_id, user=user,
+                                        note="Manual stock adjustment", balance_after=new_quantity)
+    item = await db.inventory.find_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     return InventoryItemResponse(**item)
 
 @api_router.delete("/inventory/{item_id}")
