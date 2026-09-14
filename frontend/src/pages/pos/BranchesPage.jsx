@@ -5,6 +5,7 @@ import { Plus, MapPin, Phone, Pencil, Trash2, Building2, Mail, Key, Copy, Check 
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { guard } from '../../components/pos/GuardReasonDialog';
 import { Switch } from '../../components/ui/switch';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -74,15 +75,17 @@ export default function BranchesPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this branch?')) return;
-    try {
-      await branchAPI.delete(id);
-      toast.success('Branch deleted');
-      fetchBranches();
-    } catch (err) {
-      toast.error('Failed to delete branch');
-    }
+  const handleDelete = (id) => {
+    guard.confirm({
+      title: 'Delete this branch?',
+      description: 'The branch is deactivated and this is recorded in the activity log.',
+      confirmLabel: 'Delete branch',
+      action: async (reason) => {
+        await branchAPI.delete(id, reason);
+        toast.success('Branch deleted');
+        fetchBranches();
+      },
+    });
   };
 
   const copyToClipboard = (text, field) => {

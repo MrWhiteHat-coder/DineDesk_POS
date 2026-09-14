@@ -8,6 +8,7 @@ import { ChefPresenting } from '../../components/illustrations/ChefBot';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
+import { guard } from '../../components/pos/GuardReasonDialog';
 import {
   Dialog,
   DialogContent,
@@ -121,16 +122,17 @@ export default function MenuManagement() {
     }
   };
 
-  const handleDeleteCategory = async (categoryId) => {
-    if (!window.confirm('Delete this category?')) return;
-
-    try {
-      await menuAPI.deleteCategory(categoryId);
-      toast.success('Category deleted');
-      fetchMenu();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to delete category');
-    }
+  const handleDeleteCategory = (categoryId) => {
+    guard.confirm({
+      title: 'Delete this category?',
+      description: 'The category is deactivated and this is recorded in the activity log.',
+      confirmLabel: 'Delete category',
+      action: async (reason) => {
+        await menuAPI.deleteCategory(categoryId, reason);
+        toast.success('Category deleted');
+        fetchMenu();
+      },
+    });
   };
 
   // Item handlers
@@ -226,16 +228,17 @@ export default function MenuManagement() {
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
-    if (!window.confirm('Delete this item?')) return;
-
-    try {
-      await menuAPI.deleteItem(itemId);
-      toast.success('Item deleted');
-      fetchMenu();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to delete item');
-    }
+  const handleDeleteItem = (itemId) => {
+    guard.confirm({
+      title: 'Delete this menu item?',
+      description: 'This permanently removes the item and is recorded in the activity log.',
+      confirmLabel: 'Delete item',
+      action: async (reason) => {
+        await menuAPI.deleteItem(itemId, reason);
+        toast.success('Item deleted');
+        fetchMenu();
+      },
+    });
   };
 
   const handleToggleAvailability = async (item) => {

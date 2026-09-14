@@ -9,6 +9,7 @@ import { ChefWorried } from '../../components/illustrations/ChefBot';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { guard } from '../../components/pos/GuardReasonDialog';
 import {
   Dialog,
   DialogContent,
@@ -129,16 +130,17 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDelete = async (itemId) => {
-    if (!window.confirm('Delete this inventory item?')) return;
-
-    try {
-      await inventoryAPI.delete(itemId);
-      toast.success('Item deleted');
-      fetchInventory();
-    } catch (err) {
-      toast.error('Failed to delete item');
-    }
+  const handleDelete = (itemId) => {
+    guard.confirm({
+      title: 'Delete inventory item?',
+      description: 'This permanently removes the item and is recorded in the activity log.',
+      confirmLabel: 'Delete item',
+      action: async (reason) => {
+        await inventoryAPI.delete(itemId, reason);
+        toast.success('Item deleted');
+        fetchInventory();
+      },
+    });
   };
 
   const lowStockCount = inventory.filter((i) => i.is_low_stock).length;

@@ -5,6 +5,7 @@ import { Plus, Package, Truck, CheckCircle2, XCircle, Clock, X, Trash2 } from 'l
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
+import { guard } from '../../components/pos/GuardReasonDialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
@@ -78,13 +79,17 @@ export default function PurchaseOrdersPage() {
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
   };
 
-  const handleCancel = async (id) => {
-    if (!window.confirm('Cancel this purchase order?')) return;
-    try {
-      await purchaseOrderAPI.cancel(id);
-      toast.success('Order cancelled');
-      fetchData();
-    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); }
+  const handleCancel = (id) => {
+    guard.confirm({
+      title: 'Cancel this purchase order?',
+      description: 'The PO is cancelled and this is recorded in the activity log.',
+      confirmLabel: 'Cancel PO',
+      action: async (reason) => {
+        await purchaseOrderAPI.cancel(id, reason);
+        toast.success('Order cancelled');
+        fetchData();
+      },
+    });
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-slate-800 border-t-transparent rounded-full animate-spin" /></div>;

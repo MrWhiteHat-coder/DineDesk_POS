@@ -122,7 +122,7 @@ export const branchAPI = {
   getAll: () => api.get('/branches'),
   create: (data) => api.post('/branches', data),
   update: (id, data) => api.put(`/branches/${id}`, data),
-  delete: (id) => api.delete(`/branches/${id}`),
+  delete: (id, reason) => api.delete(`/branches/${id}`, { params: { reason } }),
 };
 
 // Subscription APIs
@@ -135,11 +135,11 @@ export const subscriptionAPI = {
 export const menuAPI = {
   getCategories: () => api.get('/menu/categories'),
   createCategory: (data) => api.post('/menu/categories', data),
-  deleteCategory: (id) => api.delete(`/menu/categories/${id}`),
+  deleteCategory: (id, reason) => api.delete(`/menu/categories/${id}`, { params: { reason } }),
   getItems: (categoryId) => api.get('/menu/items', { params: categoryId ? { category_id: categoryId } : {} }),
   createItem: (data) => api.post('/menu/items', data),
   updateItem: (id, data) => api.put(`/menu/items/${id}`, data),
-  deleteItem: (id) => api.delete(`/menu/items/${id}`),
+  deleteItem: (id, reason) => api.delete(`/menu/items/${id}`, { params: { reason } }),
 };
 
 // Order APIs
@@ -148,7 +148,7 @@ export const orderAPI = {
   getAll: (params) => api.get('/orders', { params }),
   getToday: () => api.get('/orders/today'),
   getRunning: () => api.get('/orders/running'),
-  updateStatus: (id, status) => api.put(`/orders/${id}/status`, { status }),
+  updateStatus: (id, status, opts = {}) => api.put(`/orders/${id}/status`, { status }, { params: { cancel_reason: opts.reason, manager_pin: opts.managerPin } }),
   addItems: (id, data) => api.post(`/orders/${id}/add-items`, data),
   pay: (id, data) => api.post(`/orders/${id}/pay`, data),
 };
@@ -167,7 +167,7 @@ export const inventoryAPI = {
   getAll: (lowStockOnly) => api.get('/inventory', { params: lowStockOnly ? { low_stock_only: true } : {} }),
   create: (data) => api.post('/inventory', data),
   update: (id, data) => api.put(`/inventory/${id}`, data),
-  delete: (id) => api.delete(`/inventory/${id}`),
+  delete: (id, reason) => api.delete(`/inventory/${id}`, { params: { reason } }),
 };
 
 // Wastage APIs
@@ -189,7 +189,7 @@ export const tableAPI = {
 export const staffAPI = {
   getAll: () => api.get('/staff'),
   create: (data) => api.post('/staff', data),
-  delete: (id) => api.delete(`/staff/${id}`),
+  delete: (id, reason) => api.delete(`/staff/${id}`, { params: { reason } }),
 };
 
 // KDS APIs
@@ -239,7 +239,8 @@ export const purchaseOrderAPI = {
   getAll: (status) => api.get('/purchase-orders', { params: status ? { status } : {} }),
   create: (data) => api.post('/purchase-orders', data),
   receive: (id) => api.put(`/purchase-orders/${id}/receive`),
-  cancel: (id) => api.put(`/purchase-orders/${id}/cancel`),
+  cancel: (id, reason) => api.put(`/purchase-orders/${id}/cancel`, null, { params: { reason } }),
+  auditLogs: (params) => api.get('/audit-logs', { params }),
 };
 
 // Receipt API

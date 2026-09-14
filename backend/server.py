@@ -304,6 +304,8 @@ async def lifespan(app_instance: FastAPI):
         await db.branches.create_index("restaurant_id")
         await db.purchase_orders.create_index([("restaurant_id", 1), ("created_at", -1)])
         await db.wastage.create_index([("restaurant_id", 1), ("created_at", -1)])
+        await db.audit_logs.create_index([("restaurant_id", 1), ("created_at", -1)])
+        await db.stock_movements.create_index([("restaurant_id", 1), ("inventory_item_id", 1), ("created_at", -1)])
         logger.info("Database indexes created")
 
         # --- Data repair: normalize legacy order statuses ---
@@ -831,6 +833,40 @@ async def log_action(log_type: str, action: str, user_id: str = None, restaurant
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.system_logs.insert_one(log)
+
+# ──────────── DineDesk Guard: audit trail + manager PIN ────────────
+# Sensitive actions (cancel, delete, wastage, day close, payment) must never
+# happen silently: who, when, why, what changed.
+MANAGER_PIN = os.environ.get('MANAGER_PIN', '').strip()
+
+async def write_audit(user: dict, action: str, entity_type: str, entity_id: str = None,
+                      entity_label: str = None, reason: str = None, summary: str = None):
+    """Immutable audit record for sensitive actions."""
+    doc = {
+        "id": str(uuid.uuid4()),
+        "restaurant_id": user.get("restaurant_id"),
+        "user_id": user.get("id"),
+        "user_name": user.get("name") or user.get("email"),
+        "user_role": user.get("role"),
+        "action": action,               # e.g. order.cancel, menu_item.delete
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "entity_label": entity_label,
+        "reason": reason,
+        "summary": summary,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.audit_logs.insert_one(doc)
+
+def require_reason(reason: str, action: str) -> str:
+    if not reason or not str(reason).strip():
+        raise HTTPException(status_code=400, detail=f"A reason is required to {action} — this action is audited")
+    return str(reason).strip()
+
+def require_manager_pin(pin: str):
+    """When MANAGER_PIN is configured, destructive actions must present it."""
+    if MANAGER_PIN and (not pin or str(pin).strip() != MANAGER_PIN):
+        raise HTTPException(status_code=403, detail="Valid manager PIN is required for this action")
 
 async def deduct_inventory(restaurant_id: str, order_items_data: list):
     """Deduct inventory based on recipe for each ordered item."""
@@ -1992,15 +2028,19 @@ async def update_branch(branch_id: str, data: BranchCreate, user: dict = Depends
     return BranchResponse(**branch)
 
 @api_router.delete("/branches/{branch_id}")
-async def delete_branch(branch_id: str, user: dict = Depends(get_current_user)):
+async def delete_branch(branch_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "branches")
+    branch = await db.branches.find_one({"id": branch_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    _reason = require_reason(reason, "delete a branch")
     result = await db.branches.update_one(
         {"id": branch_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"is_active": False}}
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Branch not found")
-    return {"message": "Branch deleted"}
+    await write_audit(user, "branch.delete", "branch", branch_id, branch.get("name"), _reason, f"Deactivated branch '{branch.get('name')}'")
 
 # ============== SUBSCRIPTION ROUTES ==============
 
@@ -2074,14 +2114,19 @@ async def get_categories(user: dict = Depends(get_current_user)):
     return [MenuCategoryResponse(**c) for c in categories]
 
 @api_router.delete("/menu/categories/{category_id}")
-async def delete_category(category_id: str, user: dict = Depends(get_current_user)):
+async def delete_category(category_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "menu")
+    cat = await db.menu_categories.find_one({"id": category_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    _reason = require_reason(reason, "delete a category")
     result = await db.menu_categories.update_one(
         {"id": category_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"is_active": False}}
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Category not found")
+    await write_audit(user, "category.delete", "menu_category", category_id, cat.get("name"), _reason, f"Deleted category '{cat.get('name')}'")
     return {"message": "Category deleted"}
 
 # ============== WASTAGE TRACKING ==============
@@ -2163,10 +2208,26 @@ async def create_waste_log(data: WasteLogCreate, user: dict = Depends(get_curren
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.wastage.insert_one(log)
+    await write_audit(user, "wastage.log", "inventory_item", data.inventory_item_id, inv.get("name"),
+                      data.reason + (f" — {data.notes}" if data.notes else ""),
+                      f"Wasted {data.quantity}{inv.get('unit', '')} of '{inv.get('name')}' (cost ₹{estimated_cost:.2f})")
     await log_action("wastage", "waste_logged", user_id=user["id"],
                      restaurant_id=user["restaurant_id"],
                      details=f"{data.quantity}{inv.get('unit', '')} {inv.get('name')} ({data.reason}) — Rs.{estimated_cost}")
     return WasteLogResponse(**{k: v for k, v in log.items() if k != "_id"})
+
+@api_router.get("/audit-logs")
+async def get_audit_logs(days: int = 30, action: Optional[str] = None, limit: int = 100, user: dict = Depends(get_current_user)):
+    """DineDesk Guard activity log — owner/manager only. Immutable who/when/why
+    record of every sensitive action."""
+    if user.get("role") not in ["owner", "manager", "admin"]:
+        raise HTTPException(status_code=403, detail="Only owners and managers can view the activity log")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=min(max(days, 1), 365))).isoformat()
+    q = {"restaurant_id": user.get("restaurant_id"), "created_at": {"$gte": cutoff}}
+    if action:
+        q["action"] = {"$regex": f"^{action}", "$options": "i"}
+    logs = await db.audit_logs.find(q, {"_id": 0}).sort("created_at", -1).to_list(min(max(limit, 1), 500))
+    return logs
 
 @api_router.get("/wastage/summary")
 async def wastage_summary(days: int = 7, user: dict = Depends(get_current_user)):
@@ -2268,11 +2329,16 @@ async def update_menu_item(item_id: str, data: MenuItemUpdate, user: dict = Depe
     return MenuItemResponse(**item)
 
 @api_router.delete("/menu/items/{item_id}")
-async def delete_menu_item(item_id: str, user: dict = Depends(get_current_user)):
+async def delete_menu_item(item_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "menu")
+    item = await db.menu_items.find_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    _reason = require_reason(reason, "delete a menu item")
     result = await db.menu_items.delete_one({"id": item_id, "restaurant_id": user.get("restaurant_id")})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
+    await write_audit(user, "menu_item.delete", "menu_item", item_id, item.get("name"), _reason, f"Deleted menu item '{item.get('name')}' (₹{item.get('price', 0):.2f})")
     return {"message": "Item deleted"}
 
 # ============== FILE UPLOAD ROUTE ==============
@@ -2377,6 +2443,9 @@ async def close_day(closing_cash: float = 0, force: bool = False, user: dict = D
                   "cash_sales": cash_sales, "card_sales": card_sales, "upi_sales": upi_sales}}
     )
     updated = await db.day_sessions.find_one({"id": session["id"]}, {"_id": 0})
+    await write_audit(user, "day.close", "day_session", session["id"], session.get("opened_at", ""),
+                      "force" if force else None,
+                      f"Day closed — sales ₹{total_sales:.2f}, {len(orders)} orders, closing cash ₹{closing_cash:.2f}" + (" (forced with open orders)" if force else ""))
     await log_action("day_session", "day_closed", user_id=user["id"], restaurant_id=user["restaurant_id"])
     return DaySessionResponse(**{k: v for k, v in updated.items() if k not in ["_id", "opened_by"]})
 
@@ -2579,10 +2648,15 @@ async def get_running_orders(skip: int = 0, limit: int = 100, user: dict = Depen
     return [OrderResponse(**o) for o in orders]
 
 @api_router.put("/orders/{order_id}/status", response_model=OrderResponse)
-async def update_order_status(order_id: str, data: OrderUpdate, user: dict = Depends(get_current_user)):
+async def update_order_status(order_id: str, data: OrderUpdate, cancel_reason: Optional[str] = None, manager_pin: Optional[str] = None, user: dict = Depends(get_current_user)):
     order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    # Guard: cancelling is audited and needs a reason (passed via query param)
+    if data.status == "cancelled":
+        _reason = require_reason(cancel_reason, "cancel an order")
+        require_manager_pin(manager_pin)
 
     # Enforce lifecycle: received → preparing → ready → completed (cancel only before completion)
     _validate_order_transition(order["status"], data.status)
@@ -2607,6 +2681,8 @@ async def update_order_status(order_id: str, data: OrderUpdate, user: dict = Dep
                 order.get("payment_method", "cash"), order_id, order.get("day_session_id")
             )
         _restock_inventory(user["restaurant_id"], order.get("items", []))
+        await write_audit(user, "order.cancel", "order", order_id, f"Order #{order['order_number']}", _reason,
+                          f"Cancelled order #{order['order_number']} (₹{order.get('total_amount', 0):.2f}, {order.get('order_type')})")
         await log_action("order", "order_cancelled", user_id=user["id"],
                          restaurant_id=user["restaurant_id"], details=f"Order {order['order_number']} cancelled")
 
@@ -2751,6 +2827,8 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
         logger.error(f"Notification trigger error: {e}")
 
     updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    await write_audit(user, "payment.capture", "order", order_id, f"Order #{order['order_number']}", None,
+                      f"Captured ₹{order.get('total_amount', 0):.2f} via {payment_method}" + (" (split)" if len(payment_splits) > 1 else ""))
     return OrderResponse(**{k: v for k, v in updated.items() if k not in ["_id", "created_by"]})
 
 # ============== KDS (Kitchen Display System) ROUTES ==============
@@ -2850,11 +2928,16 @@ async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: d
     return InventoryItemResponse(**item)
 
 @api_router.delete("/inventory/{item_id}")
-async def delete_inventory_item(item_id: str, user: dict = Depends(get_current_user)):
+async def delete_inventory_item(item_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "inventory")
+    inv = await db.inventory.find_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Item not found")
+    _reason = require_reason(reason, "delete an inventory item")
     result = await db.inventory.delete_one({"id": item_id, "restaurant_id": user.get("restaurant_id")})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
+    await write_audit(user, "inventory.delete", "inventory_item", item_id, inv.get("name"), _reason, f"Deleted inventory item '{inv.get('name')}' ({inv.get('quantity')} {inv.get('unit')} on hand)")
     return {"message": "Item deleted"}
 
 # ============== TABLE ROUTES ==============
@@ -2953,17 +3036,21 @@ async def get_staff(user: dict = Depends(get_current_user)):
     return result
 
 @api_router.delete("/staff/{staff_id}")
-async def delete_staff(staff_id: str, user: dict = Depends(get_current_user)):
+async def delete_staff(staff_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "staff")
     if user.get("role") not in ["owner", "admin", "manager"]:
         raise HTTPException(status_code=403, detail="Only owners/managers can delete staff")
+    staff = await db.users.find_one({"id": staff_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    _reason = require_reason(reason, "remove a staff member")
     result = await db.users.update_one(
         {"id": staff_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"is_active": False}}
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Staff not found")
-    return {"message": "Staff deleted"}
+    await write_audit(user, "staff.delete", "staff", staff_id, staff.get("name"), _reason, f"Deactivated staff '{staff.get('name')}' ({staff.get('role')})")
 
 # ============== WALLET ROUTES ==============
 
@@ -3402,14 +3489,19 @@ async def receive_purchase_order(po_id: str, user: dict = Depends(get_current_us
     return {"message": "Purchase order received, inventory updated"}
 
 @api_router.put("/purchase-orders/{po_id}/cancel")
-async def cancel_purchase_order(po_id: str, user: dict = Depends(get_current_user)):
+async def cancel_purchase_order(po_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
     check_role(user, "inventory")
+    po = await db.purchase_orders.find_one({"id": po_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not po:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    _reason = require_reason(reason, "cancel a purchase order")
     result = await db.purchase_orders.update_one(
         {"id": po_id, "restaurant_id": user.get("restaurant_id"), "status": "ordered"},
         {"$set": {"status": "cancelled"}}
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Purchase order not found or already processed")
+    await write_audit(user, "purchase_order.cancel", "purchase_order", po_id, po.get("po_number") or po_id, _reason, f"Cancelled purchase order (supplier: {po.get('supplier', 'n/a')})")
     return {"message": "Purchase order cancelled"}
 
 # ============== RECEIPT ROUTE ==============

@@ -6,6 +6,9 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { guard } from '../../components/pos/GuardReasonDialog';
+import ActivityLogCard from '../../components/pos/ActivityLogCard';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +34,8 @@ const roleConfig = {
 };
 
 export default function StaffPage() {
+  const { user } = useAuth();
+  const canViewAudit = ['owner', 'manager', 'admin'].includes(user?.role);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -83,16 +88,17 @@ export default function StaffPage() {
     }
   };
 
-  const handleDeleteStaff = async (staffId) => {
-    if (!window.confirm('Remove this staff member?')) return;
-
-    try {
-      await staffAPI.delete(staffId);
-      toast.success('Staff member removed');
-      fetchStaff();
-    } catch (err) {
-      toast.error('Failed to remove staff');
-    }
+  const handleDeleteStaff = (staffId) => {
+    guard.confirm({
+      title: 'Remove this staff member?',
+      description: 'Their login will be deactivated and the removal is recorded in the activity log.',
+      confirmLabel: 'Remove staff',
+      action: async (reason) => {
+        await staffAPI.delete(staffId, reason);
+        toast.success('Staff member removed');
+        fetchStaff();
+      },
+    });
   };
 
   if (loading) {
@@ -117,6 +123,9 @@ export default function StaffPage() {
           Add Staff
         </Button>
       </div>
+
+      {/* DineDesk Guard — immutable activity trail (owner/manager only) */}
+      <ActivityLogCard canView={canViewAudit} />
 
       {/* Staff Grid */}
       {staff.length > 0 ? (

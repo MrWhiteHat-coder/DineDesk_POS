@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { InstallPrompt, SWUpdateToast } from "./components/pwa/PWAComponents";
+import GuardReasonDialog from "./components/pos/GuardReasonDialog";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
@@ -21,6 +22,7 @@ root.render(
   <React.StrictMode>
     <ThemeProvider>
       <App />
+      <GuardReasonDialog />
       <InstallPrompt />
       <SWUpdateToast />
     </ThemeProvider>
