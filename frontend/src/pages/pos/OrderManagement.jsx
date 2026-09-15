@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { orderAPI, feedbackAPI } from '../../lib/api';
+import { orderAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -7,7 +7,6 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { ChefThumbsUp } from '../../components/illustrations/ChefBot';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import {
   Clock,
@@ -16,11 +15,8 @@ import {
   UtensilsCrossed,
   Truck,
   RefreshCw,
-  Heart,
-  Star,
 } from 'lucide-react';
 import servedTableImg from '../../assets/moments/served_table.png';
-import { moment } from '../../components/pos/RestaurantMoments';
 
 const statusConfig = {
   received: { label: 'New', color: 'bg-blue-500', icon: Clock },
@@ -264,83 +260,7 @@ function OrderCard({ order, onUpdateStatus }) {
           </Button>
         )}
 
-        {/* Guest feedback — completed orders only (real POST /feedback event) */}
-        {order.status === 'completed' && (
-          <FeedbackButton orderId={order.id} />
-        )}
       </CardContent>
     </Card>
-  );
-}
-
-function FeedbackButton({ orderId }) {
-  const [open, setOpen] = useState(false);
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const submit = async () => {
-    if (!rating) { toast.error('Pick a rating first'); return; }
-    setSaving(true);
-    try {
-      await feedbackAPI.create({ order_id: orderId, rating, comment: comment.trim() || undefined, category: 'dine_in' });
-      toast.success('Thanks — feedback recorded!');
-      moment('tip_feedback', 'Your guest appreciates the meal.');
-      setOpen(false);
-      setRating(0);
-      setComment('');
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not save feedback');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Button
-        variant="outline"
-        onClick={() => setOpen(true)}
-        className="w-full mt-2 gap-2 min-h-[44px]"
-        data-testid={`feedback-${orderId}`}
-      >
-        <Heart className="w-4 h-4 text-rose-500" />
-        Guest feedback
-      </Button>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="font-heading flex items-center gap-2">
-            <Heart className="w-5 h-5 text-rose-500" /> How was the food?
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex justify-center gap-2" role="radiogroup" aria-label="Rating">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                role="radio"
-                aria-checked={rating === n}
-                aria-label={`${n} star${n > 1 ? 's' : ''}`}
-                onClick={() => setRating(n)}
-                className="p-1 rounded-lg hover:scale-110 transition-transform min-w-[44px] min-h-[44px] flex items-center justify-center"
-              >
-                <Star className={`w-8 h-8 transition-colors ${n <= rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-white/20'}`} />
-              </button>
-            ))}
-          </div>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Anything the kitchen should know? (optional)"
-            rows={2}
-            className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          />
-          <Button onClick={submit} disabled={saving || !rating} className="w-full dd-btn-primary min-h-[48px]">
-            {saving ? 'Saving…' : 'Send feedback'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

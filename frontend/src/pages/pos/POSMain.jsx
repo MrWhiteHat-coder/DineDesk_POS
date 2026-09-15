@@ -61,8 +61,8 @@ export default function POSMain() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  /* Walk-in: customer declined to share details — skip name/phone requirement */
-  const [isWalkIn, setIsWalkIn] = useState(true); // counters punch walk-ins by default — details are opt-in
+  /* Customer details are fully optional — counters punch orders without
+     stopping for data entry. Whatever is typed rides along on the bill. */
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestTimeout = useRef(null);
@@ -115,7 +115,7 @@ export default function POSMain() {
   const getCartQuantity = (id) => cart.find(c => c.item.id === id)?.quantity || 0;
   const updateQuantity = (id, d) => setCart(prev => prev.map(c => c.item.id === id ? { ...c, quantity: Math.max(0, c.quantity + d) } : c).filter(c => c.quantity > 0));
   const removeFromCart = (id) => setCart(prev => prev.filter(c => c.item.id !== id));
-  const clearCart = () => { setCart([]); generateOrderNumber(); setSelectedRunningOrder(null); setCustomerName(''); setCustomerPhone(''); setCustomerEmail(''); setIsWalkIn(false); };
+  const clearCart = () => { setCart([]); generateOrderNumber(); setSelectedRunningOrder(null); setCustomerName(''); setCustomerPhone(''); setCustomerEmail(''); };
   const updateNotes = (id, notes) => setCart(prev => prev.map(c => c.item.id === id ? { ...c, notes } : c));
 
   const subtotal = cart.reduce((s, c) => s + c.item.price * c.quantity, 0);
@@ -154,10 +154,6 @@ export default function POSMain() {
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0) { toast.error('Cart is empty'); return; }
-    if (!isWalkIn) {
-      if (!customerName.trim()) { toast.error('Customer name is required — or mark as Walk-in'); return; }
-      if (!customerPhone.trim()) { toast.error('Customer phone is required — or mark as Walk-in'); return; }
-    }
     if (orderType === 'dine_in') {
       if (selectedRunningOrder) {
         setCheckoutLoading(true);
@@ -189,10 +185,12 @@ export default function POSMain() {
       if (!tableNumber) { toast.error('Please select a table'); return; }
       setCheckoutLoading(true);
       try {
-        const result = await createOrderResilient({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: isWalkIn ? 'Walk-in Customer' : customerName.trim(), customer_phone: isWalkIn ? null : customerPhone.trim(), customer_email: (!isWalkIn && customerEmail.trim()) || null }, { total });
+        const custName = customerName.trim();
+        const hasCust = !!(custName || customerPhone.trim());
+        const result = await createOrderResilient({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: custName || 'Walk-in Customer', customer_phone: customerPhone.trim() || null, customer_email: customerEmail.trim() || null }, { total });
         haptics.success();
         if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); moment('no_internet'); }
-        else { toast.success(`Order #${result.data.order_number} placed!`); moment(isWalkIn ? 'new_customer' : 'sending_kitchen'); }
+        else { toast.success(`Order #${result.data.order_number} placed!`); moment(hasCust ? 'sending_kitchen' : 'new_customer'); }
         clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
       } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
     } else { openPaymentModal(); }
@@ -234,7 +232,7 @@ export default function POSMain() {
         order_type: orderType, table_number: null,
         items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })),
         discount_amount: discountAmount,
-        customer_name: isWalkIn ? 'Walk-in Customer' : customerName.trim(), customer_phone: isWalkIn ? null : customerPhone.trim(), customer_email: (!isWalkIn && customerEmail.trim()) || null,
+        customer_name: customerName.trim() || 'Walk-in Customer', customer_phone: customerPhone.trim() || null, customer_email: customerEmail.trim() || null,
         change_amount: change,
       };
       if (paymentSplits.length === 1) {
@@ -307,10 +305,6 @@ export default function POSMain() {
     setCustomerName(order.customer_name || '');
     setCustomerPhone(order.customer_phone || '');
     setCustomerEmail(order.customer_email || '');
-    // Walk-in orders come back from the server as "Walk-in Customer" with no
-    // phone — restore the walk-in flag so payment isn't blocked by validation
-    // that only applies to new orders (bug: "Customer phone is required").
-    setIsWalkIn(!order.customer_phone && (!order.customer_name || order.customer_name === 'Walk-in Customer'));
     /* Merge server lines by menu_item_id so repeated lines of the same dish
        (e.g. two rounds of coffee added separately) become one cart row —
        otherwise delta math and the qty stepper desync from the server. */
@@ -620,24 +614,9 @@ export default function POSMain() {
 
           {cart.length > 0 && (
             <div className="space-y-2 pt-2 pb-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1"><User className="w-3.5 h-3.5" /> Customer Details</p>
-                <button
-                  type="button"
-                  onClick={() => setIsWalkIn(v => !v)}
-                  aria-pressed={isWalkIn}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[10px] font-bold transition-all active:scale-95 min-h-[32px] ${isWalkIn ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:text-white/50 dark:hover:bg-white/5'}`}
-                  data-testid="walkin-toggle"
-                >
-                  {isWalkIn ? '✓ Walk-in' : 'Walk-in?'}
-                </button>
-              </div>
-              {isWalkIn && (
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Order will be punched without customer details</p>
-              )}
-              {!isWalkIn && (<>
+              <p className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 dark:text-white/50"><User className="w-3.5 h-3.5" /> Customer Details <span className="font-normal text-slate-400 dark:text-white/35">· optional</span></p>
               <div className="relative">
-                <Input placeholder="Phone *" value={customerPhone} onChange={e => { setCustomerPhone(e.target.value); lookupCustomer(e.target.value); }} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-phone" />
+                <Input placeholder="Phone (optional)" value={customerPhone} onChange={e => { setCustomerPhone(e.target.value); lookupCustomer(e.target.value); }} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-phone" />
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
                     {suggestions.map((s, i) => (
@@ -648,10 +627,8 @@ export default function POSMain() {
                   </div>
                 )}
               </div>
-              <Input placeholder="Name *" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-name" />
+              <Input placeholder="Name (optional)" value={customerName} onChange={e => setCustomerName(e.target.value)} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-name" />
               <Input placeholder="Email (optional)" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="h-8 text-xs rounded-lg bg-slate-50 border-slate-200" data-testid="customer-email" />
-              </>
-              )}
             </div>
           )}
 
