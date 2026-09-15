@@ -11,6 +11,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { ChefShrugging, ChefWinking } from '../../components/illustrations/ChefBot';
 import haptics from '../../lib/haptics';
+import { moment } from '../../components/pos/RestaurantMoments';
 import useDragToDismiss from '../../lib/useDragToDismiss';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -167,7 +168,7 @@ export default function POSMain() {
           if (deltas.length === 0) { toast.info('No changes to add — quantities match the running order'); setCheckoutLoading(false); return; }
           await orderAPI.addItems(selectedRunningOrder.id, { items: deltas });
           haptics.success();
-          toast.success('Order updated!'); clearCart(); fetchRunningOrders(); fetchTables();
+          toast.success('Order updated!'); moment('order_placed'); clearCart(); fetchRunningOrders(); fetchTables();
         } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
         return;
       }
@@ -176,8 +177,8 @@ export default function POSMain() {
       try {
         const result = await createOrderResilient({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: isWalkIn ? 'Walk-in Customer' : customerName.trim(), customer_phone: isWalkIn ? null : customerPhone.trim(), customer_email: (!isWalkIn && customerEmail.trim()) || null }, { total });
         haptics.success();
-        if (!result.online) toast.info('Saved offline — will sync automatically when back online');
-        else toast.success(`Order #${result.data.order_number} placed!`);
+        if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); moment('no_internet'); }
+        else { toast.success(`Order #${result.data.order_number} placed!`); moment(isWalkIn ? 'new_customer' : 'sending_kitchen'); }
         clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
       } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
     } else { openPaymentModal(); }
@@ -228,8 +229,10 @@ export default function POSMain() {
       const result = await createOrderResilient(payload, { total });
       if (!result.online) {
         toast.info('Order saved offline with payment recorded — syncs automatically when back online');
+        moment('no_internet');
       } else {
         toast.success(`Order #${result.data.order_number} completed!`);
+        moment(orderType === 'dine_in' ? 'table_cleaned' : 'payment_success');
         await fetchAndShowReceipt(result.data.id);
       }
       clearCart(); setShowPaymentModal(false);
@@ -247,7 +250,7 @@ export default function POSMain() {
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
       await orderAPI.pay(orderId, payload);
-      toast.success('Payment confirmed!'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); setShowPaymentModal(false);
+      toast.success('Payment confirmed!'); moment('payment_success'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); setShowPaymentModal(false);
     } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
   };
 
@@ -523,7 +526,7 @@ export default function POSMain() {
           {cart.length > 0 && upsellStrip}
 
           {cart.length > 0 && (
-            <button onClick={() => setApplyDiscount(!applyDiscount)} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-xs transition-colors ${applyDiscount ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`} data-testid="discount-toggle">
+            <button onClick={() => { const next = !applyDiscount; setApplyDiscount(next); if (next) moment('discount_applied'); }} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-xs transition-colors ${applyDiscount ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`} data-testid="discount-toggle">
               <Tag className="w-4 h-4" /><div className="text-left"><p className="font-semibold">{applyDiscount ? 'Applied: 10% off' : 'Save 10% on this bill'}</p><p className="text-[10px] opacity-70">Minimum buy ₹50.00 · tap to {applyDiscount ? 'remove' : 'apply'}</p></div>
               <span className={`ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full ${applyDiscount ? 'bg-green-500 text-white' : 'bg-emerald-600 text-white'}`}>{applyDiscount ? '✓ APPLIED' : 'APPLY'}</span>
             </button>

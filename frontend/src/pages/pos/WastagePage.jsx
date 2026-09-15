@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { wastageAPI, inventoryAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { haptics } from '../../lib/haptics';
+import { moment } from '../../components/pos/RestaurantMoments';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Input } from '../../components/ui/input';
@@ -83,6 +84,7 @@ export default function WastagePage() {
     try {
       await wastageAPI.create({ inventory_item_id: invItemId, quantity: parseFloat(qty), reason, notes: notes.trim() || null });
       toast.success(`Waste logged — ${fmt(estCost)} impact recorded`);
+      moment('inventory_alert', 'Waste recorded — keep an eye on stock levels.');
       setLogOpen(false);
       setInvItemId(''); setQty(''); setReason(''); setNotes('');
       haptics.success();

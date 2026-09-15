@@ -32,6 +32,13 @@ const emit = (detail) => {
   lastSyncAt = Date.now();
   listeners.forEach((fn) => { try { fn(detail); } catch { /* noop */ } });
   window.dispatchEvent(new CustomEvent('dinedesk:orders-synced', { detail }));
+  // Living brand art: celebrate a successful offline sync (real event, real count)
+  try {
+    const n = (detail && (detail.synced || detail.count)) || 0;
+    if (detail.type === 'pass-complete' && n > 0) {
+      window.dispatchEvent(new CustomEvent('dinedesk:moment', { detail: { type: 'celebration', sub: `${n} offline order${n === 1 ? '' : 's'} delivered to the kitchen.` } }));
+    }
+  } catch { /* moments must never break sync */ }
 };
 
 export const getLastSyncAt = () => lastSyncAt;

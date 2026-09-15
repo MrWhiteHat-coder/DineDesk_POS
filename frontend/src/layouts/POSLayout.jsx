@@ -10,6 +10,7 @@ import { initOfflineSync, syncOfflineOrders, onSyncEvent } from '../lib/offlineS
 import { getPendingCount } from '../lib/offlineOrders';
 import { toast } from 'sonner';
 import haptics from '../lib/haptics';
+import RestaurantMoments, { moment } from '../components/pos/RestaurantMoments';
 import useDragToDismiss from '../lib/useDragToDismiss';
 import DayCloseReport from '../components/pos/DayCloseReport';
 import {
@@ -307,6 +308,7 @@ export default function POSLayout() {
       setCurrentSession(null); setIsDayOpen(false); setShowDayCloseModal(false); setClosingCash('');
       haptics.warning();
       toast.success(`Day closed! Total sales: ₹${res.data.total_sales.toFixed(2)}`);
+      moment('day_close');
       setReportSessionId(currentSession?.id); setShowDayReport(true);
     } catch (err) {
       const detail = err.response?.data?.detail || 'Failed to close day';
@@ -711,6 +713,9 @@ export default function POSLayout() {
         </main>
 
         {/* Ask DineDesk now lives on the Dashboard page only (POSDashboard) */}
+
+        {/* Restaurant Moments — living brand art on real events (all pages) */}
+        <RestaurantMoments />
       </div>
 
       {/* ──────────── BOTTOM NAV BAR (mobile only) ──────────── */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { analyticsAPI, branchAPI, intelligenceAPI } from '../../lib/api';
+import { moment } from '../../components/pos/RestaurantMoments';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -79,6 +80,7 @@ export default function AnalyticsPage() {
     try {
       const res = await intelligenceAPI.getInsights();
       setAiInsights(res.data);
+      if (res.data?.insights?.length > 0) moment('ai_insight');
     } catch (err) {
       console.error('AI insights error:', err);
       setAiInsights({ insights: [], ai_generated: false, snapshot_summary: { has_data: false } });
