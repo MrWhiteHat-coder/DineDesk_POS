@@ -62,7 +62,7 @@ export default function POSMain() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   /* Walk-in: customer declined to share details — skip name/phone requirement */
-  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [isWalkIn, setIsWalkIn] = useState(true); // counters punch walk-ins by default — details are opt-in
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestTimeout = useRef(null);
@@ -474,6 +474,42 @@ export default function POSMain() {
         </div>
 
         <ScrollArea className="flex-1 min-h-0 px-4 py-3">
+          {/* ── Context first (reference layout): order type + table, one tap each ── */}
+          {!selectedRunningOrder && (
+            <div className="space-y-2 pb-3 mb-2 border-b border-slate-100 dark:border-white/[0.06]">
+              <div className="flex items-center gap-1.5">
+                {[['dine_in', 'Dine-in', '🪑'], ['takeaway', 'Takeaway', '🥡']].map(([val, label, ico]) => (
+                  <button key={val} type="button" onClick={() => { setOrderType(val); if (val !== 'dine_in') setTableNumber(''); }} aria-pressed={orderType === val}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 min-h-[36px] ${orderType === val ? 'bg-[#0F2417] text-white shadow-md shadow-emerald-900/20' : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 dark:bg-white/[0.04] dark:text-white/60 dark:border-white/10'}`}
+                    data-testid={`otype-${val}`}>
+                    <span aria-hidden="true">{ico}</span> {label}
+                  </button>
+                ))}
+                {orderType === 'dine_in' && tableNumber && (
+                  <span className="ml-auto text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Table {tableNumber} ✓</span>
+                )}
+              </div>
+              {orderType === 'dine_in' && (
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Select table</p>
+                  {availableTables.length === 0 ? (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">No free tables — settle a running bill or add tables.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {availableTables.map(t => (
+                        <button key={t.id} type="button" onClick={() => setTableNumber(t.table_number.toString())} aria-pressed={tableNumber === t.table_number.toString()}
+                          aria-label={`Select table ${t.table_number}`}
+                          className={`w-11 h-11 rounded-xl text-sm font-bold font-numbers transition-all active:scale-90 ${tableNumber === t.table_number.toString() ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700 dark:bg-white/[0.04] dark:text-white/60 dark:border-white/10 dark:hover:text-emerald-400'}`}
+                          data-testid={`table-chip-${t.table_number}`}>
+                          {t.table_number}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {cart.length > 0 ? (
             <div className="space-y-3">
               {cart.map(cartItem => {
@@ -565,7 +601,7 @@ export default function POSMain() {
               {upsellStrip}
             </>
           ) : null}
-          {/* ── Zomato-style bill summary + upsell + coupon (same single scroll) ── */}
+          {/* ── Bill summary — right after the items, before the extras ── */}
           {cart.length > 0 && (
             <div className="space-y-1.5 text-sm pt-4 mt-1 border-t border-slate-100 dark:border-white/[0.06]">
               <div className="flex justify-between"><span className="text-slate-500 dark:text-white/50">Subtotal</span><span className="font-semibold text-slate-900 dark:text-white">₹{subtotal.toFixed(2)}</span></div>
@@ -575,34 +611,11 @@ export default function POSMain() {
             </div>
           )}
 
-          {cart.length > 0 && upsellStrip}
-
           {cart.length > 0 && (
             <button onClick={() => { const next = !applyDiscount; setApplyDiscount(next); if (next) moment('discount_applied'); }} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-xs transition-colors ${applyDiscount ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`} data-testid="discount-toggle">
               <Tag className="w-4 h-4" /><div className="text-left"><p className="font-semibold">{applyDiscount ? 'Applied: 10% off' : 'Save 10% on this bill'}</p><p className="text-[10px] opacity-70">Minimum buy ₹50.00 · tap to {applyDiscount ? 'remove' : 'apply'}</p></div>
               <span className={`ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full ${applyDiscount ? 'bg-green-500 text-white' : 'bg-emerald-600 text-white'}`}>{applyDiscount ? '✓ APPLIED' : 'APPLY'}</span>
             </button>
-          )}
-
-          {!selectedRunningOrder && cart.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <div>
-                <Label className="text-[11px] text-slate-400 mb-1 block">Order Type</Label>
-                <Select value={orderType} onValueChange={setOrderType}>
-                  <SelectTrigger className="h-8 rounded-lg bg-slate-50 border-slate-200 text-xs" data-testid="order-type-select"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="dine_in">Dine-in</SelectItem><SelectItem value="takeaway">Takeaway</SelectItem></SelectContent>
-                </Select>
-              </div>
-              {orderType === 'dine_in' && (
-                <div>
-                  <Label className="text-[11px] text-slate-400 mb-1 block">Select Table</Label>
-                  <Select value={tableNumber} onValueChange={setTableNumber}>
-                    <SelectTrigger className="h-8 rounded-lg bg-slate-50 border-slate-200 text-xs" data-testid="table-select"><SelectValue placeholder="Table" /></SelectTrigger>
-                    <SelectContent>{availableTables.map(t => <SelectItem key={t.id} value={t.table_number.toString()}>T-{t.table_number}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
           )}
 
           {cart.length > 0 && (
