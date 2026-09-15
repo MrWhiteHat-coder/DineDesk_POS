@@ -97,7 +97,7 @@ export default function POSMain() {
     try { const [catRes, itemsRes] = await Promise.all([menuAPI.getCategories(), menuAPI.getItems()]); setCategories(catRes.data); setMenuItems(itemsRes.data); } catch (err) { console.error(err); } finally { setLoading(false); }
   };
   const fetchTables = async () => { try { const res = await tableAPI.getAll(); setTables(res.data); } catch {} };
-  const fetchRunningOrders = async () => { try { const res = await orderAPI.getRunning(); setRunningOrders(res.data); } catch {} };
+  const fetchRunningOrders = async () => { try { const res = await orderAPI.getRunning(); setRunningOrders(res.data); /* Keep the selected bill's money in sync — a stale snapshot would charge the old total at settle time */ setSelectedRunningOrder(prev => prev ? (res.data.find(o => o.id === prev.id) || null) : null); } catch {} };
 
   const availableTables = tables.filter(t => t.status === 'available');
   const filteredItems = menuItems.filter((item) => {
@@ -136,6 +136,14 @@ export default function POSMain() {
   const total = selectedRunningOrder
     ? round2(selectedRunningOrder.total_amount + deltaSubtotal + deltaTax - deltaDiscount)
     : round2(subtotal + taxAmount - discountAmount);
+  /* New items not yet sent to the kitchen — Update must run before Settle,
+     otherwise the guest would pay for food the order doesn't contain yet. */
+  const hasOrderChanges = selectedRunningOrder
+    ? cart.some(c => {
+        const base = (selectedRunningOrder.items || []).filter(i => i.menu_item_id === c.item.id).reduce((s, i) => s + i.quantity, 0);
+        return c.quantity > base;
+      })
+    : false;
 
   /* "Complete your meal with" — top 6 available items not already in cart,
      sorted by price desc (chef's picks feel, like the reference app). */
@@ -165,10 +173,16 @@ export default function POSMain() {
             const base = serverQty[c.item.id] || 0;
             if (c.quantity > base) deltas.push({ menu_item_id: c.item.id, quantity: c.quantity - base, notes: c.notes || null });
           }
-          if (deltas.length === 0) { toast.info('No changes to add — quantities match the running order'); setCheckoutLoading(false); return; }
+          if (deltas.length === 0) { setCheckoutLoading(false); handleReleaseAndPay(selectedRunningOrder.id); return; }
           await orderAPI.addItems(selectedRunningOrder.id, { items: deltas });
           haptics.success();
-          toast.success('Order updated!'); moment('order_placed'); clearCart(); fetchRunningOrders(); fetchTables();
+          toast.success('Order updated!'); moment('order_placed');
+          clearCart();
+          await fetchRunningOrders(); fetchTables();
+          // Reopen the bill so the fresh total is ready to settle — waiters
+          // shouldn't have to re-find the running order chip after every update
+          const updated = (await orderAPI.getRunning()).data.find(o => o.id === selectedRunningOrder.id);
+          if (updated) { setSelectedRunningOrder(updated); setCart([]); setMobileCartOpen(true); }
         } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
         return;
       }
@@ -205,7 +219,10 @@ export default function POSMain() {
     }
   };
   const openPaymentModal = () => {
-    setPaymentSplits([{ method: 'cash', amount: total }]);
+    // Base the ask on the authoritative server total (running order) or the
+    // current cart total — never on a leftover split from a previous bill
+    const billTotal = selectedRunningOrder ? selectedRunningOrder.total_amount : total;
+    setPaymentSplits([{ method: 'cash', amount: billTotal }]);
     setShowPaymentModal(true);
   };
 
@@ -240,6 +257,37 @@ export default function POSMain() {
   };
 
   const handleReleaseAndPay = async (orderId) => {
+    // Guard: new items must reach the order before money changes hands
+    if (hasOrderChanges) {
+      setCheckoutLoading(true);
+      try {
+        const serverQty = {};
+        (selectedRunningOrder.items || []).forEach(i => { serverQty[i.menu_item_id] = (serverQty[i.menu_item_id] || 0) + i.quantity; });
+        const deltas = [];
+        for (const c of cart) {
+          const base = serverQty[c.item.id] || 0;
+          if (c.quantity > base) deltas.push({ menu_item_id: c.item.id, quantity: c.quantity - base, notes: c.notes || null });
+        }
+        if (deltas.length > 0) await orderAPI.addItems(selectedRunningOrder.id, { items: deltas });
+        clearCart();
+        const updated = (await orderAPI.getRunning()).data.find(o => o.id === orderId);
+        if (updated) {
+          setSelectedRunningOrder(updated);
+          // Seed the ask from the FRESH server total — the closure's
+          // selectedRunningOrder is still the stale snapshot here
+          setPaymentSplits([{ method: 'cash', amount: round2(updated.total_amount) }]);
+          setShowPaymentModal(true);
+          toast.info('Items added — settle the fresh bill now');
+          return;
+        }
+      } catch (err) { toast.error(err.response?.data?.detail || 'Failed to update order'); setCheckoutLoading(false); return; }
+      setCheckoutLoading(false);
+    }
+    openPaymentModal();
+  };
+
+  /* Called from the payment modal's confirm button — money moment only. */
+  const confirmRunningOrderPayment = async (orderId) => {
     if (totalPaid < total) { toast.error('Payment is less than total amount'); return; }
     try {
       const payload = { change_amount: change };
@@ -250,7 +298,7 @@ export default function POSMain() {
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
       await orderAPI.pay(orderId, payload);
-      toast.success('Payment confirmed!'); moment('payment_success'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); setShowPaymentModal(false);
+      toast.success('Payment confirmed!'); moment('payment_success'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); setSelectedRunningOrder(null); setShowPaymentModal(false);
     } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
   };
 
@@ -595,18 +643,18 @@ export default function POSMain() {
           )}
 
           {selectedRunningOrder && (
-            <p className="text-[11px] font-medium text-slate-500 text-center py-3">Release table & collect payment below</p>
+            <p className="text-[11px] font-medium text-slate-500 text-center py-3">{hasOrderChanges ? 'New items pending — Update to send them to the kitchen first' : 'Bill settled below releases the table'}</p>
           )}
         </ScrollArea>
 
         {/* ── STICKY PAY BAR (always visible, exact reference placement) ── */}
-        {cart.length > 0 && (
+        {(cart.length > 0 || selectedRunningOrder) && (
           <div className="flex items-center gap-3 px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }} data-testid="place-order-bar">
             {/* Left: context — like "PAY USING / Google Pay UPI" slot */}
             <div className="flex flex-col min-w-0 flex-shrink-0">
               <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase leading-none">{orderType === 'dine_in' ? 'Dine-in' : 'Takeaway'}</p>
               <p className="text-[11px] font-semibold text-slate-700 truncate mt-1">
-                {orderType === 'dine_in' ? (tableNumber ? `Table ${tableNumber}` : 'Select table ↑') : 'Billing counter'}
+                {orderType === 'dine_in' ? (selectedRunningOrder ? `Table ${selectedRunningOrder.table_number}` : tableNumber ? `Table ${tableNumber}` : 'Select table ↑') : 'Billing counter'}
               </p>
             </div>
             {/* Right: total + CTA block — like the ₹230.69 / Place Order pill */}
@@ -625,7 +673,7 @@ export default function POSMain() {
                     <span className="text-[9px] font-semibold opacity-80 mt-0.5">TOTAL</span>
                   </span>
                   <span className="flex items-center gap-1 text-sm">
-                    {selectedRunningOrder ? 'Update' : orderType === 'dine_in' ? 'Place Order' : 'Pay Now'}
+                    {selectedRunningOrder ? (hasOrderChanges ? 'Update' : 'Pay & Release') : orderType === 'dine_in' ? 'Place Order' : 'Pay Now'}
                     <ChevronRight className="w-4 h-4" />
                   </span>
                 </>
@@ -743,7 +791,8 @@ export default function POSMain() {
             <button
               onClick={() => {
                 if (selectedRunningOrder) {
-                  handleReleaseAndPay(selectedRunningOrder.id);
+                  confirmRunningOrderPayment(selectedRunningOrder.id);
+                  return;
                 } else {
                   handleCheckoutWithPayment();
                 }
