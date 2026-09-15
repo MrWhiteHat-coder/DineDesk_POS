@@ -12,9 +12,10 @@
  *   - Offline-first: the same IndexedDB offline queue + sync engine the web
  *     PWA uses keeps billing working with zero connectivity.
  */
-const { app, BrowserWindow, shell, protocol, session } = require('electron');
+const { app, BrowserWindow, shell, protocol, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 
 // Packaged builds carry the production bundle under resources/app-build;
 // running from the repo (dev) reads frontend/build directly.
@@ -26,9 +27,9 @@ const isDev = !!process.env.DD_DESKTOP_DEV;
 const DEV_URL = process.env.DD_DEV_URL || 'http://localhost:3000';
 
 // The custom scheme must be registered as standard/secure BEFORE app ready
-// so fetch/XHR (axios) and service workers work inside it.
+// so fetch/XHR (axios) and IndexedDB work inside it.
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
 
 // Single instance — a POS terminal never runs two copies of the till.
@@ -87,28 +88,37 @@ function createWindow() {
 /* Load the packaged build with SPA routing support: file:// breaks
    BrowserRouter deep-links, so requests on app://local are transparently
    remapped — real asset files stream from disk, every route falls back to
-   index.html (exactly what a dev server does). */
+   index.html (exactly what a dev server does).
+
+   Electron ≥25 `protocol.handle` is fetch-style: the handler must RETURN a
+   Response. The old callback style throws ERR_UNEXPECTED → blank window
+   (this exact bug shipped once — do not regress it). */
 function loadApp(route = '/login') {
   const indexHtml = path.join(BUILD_DIR, 'index.html');
-  const handler = (request, callback) => {
-    let pathname = '';
+
+  const handler = (request) => {
+    let pathname = '/';
     try { pathname = decodeURIComponent(new URL(request.url).pathname); } catch { pathname = '/'; }
     const rel = pathname.replace(/^\/+/, '');
     if (rel) {
       const candidate = path.normalize(path.join(BUILD_DIR, rel));
       if (candidate.startsWith(BUILD_DIR) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-        callback({ path: candidate });
-        return;
+        return net.fetch(pathToFileURL(candidate).toString());
       }
     }
-    callback({ path: indexHtml });
+    // SPA fallback — every route serves the app shell
+    return net.fetch(pathToFileURL(indexHtml).toString());
   };
 
-  try { protocol.handle('app', handler); } catch { /* already handled */ }
-  try { session.defaultSession.protocol.handle('app', handler); } catch { /* already handled */ }
+  protocol.handle('app', handler);
 
   // Deep-link straight into the POS terminal — no marketing pages.
-  mainWindow.loadURL(`app://local${route}`);
+  // PublicRoute bounces an already-authenticated user into /pos automatically.
+  mainWindow.loadURL(`app://local${route}`).catch((err) => {
+    console.error('Failed to load app shell:', err);
+    // Last-resort plain file load so the window is never blank without a trace.
+    mainWindow.loadFile(indexHtml).catch(() => {});
+  });
 }
 
 app.whenReady().then(() => {

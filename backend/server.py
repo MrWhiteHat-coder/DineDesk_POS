@@ -4761,6 +4761,7 @@ for _o in [
     'http://localhost:5173',
     'https://revontechologies.in',
     'https://www.revontechologies.in',
+    'app://local',          # DineDesk POS Windows desktop app (Electron app:// scheme)
 ]:
     if _o not in _cors_list:
         _cors_list.append(_o)
