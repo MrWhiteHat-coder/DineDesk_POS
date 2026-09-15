@@ -66,11 +66,11 @@ try:
 except Exception:
     RESTAURANT_TZ = timezone.utc
 
-# Email verification flow: when True AND an email provider is configured,
-# users must click the emailed link before logging in. When False (default,
-# dev/self-host), accounts are auto-verified at registration so signup works
-# without any email provider — no more permanent lockout.
-EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'false').strip().lower() in ('true', '1', 'yes')
+# Email verification flow: whenever an email provider is configured (SendGrid
+# or SMTP), signup requires an emailed OTP and login requires a verified
+# account. Without any provider (self-host/dev), accounts auto-verify so
+# nobody is locked out.
+EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'true').strip().lower() in ('true', '1', 'yes')
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
@@ -331,8 +331,8 @@ async def lifespan(app_instance: FastAPI):
                 logger.info(f"Normalized {repaired.modified_count} legacy 'served' order(s) to 'ready'")
         except Exception as e:
             logger.warning(f"Legacy status normalization skipped: {e}")
-        reverify_task = asyncio.create_task(license_reverification_loop())
-        background_tasks.append(reverify_task)
+        # FSSAI re-verification loop disabled — verification is off for now
+        pass
     except Exception as e:
         logger.warning(f"Startup DB init skipped (will retry on first request): {e}")
     yield
@@ -398,8 +398,7 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-class GoogleLoginRequest(BaseModel):
-    credential: str  # Google ID token
+
 
 class UserResponse(BaseModel):
     id: str
@@ -453,7 +452,8 @@ class RestaurantOnboarding(BaseModel):
     city: str
     pincode: str
     tax_rate: float = 5.0  # GST/restaurant tax percent
-    fssai_license_number: str = ""  # 14-digit FSSAI food license (mandatory at registration)
+    kitchen_enabled: bool = False  # "Do you have a kitchen setup?" — enables KDS workflow
+    fssai_license_number: str = ""  # optional; FSSAI verification is disabled for now
     fssai_expiry_date: Optional[str] = None  # ISO date (YYYY-MM-DD)
 
 class RestaurantUpdate(BaseModel):
@@ -483,6 +483,7 @@ class RestaurantResponse(BaseModel):
     city: str
     pincode: str
     tax_rate: float = 5.0
+    kitchen_enabled: bool = False
     is_active: bool
     subscription_status: str
     subscription_expires: Optional[str] = None
@@ -1059,6 +1060,72 @@ def _send_email_sync(to_email: str, subject: str, html_body: str):
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, [to_email], msg.as_string())
 
+import secrets
+import hashlib
+
+async def send_signup_otp_email(email: str, name: str, otp: str):
+    """Send the signup verification code via SendGrid (or SMTP fallback).
+    Sender is always the official support address."""
+    sender = 'support@revontechnologies.in'
+    subject = "Your DineDesk verification code"
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f0f4f0;font-family:'Segoe UI',Roboto,sans-serif;">
+      <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(15,36,23,0.10);">
+        <div style="background:#0F2417;padding:32px;text-align:center;">
+          <h1 style="color:#fff;font-size:24px;margin:0;">🌿 DineDesk</h1>
+          <p style="color:#9BC4A8;font-size:12px;margin:6px 0 0;">Absorbs chaos. Serves calm.</p>
+        </div>
+        <div style="padding:32px;">
+          <h2 style="color:#111;font-size:20px;margin:0 0 8px;">Welcome, {name}!</h2>
+          <p style="color:#555;font-size:14px;line-height:1.6;margin:0 0 24px;">Use this code to verify your email and activate your DineDesk account:</p>
+          <div style="background:#f0f6f0;border-radius:12px;padding:20px;text-align:center;margin-bottom:24px;">
+            <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#0F2417;">{otp}</span>
+          </div>
+          <p style="color:#999;font-size:12px;margin:0;line-height:1.5;">This code expires in 10 minutes. If you didn't sign up, you can safely ignore this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    try:
+        if SENDGRID_API_KEY:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail
+            message = Mail(
+                from_email=('support@revontechnologies.in', 'DineDesk'),
+                to_emails=email,
+                subject=subject,
+                html_content=html_body,
+            )
+            sg = SendGridAPIClient(SENDGRID_API_KEY)
+            resp = await asyncio.to_thread(sg.send, message)
+            if resp.status_code not in (200, 201, 202):
+                raise RuntimeError(f"SendGrid status {resp.status_code}")
+            logger.info(f"Signup OTP sent to {email} via SendGrid")
+            return
+        if GMAIL_USER and GMAIL_APP_PASSWORD:
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"DineDesk <{sender}>"
+            msg["To"] = email
+            msg.attach(MIMEText(html_body, "html"))
+            def _smtp():
+                with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+                    server.ehlo(); server.starttls(); server.ehlo()
+                    server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+                    server.sendmail(GMAIL_USER, [email], msg.as_string())
+            await asyncio.to_thread(_smtp)
+            logger.info(f"Signup OTP sent to {email} via SMTP")
+            return
+        logger.warning(f"No email provider configured — signup OTP for {email}: {otp}")
+    except Exception as e:
+        logger.error(f"Failed to send signup OTP to {email}: {e}")
+
 async def send_verification_email(email: str, name: str, token: str):
     """Send email verification link to newly registered user (SendGrid or SMTP)."""
     if not SENDGRID_API_KEY and (not GMAIL_USER or not GMAIL_APP_PASSWORD):
@@ -1313,15 +1380,17 @@ async def generate_ai_insights(analytics_data: dict, restaurant_name: str = "Res
 
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate):
+    """Step 1 of signup: create an unverified account and email a 6-digit OTP.
+    No token is ever returned — the account activates only via /auth/verify-otp."""
     if not _check_rate_limit(f"register:{user_data.email}", 5):
         raise HTTPException(status_code=429, detail="Too many registration attempts. Please try again later.")
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    user_id = str(uuid.uuid4())
     needs_email_verification = EMAIL_VERIFICATION_REQUIRED and EMAIL_CONFIGURED
 
+    user_id = str(uuid.uuid4())
     user = {
         "id": user_id,
         "email": user_data.email,
@@ -1337,22 +1406,21 @@ async def register(user_data: UserCreate):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     if needs_email_verification:
-        user["verification_token"] = str(uuid.uuid4())
-        user["verification_token_expires"] = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
-
-    await db.users.insert_one(user)
-    await log_action("auth", "user_registered", user_id=user_id)
-
-    if needs_email_verification:
-        # SaaS mode: send verification link in background (never blocks the response)
-        asyncio.create_task(send_verification_email(user_data.email, user_data.name, user["verification_token"]))
+        # Hashed single-use signup OTP: 10 minutes, max 5 attempts
+        raw_otp = "".join(str(secrets.randbelow(10)) for _ in range(6))
+        user["signup_otp_hash"] = hashlib.sha256(raw_otp.encode()).hexdigest()
+        user["signup_otp_expires"] = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+        user["signup_otp_attempts"] = 0
+        await db.users.insert_one(user)
+        asyncio.create_task(send_signup_otp_email(user_data.email, user_data.name, raw_otp))
         return RegisterResponse(
-            message="Registration successful! We've sent a verification link to your email. "
-                    "Please verify your email to activate your account, then log in.",
+            message="We've sent a 6-digit verification code to your email. Enter it to activate your account.",
             email=user_data.email
         )
 
-    # Dev/self-host mode: account auto-verified — log the user straight in
+    # No email provider configured (self-host/dev): auto-verified
+    await db.users.insert_one(user)
+    await log_action("auth", "user_registered", user_id=user_id)
     token = create_token(user_id, user["role"], None)
     return TokenResponse(
         access_token=token,
@@ -1360,6 +1428,89 @@ async def register(user_data: UserCreate):
         user=UserResponse(id=user_id, email=user["email"], name=user["name"], role=user["role"],
                           restaurant_id=None, branch_id=None, created_at=user["created_at"])
     )
+
+
+class SignupOtpVerify(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+@api_router.post("/auth/verify-signup-otp", response_model=TokenResponse)
+async def verify_signup_otp(data: SignupOtpVerify):
+    """Step 2 of signup: verify the emailed OTP, activate the account, log in."""
+    if not _check_rate_limit(f"verify-otp:{data.email}", 10):
+        raise HTTPException(status_code=429, detail="Too many attempts. Please try again later.")
+    user = await db.users.find_one({"email": data.email})
+    if not user:
+        raise HTTPException(status_code=404, detail="No account found for this email")
+    if user.get("is_verified"):
+        raise HTTPException(status_code=400, detail="Account already verified — please log in")
+
+    expires = user.get("signup_otp_expires")
+    otp_hash = user.get("signup_otp_hash")
+    if not otp_hash or not expires:
+        raise HTTPException(status_code=400, detail="No verification code pending. Please register again or resend.")
+    try:
+        if datetime.fromisoformat(expires) < datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="Code expired. Please request a new one.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid verification state. Please request a new code.")
+
+    if user.get("signup_otp_attempts", 0) >= 5:
+        await db.users.update_one({"id": user["id"]}, {"$unset": {"signup_otp_hash": "", "signup_otp_expires": "", "signup_otp_attempts": ""}})
+        raise HTTPException(status_code=429, detail="Too many wrong attempts. Please request a new code.")
+
+    provided_hash = hashlib.sha256(data.otp.strip().encode()).hexdigest()
+    if not secrets.compare_digest(provided_hash, otp_hash):
+        await db.users.update_one({"id": user["id"]}, {"$inc": {"signup_otp_attempts": 1}})
+        left = 5 - user.get("signup_otp_attempts", 0) - 1
+        raise HTTPException(status_code=400, detail=f"Invalid code. {max(left, 0)} attempts remaining.")
+
+    # One-time use: burn the OTP, activate, log in
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"is_verified": True}, "$unset": {"signup_otp_hash": "", "signup_otp_expires": "", "signup_otp_attempts": ""}}
+    )
+    await log_action("auth", "signup_otp_verified", user_id=user["id"])
+    token = create_token(user["id"], user["role"], user.get("restaurant_id"))
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user=UserResponse(id=user["id"], email=user["email"], name=user["name"], role=user["role"],
+                          restaurant_id=user.get("restaurant_id"), branch_id=user.get("branch_id"),
+                          created_at=user["created_at"])
+    )
+
+
+class SignupOtpResend(BaseModel):
+    email: EmailStr
+
+
+@api_router.post("/auth/resend-signup-otp")
+async def resend_signup_otp(data: SignupOtpResend):
+    """Resend the signup OTP — 60s cooldown + per-email rate limit."""
+    if not _check_rate_limit(f"resend-otp:{data.email}", 3):
+        raise HTTPException(status_code=429, detail="Too many code requests. Please wait a minute and try again.")
+    user = await db.users.find_one({"email": data.email})
+    if not user or user.get("is_verified"):
+        # Do not leak account existence
+        return {"message": "If that email can be verified, a new code has been sent."}
+    if not EMAIL_CONFIGURED:
+        raise HTTPException(status_code=503, detail="Email delivery is not configured")
+
+    raw_otp = "".join(str(secrets.randbelow(10)) for _ in range(6))
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "signup_otp_hash": hashlib.sha256(raw_otp.encode()).hexdigest(),
+            "signup_otp_expires": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
+            "signup_otp_attempts": 0,
+        }}
+    )
+    asyncio.create_task(send_signup_otp_email(user["email"], user["name"], raw_otp))
+    return {"message": "New code sent. Check your inbox."}
 
 @api_router.post("/auth/verify-email", response_model=TokenResponse)
 async def verify_email(data: VerifyEmailRequest):
@@ -1467,86 +1618,7 @@ async def verify_otp(data: VerifyOTPRequest):
     _otp_store.pop(phone, None)
     return {"message": "Phone number verified successfully", "verified": True}
 
-@api_router.post("/auth/google", response_model=TokenResponse)
-async def google_login(data: GoogleLoginRequest):
-    """Login or register using a Google ID token."""
-    import requests as http_requests
-    try:
-        # Verify the ID token with Google's tokeninfo endpoint
-        resp = http_requests.get(
-            "https://oauth2.googleapis.com/tokeninfo",
-            params={"id_token": data.credential},
-            timeout=10
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=401, detail="Invalid Google token")
-        
-        google_data = resp.json()
-        google_email = google_data.get("email")
-        google_name = google_data.get("name", "")
-        google_picture = google_data.get("picture", "")
-        
-        if not google_email:
-            raise HTTPException(status_code=401, detail="Google token missing email")
-        
-        # Find existing user by email
-        user = await db.users.find_one({"email": google_email}, {"_id": 0})
-        
-        if user:
-            # Existing user — update profile pic if not set
-            if not user.get("profile_picture") and google_picture:
-                await db.users.update_one(
-                    {"id": user["id"]},
-                    {"$set": {"profile_picture": google_picture}}
-                )
-                user["profile_picture"] = google_picture
-            # Ensure account is verified
-            if not user.get("is_verified"):
-                await db.users.update_one(
-                    {"id": user["id"]},
-                    {"$set": {"is_verified": True}}
-                )
-                user["is_verified"] = True
-        else:
-            # New user — create account
-            user_id = str(uuid.uuid4())
-            user = {
-                "id": user_id,
-                "email": google_email,
-                "password": hash_password(uuid.uuid4().hex),  # Random password
-                "name": google_name,
-                "phone": None,
-                "phone_verified": True,  # Google accounts are verified
-                "role": "owner",
-                "restaurant_id": None,
-                "branch_id": None,
-                "onboarding_complete": False,
-                "is_verified": True,  # Google accounts are pre-verified
-                "profile_picture": google_picture,
-                "auth_provider": "google",
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            await db.users.insert_one(user)
-            await log_action("auth", "google_register", user_id=user_id)
-        
-        # Generate JWT
-        token = create_token(user["id"], user["role"], user.get("restaurant_id"))
-        await log_action("auth", "google_login", user_id=user["id"])
-        
-        return TokenResponse(
-            access_token=token,
-            token_type="bearer",
-            user=UserResponse(
-                id=user["id"], email=user["email"], name=user["name"],
-                role=user["role"], restaurant_id=user.get("restaurant_id"),
-                branch_id=user.get("branch_id"), created_at=user["created_at"]
-            )
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Google auth failed: {e}")
-        raise HTTPException(status_code=500, detail="Google authentication failed")
+# Google sign-in removed — DineDesk is email + OTP only.
 
 @api_router.post("/auth/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest):
@@ -1658,10 +1730,11 @@ async def onboard_restaurant(data: RestaurantOnboarding, user: dict = Depends(ge
         "city": data.city,
         "pincode": data.pincode,
         "tax_rate": data.tax_rate,
-        "fssai_license_number": data.fssai_license_number.strip(),
-        "fssai_expiry_date": data.fssai_expiry_date,
-        "fssai_verified": validate_fssai_format(data.fssai_license_number),
-        "fssai_verified_at": datetime.now(timezone.utc).isoformat() if validate_fssai_format(data.fssai_license_number) else None,
+        "kitchen_enabled": bool(data.kitchen_enabled),
+        "fssai_license_number": "",
+        "fssai_expiry_date": None,
+        "fssai_verified": False,
+        "fssai_verified_at": None,
         "is_active": False,
         "subscription_status": "pending",
         "subscription_expires": None,
@@ -1807,193 +1880,14 @@ async def fssai_registry_check(license_number: str) -> dict:
 
 @api_router.post("/restaurants/verify-license")
 async def verify_fssai_license(data: dict, user: dict = Depends(get_current_user)):
-    """Verify a FSSAI food license number against the official government
-    registry via Decentro (https://decentro.tech), falling back to a honest
-    format-level check when the provider is unreachable. Never returns a
-    fake success."""
-    license_number = str(data.get("license_number", "")).strip()
-    if not validate_fssai_format(license_number):
-        return {"valid": False, "status": "invalid_format", "message": "FSSAI license must be a 14-digit number starting with a valid state code (1-9)."}
-
-    client_id, client_secret, module_secret, _base = _decentro_credentials()
-    if client_id and client_secret and module_secret:
-        check = await fssai_registry_check(license_number)
-        if check["outcome"] == "verified":
-            reg_status = check["registry_status"]
-            entity = check.get("entity_name") or ""
-            lic_type = (check.get("license_type") or "")
-            lic_type_title = lic_type.title() if lic_type else ""
-            msg = f"Verification successful — license is {reg_status} in the FSSAI registry"
-            if entity:
-                msg += f" for {entity}"
-            if lic_type_title:
-                msg += f" ({lic_type_title})"
-            msg += "."
-            # Persist the registry result so the details page shows the last
-            # official check even after the visitor leaves.
-            if user.get("restaurant_id"):
-                try:
-                    await db.restaurants.update_one(
-                        {"id": user["restaurant_id"]},
-                        {"$set": {
-                            "fssai_registry_status": reg_status,
-                            "fssai_registry_entity": entity,
-                            "fssai_registry_type": lic_type,
-                            "fssai_registry_premises": check.get("premises_address"),
-                            "fssai_registry_checked_at": datetime.now(timezone.utc).isoformat(),
-                            "fssai_verified": reg_status == "ACTIVE",
-                            "fssai_verified_at": datetime.now(timezone.utc).isoformat(),
-                        }},
-                    )
-                except Exception as _e:
-                    logger.warning(f"Failed to persist FSSAI registry result: {_e}")
-            return {
-                "valid": reg_status == "ACTIVE",
-                "status": "verified",
-                "registry_status": reg_status,
-                "entity_name": entity,
-                "license_type": lic_type,
-                "premises_address": check.get("premises_address"),
-                "message": msg if reg_status == "ACTIVE" else f"License found but status is {reg_status} — not active. Please renew or correct the number.",
-            }
-        if check["outcome"] == "not_found":
-            return {"valid": False, "status": "not_found", "message": "This license number was not found in the FSSAI registry. Double-check the 14-digit number on your certificate."}
-        if check["outcome"] == "invalid_format":
-            return {"valid": False, "status": "invalid_format", "message": "FSSAI rejected this number — it must be a valid 14-digit license/registration number."}
-        # unreachable → fall through to honest format-level fallback
-
-    # Fallback: format-level check only, stated honestly.
-    configured = bool(client_id and client_secret and module_secret)
-    return {
-        "valid": True,
-        "status": "format_verified",
-        "provider_configured": configured,
-        "message": "Verification successful — valid FSSAI format (state code + 14 digits). " + (
-            "Government registry could not be reached right now; we'll re-verify automatically." if configured
-            else "Full registry verification is being activated shortly."
-        ),
-    }
+    """FSSAI verification is disabled for now — kept as a no-op so the API
+    surface stays stable and can be reintroduced later without client changes."""
+    return {"status": "disabled", "message": "FSSAI verification is currently disabled."}
 
 @api_router.post("/restaurants/reverify-licenses")
 async def reverify_all_licenses(user: dict = Depends(get_current_user)):
-    """Manual trigger for the monthly re-verification sweep. Owner/admin only.
-    Runs the same checks as the scheduled loop and returns what changed."""
-    check_role(user, "settings")
-    summary = await run_license_reverification(force=True)
-    return {"message": "Re-verification complete", **summary}
-
-async def run_license_reverification(force: bool = False) -> dict:
-    """Re-verify every restaurant's FSSAI license against the registry and:
-      - store the fresh registry snapshot (status, entity, premises, time)
-      - raise an in-app alert the first time a license turns inactive or
-        disappears from the registry (never duplicated per status+day)
-      - stay silent on transient provider outages (no false alarms)
-    Licenses are re-checked at most once every 30 days unless force=True.
-    Returns a small summary dict for logging/monitoring."""
-    summary = {"checked": 0, "still_active": 0, "went_inactive": 0, "not_found": 0, "skipped": 0, "unreachable": 0}
-    client_id, client_secret, module_secret, _base = _decentro_credentials()
-    if not (client_id and client_secret and module_secret):
-        logger.info("License re-verification skipped: Decentro not configured")
-        return summary
-    now = datetime.now(timezone.utc)
-    cutoff = (now - timedelta(days=30)).isoformat()
-    query = {"fssai_license_number": {"$exists": True, "$nin": [None, ""]}}
-    if not force:
-        query["$or"] = [
-            {"fssai_registry_checked_at": {"$exists": False}},
-            {"fssai_registry_checked_at": None},
-            {"fssai_registry_checked_at": {"$lt": cutoff}},
-        ]
-    restaurants = await db.restaurants.find(query, {"_id": 0}).to_list(500)
-    for restaurant in restaurants:
-        license_number = restaurant.get("fssai_license_number", "").strip()
-        if not validate_fssai_format(license_number):
-            summary["skipped"] += 1
-            continue
-        summary["checked"] += 1
-        check = await fssai_registry_check(license_number)
-        outcome = check.get("outcome")
-        if outcome == "unreachable":
-            # Transient provider problem — not a compliance signal. Never alert.
-            summary["unreachable"] += 1
-            continue
-        reg_status = (check.get("registry_status") or "").upper() if outcome == "verified" else ""
-        update_set = {
-            "fssai_registry_checked_at": now.isoformat(),
-        }
-        if outcome == "verified":
-            update_set.update({
-                "fssai_registry_status": reg_status,
-                "fssai_registry_entity": check.get("entity_name") or "",
-                "fssai_registry_type": check.get("license_type"),
-                "fssai_registry_premises": check.get("premises_address"),
-                "fssai_verified": reg_status == "ACTIVE",
-                "fssai_verified_at": now.isoformat(),
-            })
-        elif outcome == "not_found":
-            update_set.update({
-                "fssai_registry_status": "NOT_FOUND",
-                "fssai_verified": False,
-            })
-        await db.restaurants.update_one({"id": restaurant["id"]}, {"$set": update_set})
-
-        # Compliance alert only on genuine registry state:
-        # ACTIVE → healthy (clears any previous inactive flag internally).
-        active = outcome == "verified" and reg_status == "ACTIVE"
-        if active:
-            summary["still_active"] += 1
-            continue
-        went_inactive = outcome == "verified" and reg_status != "ACTIVE"
-        if went_inactive:
-            summary["went_inactive"] += 1
-            alert_title = f"FSSAI license {license_number} is now {reg_status} in the government registry"
-            alert_body = (
-                f"{alert_title}. Your license was active earlier but the registry now reports "
-                f"{reg_status}. Renew it on the FoSCoS portal to stay compliant."
-            )
-        else:
-            summary["not_found"] += 1
-            alert_title = f"FSSAI license {license_number} not found in the government registry"
-            alert_body = (
-                f"{alert_title}. During DineDesk's monthly compliance check the registry returned "
-                f"no record for this number. Verify the number on your certificate and update it "
-                f"in Restaurant Details."
-            )
-        dedupe_key = f"license_status:{outcome}:{reg_status or 'NOT_FOUND'}:{now.strftime('%Y-%m')}"
-        already = await db.notifications.find_one({
-            "restaurant_id": restaurant["id"],
-            "type": "license_alert",
-            "message": {"$regex": f"^{re.escape(dedupe_key)}"},
-        })
-        if not already:
-            await db.notifications.insert_one({
-                "id": str(uuid.uuid4()),
-                "restaurant_id": restaurant["id"],
-                "type": "license_alert",
-                "message": f"{dedupe_key}|{alert_body}",
-                "channel": "system",
-                "status": "warning",
-                "created_at": now.isoformat(),
-            })
-        logger.warning(f"License compliance alert [{restaurant.get('name', restaurant['id'])}]: {alert_title}")
-    return summary
-
-async def license_reverification_loop():
-    """Background loop: runs the re-verification sweep once a day. The sweep
-    itself rate-limits each restaurant to one registry check per 30 days, so
-    this gives 'monthly re-verification' with daily retry safety if a sweep
-    was interrupted or the provider was down."""
-    while True:
-        try:
-            await asyncio.sleep(3600)  # first sweep 1h after boot, then daily
-            summary = await run_license_reverification()
-            if summary.get("checked"):
-                logger.info(f"License re-verification sweep: {summary}")
-        except asyncio.CancelledError:
-            break
-        except Exception as e:
-            logger.warning(f"License re-verification loop error: {e}")
-            await asyncio.sleep(3600)
+    """FSSAI re-verification sweep is disabled for now."""
+    return {"status": "disabled", "message": "FSSAI verification is currently disabled.", "verified": 0, "failed": 0}
 
 @api_router.put("/restaurants/my", response_model=RestaurantResponse)
 async def update_my_restaurant(data: RestaurantUpdate, user: dict = Depends(get_current_user)):
@@ -2575,7 +2469,8 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         if data.payment_splits:
             if len(data.payment_splits) > 1:
                 split_sum = round(sum(s.amount for s in data.payment_splits), 2)
-                if abs(split_sum - total_amount) > 1.0:
+                # Paise-integer compare: splits may miss/over the total by at most ₹0.01
+                if abs(int(round(split_sum * 100)) - int(round(total_amount * 100))) > 1:
                     raise HTTPException(
                         status_code=400,
                         detail=f"Split payments (₹{split_sum}) must add up to the order total (₹{total_amount})"
@@ -2710,13 +2605,30 @@ async def update_order_status(order_id: str, data: OrderUpdate, cancel_reason: O
     if data.status == "cancelled":
         _reason = require_reason(cancel_reason, "cancel an order")
         require_manager_pin(manager_pin)
+        # Completed or paid bills are financial records — void via refund
+        # workflow, never a casual cancel
+        if order["status"] == "completed" or order.get("payment_status") == "paid":
+            raise HTTPException(status_code=400, detail="Completed or paid bills cannot be cancelled — process a refund/void instead")
 
     # Enforce lifecycle: received → preparing → ready → completed (cancel only before completion)
-    _validate_order_transition(order["status"], data.status)
+    # Kitchen-off restaurants bill directly: completed is allowed from any
+    # active state (received/preparing) without marching through the kitchen
+    restaurant_for_flow = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    kitchen_on = bool(restaurant_for_flow.get("kitchen_enabled", False)) if restaurant_for_flow else False
+    try:
+        _validate_order_transition(order["status"], data.status)
+    except HTTPException:
+        if not (data.status == "completed" and not kitchen_on and order["status"] in ("received", "preparing", "ready")):
+            raise
 
     # Cannot complete an unpaid order — payment must go through /pay first
     if data.status == "completed" and order.get("payment_status") != "paid":
         raise HTTPException(status_code=400, detail="Order must be paid before it can be completed")
+
+    # Kitchen discipline: when the restaurant runs a kitchen (KDS enabled),
+    # food must be Ready before the bill can be completed
+    if data.status == "completed" and kitchen_on and order["status"] != "ready":
+        raise HTTPException(status_code=400, detail="Food must be Ready in the kitchen before the bill can be completed")
 
     await db.orders.update_one({"id": order_id}, {"$set": {"status": data.status}})
 
@@ -2761,6 +2673,13 @@ async def add_items_to_order(order_id: str, data: OrderAddItems, user: dict = De
     if order.get("payment_status") == "paid":
         raise HTTPException(status_code=400, detail="Cannot add items to a paid order")
 
+    # Second rounds on a Ready order create fresh kitchen work: flip the
+    # order back to preparing so KDS picks it up again (kitchen-enabled
+    # restaurants only). Inventory for the new items is deducted below.
+    restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+    kitchen_on = bool(restaurant.get("kitchen_enabled", False)) if restaurant else False
+    reopen_kitchen = kitchen_on and order["status"] == "ready"
+
     session = await db.day_sessions.find_one({"id": order.get("day_session_id"), "status": "open"}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=400, detail="Day session is closed — cannot add items")
@@ -2799,7 +2718,8 @@ async def add_items_to_order(order_id: str, data: OrderAddItems, user: dict = De
 
     await db.orders.update_one(
         {"id": order_id},
-        {"$set": {"items": all_items, "subtotal": new_subtotal, "tax_amount": tax_amount, "total_amount": total_amount}}
+        {"$set": {"items": all_items, "subtotal": new_subtotal, "tax_amount": tax_amount, "total_amount": total_amount,
+                  **({"status": "preparing", "status_history": (order.get("status_history") or []) + [{"status": "preparing", "reason": "items_added", "at": datetime.now(timezone.utc).isoformat()}]} if reopen_kitchen else {})}}
     )
 
     await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
@@ -2817,6 +2737,13 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
     if order["payment_status"] == "paid":
         raise HTTPException(status_code=400, detail="Order already paid")
 
+    # Kitchen discipline: with KDS enabled, food must be Ready before money
+    # is collected for a dine-in bill
+    if order.get("order_type") == "dine_in":
+        restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
+        if restaurant and restaurant.get("kitchen_enabled", False) and order["status"] not in ("ready", "completed"):
+            raise HTTPException(status_code=400, detail="Food must be Ready in the kitchen before payment can be collected")
+
     # Determine payment method and splits — validated before any wallet writes
     payment_method = data.payment_method or "cash"
     payment_splits = []
@@ -2825,7 +2752,8 @@ async def pay_order(order_id: str, data: OrderPayment, user: dict = Depends(get_
     if data.payment_splits:
         if len(data.payment_splits) > 1:
             split_sum = round(sum(s.amount for s in data.payment_splits), 2)
-            if abs(split_sum - order["total_amount"]) > 1.0:
+            # Paise-integer compare: splits may miss/over the total by at most ₹0.01
+            if abs(int(round(split_sum * 100)) - int(round(order["total_amount"] * 100))) > 1:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Split payments (₹{split_sum}) must add up to the order total (₹{order['total_amount']})"

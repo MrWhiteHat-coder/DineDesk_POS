@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authAPI } from '../../lib/api';
-import { useAuth, getPostAuthPath } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../../components/ui/input';
-import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import usePageMeta from '../../lib/usePageMeta';
 import {
   Mail, Lock, ArrowRight, User, Phone, Shield, Zap, Globe, UtensilsCrossed,
@@ -26,53 +25,29 @@ export default function RegisterPage() {
     title: 'Create Your DineDesk Account — Restaurant POS from ₹999/month',
     noindex: false,
   });
-  // Must come from the build environment (Vercel). No hard-coded fallback:
-  // without an explicit client id the shared button shows "not configured".
-  const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(routeState.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register, googleLogin } = useAuth();
-  const [step, setStep] = useState('register'); // 'register' | 'otp' | 'check-email'
+  const { register, login } = useAuth();
+  const [step, setStep] = useState(routeState.step === 'otp' && routeState.email ? 'otp' : 'register');
   const [resending, setResending] = useState(false);
 
   const navigate = useNavigate();
+  // LoginPage can hand us an unverified email: /register {state:{step:'otp', email}}
+  // jumps straight back into the verification step.
+  const routeState = useLocation().state || {};
   const { dark, toggle } = useTheme();
-  // Busy only while the Google credential is actually being exchanged with the
-  // backend. A cancelled popup never sets it, so no indefinite spinner.
-  const [googleBusy, setGoogleBusy] = useState(false);
 
-  // OTP state
+  // Email OTP state
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [otpSending, setOtpSending] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
-  const [phoneVerified, setPhoneVerified] = useState(false);
   const otpRefs = useRef([]);
 
-  // Called by the shared Google button once the popup returns a credential.
-  const handleGoogleCredential = async (credential) => {
-    if (googleBusy) return; // ignore duplicate callbacks while exchanging
-    setGoogleBusy(true);
-    try {
-      const { user: userData, restaurant: restaurantData } = await googleLogin(credential);
-      toast.success('Welcome to DineDesk! Signed in with Google.');
-      // Admins (including via signup) → /admin. Everyone else follows the
-      // standard onboarding / subscription / POS routing.
-      navigate(getPostAuthPath(userData, restaurantData));
-    } catch (err) {
-      // Keep the failure visible on the page instead of forcing a reload —
-      // the api layer no longer redirects anonymous 401s.
-      toast.error(err.response?.data?.detail || 'Google sign-up failed. Please try again.');
-    } finally {
-      setGoogleBusy(false);
-    }
-  };
-
-  // OTP countdown timer
+  // Resend cooldown countdown
   useEffect(() => {
     if (otpTimer <= 0) return;
     const interval = setInterval(() => setOtpTimer((t) => t - 1), 1000);
@@ -80,35 +55,32 @@ export default function RegisterPage() {
   }, [otpTimer]);
 
   const formatPhone = (val) => {
-    // Auto-format: ensure + prefix and digits only
-    let cleaned = val.replace(/[^+\d]/g, '');
-    if (!cleaned.startsWith('+')) cleaned = '+91' + cleaned.replace(/^\+?91/, '');
-    return cleaned;
+    if (!val.trim()) return '';
+    let cleaned = val.replace(/[^\d]/g, '');
+    if (cleaned.startsWith('91') && cleaned.length > 10) cleaned = cleaned.slice(2);
+    return `+91${cleaned}`;
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return; }
     if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
-    if (!phone.trim()) { toast.error('Phone number is required'); return; }
-
-    const formattedPhone = formatPhone(phone);
-    if (formattedPhone.length < 12) { toast.error('Please enter a valid phone number with country code'); return; }
 
     setLoading(true);
     try {
-      // Use AuthContext.register so the in-memory user state is updated too.
-      // Without this, ProtectedRoute still thinks we're logged out and sends
-      // the user straight back to /login after a successful signup.
-      const user = await register(name, email, password, formattedPhone);
+      // Step 1: create the account. With email delivery configured the backend
+      // sends a 6-digit OTP and returns NO session — we move to the OTP step.
+      // Self-host/dev without email: the account is auto-verified and a session
+      // comes back immediately.
+      const user = await register(name, email.trim().toLowerCase(), password, formatPhone(phone));
       if (user) {
-        // Auto-login mode (email verification not required) — straight to onboarding
         toast.success(`Welcome to DineDesk, ${user.name}! 🎉`);
         navigate('/onboarding');
       } else {
-        // Verification mode — email link sent, show check-email screen
-        setStep('check-email');
-        toast.success('Account created! We sent a verification link to your email.');
+        setStep('otp');
+        setOtpTimer(60);
+        setOtp(['', '', '', '', '', '']);
+        toast.success(`Verification code sent to ${email.trim().toLowerCase()}`);
       }
     } catch (err) {
       const detail = err.response?.data?.detail || 'Registration failed';
@@ -118,19 +90,6 @@ export default function RegisterPage() {
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const sendOTP = async (phoneNum) => {
-    setOtpSending(true);
-    try {
-      await authAPI.sendOTP(phoneNum || phone);
-      setOtpTimer(60); // 60s cooldown
-      toast.success('OTP sent! Check your phone.');
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send OTP');
-    } finally {
-      setOtpSending(false);
     }
   };
 
@@ -149,7 +108,7 @@ export default function RegisterPage() {
 
     // Auto-submit when all 6 digits filled
     if (newOtp.every((d) => d !== '')) {
-      verifyOTP(newOtp.join(''));
+      verifyOtp(newOtp.join(''));
     }
   };
 
@@ -169,20 +128,28 @@ export default function RegisterPage() {
       const newOtp = pasted.split('');
       setOtp(newOtp);
       otpRefs.current[5]?.focus();
-      verifyOTP(pasted);
+      verifyOtp(pasted);
     }
   };
 
-  const verifyOTP = async (otpValue) => {
+  const verifyOtp = async (otpValue) => {
+    if (otpVerifying) return;
     setOtpVerifying(true);
     try {
-      const formattedPhone = formatPhone(phone);
-      await authAPI.verifyOTP(formattedPhone, otpValue);
-      setPhoneVerified(true);
-      toast.success('Phone verified! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 1500);
+      // Step 2: verify the emailed OTP. The account is now activated.
+      await authAPI.verifySignupOtp(email.trim().toLowerCase(), otpValue);
+      // Step 3: establish the session with the credentials the owner just
+      // created — same trust path as a normal login.
+      await login(email.trim().toLowerCase(), password);
+      toast.success('Email verified! Welcome to DineDesk. 🎉');
+      navigate('/onboarding');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Invalid OTP. Please try again.');
+      const detail = err.response?.data?.detail || 'Invalid code. Please try again.';
+      toast.error(detail);
+      if (String(detail).toLowerCase().includes('already verified')) {
+        setTimeout(() => navigate('/login'), 1800);
+        return;
+      }
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
     } finally {
@@ -193,10 +160,13 @@ export default function RegisterPage() {
   const handleResend = async () => {
     setResending(true);
     try {
-      await authAPI.resendVerification(email);
-      toast.success('Verification email sent! Check your inbox.');
+      await authAPI.resendSignupOtp(email.trim().toLowerCase());
+      setOtpTimer(60);
+      setOtp(['', '', '', '', '', '']);
+      otpRefs.current[0]?.focus();
+      toast.success('New code sent! Check your inbox.');
     } catch (err) {
-      toast.error('Could not resend. Try again shortly.');
+      toast.error(err.response?.data?.detail || 'Could not resend. Try again shortly.');
     } finally {
       setResending(false);
     }
@@ -269,37 +239,7 @@ export default function RegisterPage() {
         <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:px-12 lg:pb-12">
         <div className="w-full max-w-sm">
 
-          {/* STEP: Check Email */}
-          {step === 'check-email' && (
-            <div className="lp-reveal is-visible rounded-3xl bg-[var(--lp-card)] border border-[var(--lp-card-line)] shadow-[var(--lp-shadow)] p-7 sm:p-8 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-[var(--lp-green-a15)] flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-7 h-7 text-[var(--lp-green-deep)]" />
-              </div>
-              <h2 className="font-heading text-xl font-bold text-[var(--lp-ink)] mb-2">Check your email</h2>
-              <p className="text-sm text-[var(--lp-ink-soft)] mb-6">
-                We sent a verification link to <span className="font-semibold text-[var(--lp-ink)]">{email}</span>. Click it to activate your account, then sign in.
-              </p>
-
-              <button
-                onClick={handleResend}
-                disabled={resending}
-                className="w-full h-12 rounded-xl border-[1.5px] border-[var(--lp-outline)] text-[var(--lp-ink)] font-semibold text-sm hover:border-[var(--lp-green-a40)] hover:text-[var(--lp-green-deep)] transition-colors disabled:opacity-60 mb-3"
-              >
-                {resending ? 'Sending...' : 'Resend Email'}
-              </button>
-
-              <Link
-                to="/login"
-                className="lp-btn-primary w-full"
-              >
-                Go to Sign In <ArrowRight className="w-4 h-4" />
-              </Link>
-
-              <p className="text-xs text-[var(--lp-ink-faint)] mt-4">Link expires in 24 hours</p>
-            </div>
-          )}
-
-          {/* STEP: OTP Verification */}
+          {/* STEP: Email OTP Verification */}
           {step === 'otp' && (
             <div className="lp-reveal is-visible rounded-3xl bg-[var(--lp-card)] border border-[var(--lp-card-line)] shadow-[var(--lp-shadow)] p-7 sm:p-8">
               <button
@@ -313,9 +253,9 @@ export default function RegisterPage() {
                 <div className="w-14 h-14 rounded-2xl bg-[var(--lp-green-a15)] flex items-center justify-center mx-auto mb-4">
                   <Shield className="w-7 h-7 text-[var(--lp-green-deep)]" />
                 </div>
-                <h2 className="font-heading text-xl font-bold text-[var(--lp-ink)] mb-1">Verify your phone</h2>
+                <h2 className="font-heading text-xl font-bold text-[var(--lp-ink)] mb-1">Verify your email</h2>
                 <p className="text-sm text-[var(--lp-ink-soft)]">
-                  Enter the 6-digit code sent to <span className="font-semibold text-[var(--lp-ink)]">{phone}</span>
+                  Enter the 6-digit code sent to <span className="font-semibold text-[var(--lp-ink)]">{email.trim().toLowerCase()}</span>
                 </p>
               </div>
 
@@ -327,6 +267,7 @@ export default function RegisterPage() {
                     ref={(el) => (otpRefs.current[i] = el)}
                     type="tel"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
@@ -345,16 +286,16 @@ export default function RegisterPage() {
               <div className="text-center">
                 {otpTimer > 0 ? (
                   <p className="text-sm text-[var(--lp-ink-faint)]">
-                    Resend OTP in <span className="font-semibold text-[var(--lp-ink)]">{otpTimer}s</span>
+                    Resend code in <span className="font-semibold text-[var(--lp-ink)]">{otpTimer}s</span>
                   </p>
                 ) : (
                   <button
-                    onClick={() => sendOTP(formatPhone(phone))}
-                    disabled={otpSending}
+                    onClick={handleResend}
+                    disabled={resending}
                     className="inline-flex items-center gap-1.5 text-sm text-[var(--lp-green-deep)] font-semibold hover:underline disabled:opacity-50"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${otpSending ? 'animate-spin' : ''}`} />
-                    Resend OTP
+                    <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                    Resend code
                   </button>
                 )}
               </div>
@@ -365,7 +306,7 @@ export default function RegisterPage() {
                 to="/login"
                 className="w-full h-12 rounded-xl border-[1.5px] border-[var(--lp-outline)] text-[var(--lp-ink)] font-semibold text-sm flex items-center justify-center gap-2 hover:border-[var(--lp-green-a40)] hover:text-[var(--lp-green-deep)] transition-colors mt-4"
               >
-                Skip for now — I'll verify later
+                Already verified? Sign in
               </Link>
             </div>
           )}
@@ -395,21 +336,20 @@ export default function RegisterPage() {
                       className="pl-10 h-11 rounded-xl bg-[var(--lp-bg)] border-[var(--lp-card-line)] text-sm text-[var(--lp-ink)] focus-visible:ring-[var(--lp-green-a40)] focus-visible:border-[var(--lp-green)]"
                       required />
                   </div>
+                  <p className="text-[11px] text-[var(--lp-ink-faint)] mt-1">We'll send a 6-digit verification code here.</p>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Phone Number</label>
+                  <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Phone Number <span className="font-normal text-[var(--lp-ink-faint)]">(optional)</span></label>
                   <div className="relative">
                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--lp-ink-faint)]" />
                     <Input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 98765 43210"
+                      placeholder="98765 43210"
                       className="pl-10 h-11 rounded-xl bg-[var(--lp-bg)] border-[var(--lp-card-line)] text-sm text-[var(--lp-ink)] focus-visible:ring-[var(--lp-green-a40)] focus-visible:border-[var(--lp-green)]"
-                      required
                     />
                   </div>
-                  <p className="text-[11px] text-[var(--lp-ink-faint)] mt-1">Include country code (e.g. +91 for India)</p>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-[var(--lp-ink-soft)] mb-1.5 block">Password</label>
@@ -441,25 +381,6 @@ export default function RegisterPage() {
                   )}
                 </button>
               </form>
-              <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-[var(--lp-card-line)]" />
-                <span className="text-[11px] text-[var(--lp-ink-faint)] font-medium uppercase">or</span>
-                <div className="flex-1 h-px bg-[var(--lp-card-line)]" />
-              </div>
-
-              {/* Google Sign-Up — shared official button (no One Tap / hidden-container clicks) */}
-              <GoogleSignInButton
-                clientId={GOOGLE_CLIENT_ID}
-                onSuccess={handleGoogleCredential}
-                onError={(message) => toast.error(message)}
-                disabled={googleBusy}
-              />
-              {googleBusy && (
-                <div className="flex items-center justify-center gap-2 mt-2" data-testid="google-busy">
-                  <div className="w-4 h-4 border-2 border-[var(--lp-card-line)] border-t-[var(--lp-ink-faint)] rounded-full animate-spin" />
-                  <span className="text-xs text-[var(--lp-ink-soft)]">Creating your account with Google…</span>
-                </div>
-              )}
 
               <Link
                 to="/login"

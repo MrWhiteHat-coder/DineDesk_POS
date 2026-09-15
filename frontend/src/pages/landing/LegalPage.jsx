@@ -310,10 +310,9 @@ export function PrivacyPage() {
       <Section num="6." title="Sharing and processors">
         <p>
           We share personal data only with service providers who help us run DineDesk POS — cloud hosting
-          (Render/Atlas infrastructure), email delivery, payment gateways for subscription charges, and
-          authentication providers (Google/Microsoft sign-in, if you use them) — each bound by contractual
-          confidentiality and security obligations. We may also disclose data where required by Indian law, court
-          order or government authority with lawful jurisdiction.
+          (Render/Atlas infrastructure), email delivery for verification codes, and payment gateways for
+          subscription charges — each bound by contractual confidentiality and security obligations. We may also
+          disclose data where required by Indian law, court order or government authority with lawful jurisdiction.
         </p>
       </Section>
 
@@ -353,8 +352,7 @@ export function PrivacyPage() {
       <Section num="10." title="Cookies and tracking">
         <p>
           We use only strictly necessary cookies and browser storage (session tokens, theme preference) to run
-          the application. We do not use third-party advertising trackers or sell behavioural data. Google
-          sign-in sets its own cookies when you use that option, governed by Google's policy.
+          the application. We do not use third-party advertising trackers or sell behavioural data.
         </p>
       </Section>
 

@@ -11,7 +11,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { ChefShrugging, ChefWinking } from '../../components/illustrations/ChefBot';
 import haptics from '../../lib/haptics';
-import { moment } from '../../components/pos/RestaurantMoments';
+import { moment, momentAndWait } from '../../components/pos/RestaurantMoments';
 import useDragToDismiss from '../../lib/useDragToDismiss';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -115,7 +115,9 @@ export default function POSMain() {
   const getCartQuantity = (id) => cart.find(c => c.item.id === id)?.quantity || 0;
   const updateQuantity = (id, d) => setCart(prev => prev.map(c => c.item.id === id ? { ...c, quantity: Math.max(0, c.quantity + d) } : c).filter(c => c.quantity > 0));
   const removeFromCart = (id) => setCart(prev => prev.filter(c => c.item.id !== id));
-  const clearCart = () => { setCart([]); generateOrderNumber(); setSelectedRunningOrder(null); setCustomerName(''); setCustomerPhone(''); setCustomerEmail(''); };
+  /* Reset EVERYTHING bill-scoped — a stale applyDiscount leaking into the next
+     customer's cart silently grants a 10% discount they never asked for. */
+  const clearCart = () => { setCart([]); setApplyDiscount(false); generateOrderNumber(); setSelectedRunningOrder(null); setCustomerName(''); setCustomerPhone(''); setCustomerEmail(''); };
   const updateNotes = (id, notes) => setCart(prev => prev.map(c => c.item.id === id ? { ...c, notes } : c));
 
   const subtotal = cart.reduce((s, c) => s + c.item.price * c.quantity, 0);
@@ -241,15 +243,12 @@ export default function POSMain() {
         payload.payment_method = 'split';
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
-      const result = await createOrderResilient(payload, { total });
-      if (!result.online) {
-        toast.info('Order saved offline with payment recorded — syncs automatically when back online');
-        moment('no_internet');
-      } else {
-        toast.success(`Order #${result.data.order_number} completed!`);
-        moment(orderType === 'dine_in' ? 'table_cleaned' : 'payment_success');
-        await fetchAndShowReceipt(result.data.id);
-      }
+      const result = await createOrderResilient(payload, { total });        if (!result.online) { toast.info('Order saved offline with payment recorded — syncs automatically when back online'); moment('no_internet'); }
+        else {
+          toast.success(`Order #${result.data.order_number} completed!`);
+          await momentAndWait(orderType === 'dine_in' ? 'table_cleaned' : 'payment_success');
+          await fetchAndShowReceipt(result.data.id);
+        }
       clearCart(); setShowPaymentModal(false);
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
   };
@@ -296,7 +295,13 @@ export default function POSMain() {
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
       await orderAPI.pay(orderId, payload);
-      toast.success('Payment confirmed!'); moment('payment_success'); await fetchAndShowReceipt(orderId); fetchRunningOrders(); fetchTables(); clearCart(); setSelectedRunningOrder(null); setShowPaymentModal(false);
+      toast.success('Payment confirmed!');
+      setShowPaymentModal(false);
+      fetchRunningOrders(); fetchTables(); clearCart(); setSelectedRunningOrder(null);
+      // Sequence: payment success → centered moment completes → receipt popup.
+      // The receipt must never jump ahead of the success moment.
+      await momentAndWait('payment_success');
+      await fetchAndShowReceipt(orderId);
     } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
   };
 

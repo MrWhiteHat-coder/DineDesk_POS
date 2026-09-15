@@ -1,4 +1,4 @@
-import api, { authAPI, GOOGLE_LOGIN_TIMEOUT_MS } from '../../lib/api';
+import api, { authAPI } from '../../lib/api';
 
 /**
  * Exercises the axios interceptors with a fake adapter, so no network is hit.
@@ -20,7 +20,7 @@ function installFakeAdapter(handler) {
   };
 }
 
-function unauth401(detail = 'Invalid Google token') {
+function unauth401(detail = 'Not authenticated') {
   const error = new Error(`Request failed with status code 401`);
   error.response = { status: 401, data: { detail } };
   throw error;
@@ -83,13 +83,13 @@ describe('lib/api — 401 handling', () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
-  test('invalid Google token 401 with a stale bearer header still does not redirect', async () => {
+  test('invalid signup OTP 401 with a stale bearer header still does not redirect', async () => {
     sessionStorage.setItem('token', 'stale-token');
     const assign = setLocation('/register');
 
-    installFakeAdapter(async () => unauth401('Invalid Google token'));
+    installFakeAdapter(async () => unauth401('Invalid code. 3 attempts remaining.'));
 
-    await expect(authAPI.googleLogin('bad')).rejects.toMatchObject({
+    await expect(authAPI.verifySignupOtp('a@b.c', '000000')).rejects.toMatchObject({
       response: { status: 401 },
     });
 
@@ -127,31 +127,29 @@ describe('lib/api — 401 handling', () => {
   });
 });
 
-describe('lib/api — Google token exchange timeout', () => {
-  test('googleLogin sends the request with a 60s timeout', async () => {
+describe('lib/api — email-only auth endpoints', () => {
+  test('verifySignupOtp posts to /auth/verify-signup-otp with email + otp', async () => {
     let captured;
     installFakeAdapter(async (config) => {
       captured = config;
       return { data: { access_token: 'tok', user: { id: 'u1' } }, status: 200, statusText: 'OK', headers: {}, config };
     });
 
-    const res = await authAPI.googleLogin('google-jwt');
-    expect(res.data.access_token).toBe('tok');
-    expect(captured.url).toBe('/auth/google');
-    expect(captured.method).toBe('post');
-    expect(captured.timeout).toBe(GOOGLE_LOGIN_TIMEOUT_MS);
-    expect(captured.timeout).toBe(60000);
+    await authAPI.verifySignupOtp('a@b.c', '123456');
+    expect(captured.url).toBe('/auth/verify-signup-otp');
+    expect(JSON.parse(captured.data)).toEqual({ email: 'a@b.c', otp: '123456' });
   });
 
-  test('ordinary requests are not stuck with the google timeout', async () => {
+  test('resendSignupOtp posts to /auth/resend-signup-otp', async () => {
     let captured;
     installFakeAdapter(async (config) => {
       captured = config;
-      return { data: {}, status: 200, statusText: 'OK', headers: {}, config };
+      return { data: { message: 'ok' }, status: 200, statusText: 'OK', headers: {}, config };
     });
 
-    await authAPI.login({ email: 'a@b.c', password: 'pw' });
-    expect(captured.timeout).not.toBe(60000);
+    await authAPI.resendSignupOtp('a@b.c');
+    expect(captured.url).toBe('/auth/resend-signup-otp');
+    expect(JSON.parse(captured.data)).toEqual({ email: 'a@b.c' });
   });
 });
 

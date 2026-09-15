@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 /**
  * Decide where an authenticated user should land after login/signup.
- * - Admins → /admin (including when they sign up/sign in via Google).
+ * - Admins → /admin.
  * - Users without a restaurant yet (new signups) → /onboarding.
  * - Owners whose subscription is not active → /subscription.
  * - Everyone else (active subscribers) → /pos.
@@ -105,33 +105,6 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const googleLogin = async (credential) => {
-    const response = await authAPI.googleLogin(credential);
-    const { access_token, user: userData } = response.data;
-
-    sessionStorage.setItem('token', access_token);
-    sessionStorage.setItem('user', JSON.stringify(userData));
-    try { localStorage.setItem('token', access_token); } catch { /* private mode */ }
-    try { localStorage.setItem('user', JSON.stringify(userData)); } catch { /* private mode */ }
-    setUser(userData);
-    setRestaurant(null);
-
-    // Load restaurant/subscription details BEFORE returning so callers can
-    // route straight to onboarding / subscription / POS / admin correctly.
-    let restaurantData = null;
-    if (userData.restaurant_id) {
-      try {
-        const res = await restaurantAPI.getMy();
-        restaurantData = res.data;
-        setRestaurant(restaurantData);
-      } catch (e) {
-        console.error('Failed to fetch restaurant:', e);
-      }
-    }
-
-    return { user: userData, restaurant: restaurantData };
-  };
-
   const register = async (name, email, password, phone) => {
     const response = await authAPI.register({ name, email, password, phone });
     const data = response.data || {};
@@ -183,7 +156,6 @@ export const AuthProvider = ({ children }) => {
     restaurant,
     loading,
     login,
-    googleLogin,
     register,
     logout,
     updateUser,

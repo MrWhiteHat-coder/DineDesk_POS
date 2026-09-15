@@ -5,7 +5,9 @@ import { sounds } from '../../lib/sounds';
 import { Clock, ChefHat, CheckCircle2, Utensils, RefreshCw, Play, Pause, Printer, AlertTriangle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
-import { ChefRunning, ChefRelaxing } from '../../components/illustrations/ChefBot';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import kitchenIdleImg from '../../assets/moments/kitchen_started.png';
 
 const STATUS_CONFIG = {
   received: {
@@ -25,6 +27,7 @@ const STATUS_CONFIG = {
 };
 
 export default function KDSPage() {
+  const { restaurant } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -81,6 +84,13 @@ export default function KDSPage() {
     : filter === 'delayed' ? orders.filter(o => isDelayed(o.created_at))
     : orders;
 
+  /* "Do you have a kitchen setup?" = No → KDS is not part of this restaurant's
+     workflow. Direct-visit guard: orders bypass kitchen-ready blocking, so the
+     display would only confuse staff. */
+  if (restaurant && restaurant.kitchen_enabled === false) {
+    return <Navigate to="/pos" replace />;
+  }
+
   if (loading) return (
     <div className="animate-fade-in" data-testid="kds-skeleton">
       <div className="flex items-center justify-between mb-5"><Skeleton className="h-8 w-48" /><div className="flex gap-2"><Skeleton className="h-8 w-20 rounded-lg" /><Skeleton className="h-8 w-20 rounded-lg" /></div></div>
@@ -118,7 +128,7 @@ export default function KDSPage() {
       {/* Orders Grid */}
       {filteredOrders.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-slate-400 animate-fade-in">
-          <ChefRelaxing className="w-32 h-32 mb-3" />
+          <img src={kitchenIdleImg} alt="" aria-hidden="true" className="w-28 h-24 object-contain object-bottom mb-3 opacity-90 moment-bob" draggable="false" />
           <p className="text-lg font-heading font-bold text-slate-600">All caught up!</p>
           <p className="text-sm text-slate-400 mt-1">No pending orders — time for chai! ☕</p>
         </div>

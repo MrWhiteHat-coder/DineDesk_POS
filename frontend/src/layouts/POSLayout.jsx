@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
 import { useTheme } from '../contexts/ThemeContext';
 import logoUrl from '../assets/dinedesk-logo.png';
-import { daySessionAPI } from '../lib/api';
+import { daySessionAPI, queueOfflineDayOpen, readOfflineDayIntent, clearOfflineDayIntent } from '../lib/api';
 import AskDineDesk from '../components/pos/AskDineDesk';
 import { initOfflineSync, syncOfflineOrders, onSyncEvent } from '../lib/offlineSync';
 import { getPendingCount } from '../lib/offlineOrders';
@@ -150,6 +150,10 @@ export default function POSLayout() {
   const permissions = ROLE_ACCESS[userRole] || ROLE_ACCESS.owner;
   const hasAccess = (feature) => permissions.has(feature);
   const isUnlocked = (feature) => isFeatureUnlocked(feature);
+  /* "Do you have a kitchen setup?" — No hides KDS from all navigation.
+     Existing restaurants without the flag keep the kitchen (safe default). */
+  const kitchenEnabled = restaurant ? restaurant.kitchen_enabled !== false : true;
+  const navVisible = (item) => (item.feature === 'kds' ? kitchenEnabled : true);
 
   /* ── day session ── */
   const [isDayOpen, setIsDayOpen] = useState(false);
@@ -272,7 +276,15 @@ export default function POSLayout() {
     dishes: isDishRoute,
   });
 
-  useEffect(() => { fetchDaySession(); }, []);
+  useEffect(() => {
+    fetchDaySession();
+    // Boot with no connectivity but a queued day-open intent → reflect it
+    // locally so the counter can bill offline immediately.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false && readOfflineDayIntent()) {
+      setCurrentSession((s) => s || { id: 'offline-day', status: 'open', offline: true, opening_cash: 0 });
+      setIsDayOpen(true);
+    }
+  }, []);
   useEffect(() => {
     if (isTableRoute) setExpandedSections(prev => ({ ...prev, tables: true }));
     if (isDishRoute) setExpandedSections(prev => ({ ...prev, dishes: true }));
@@ -289,12 +301,31 @@ export default function POSLayout() {
 
   const handleOpenDay = async () => {
     setLoading(true);
+    const cash = parseFloat(openingCash) || 0;
     try {
-      const res = await daySessionAPI.open(parseFloat(openingCash) || 0);
+      const res = await daySessionAPI.open(cash);
       setCurrentSession(res.data); setIsDayOpen(true); setShowDayOpenModal(false); setOpeningCash('');
       haptics.success();
       toast.success('Day opened successfully!');
-    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to open day'); }
+    } catch (err) {
+      if (!err.response) {
+        // Fully offline: queue the intent and keep the counter working. The
+        // sync engine replays it (day-open BEFORE any queued orders) when
+        // connectivity returns. If a session is already open server-side,
+        // the replay is a harmless no-op.
+        if (queueOfflineDayOpen(cash)) {
+          setCurrentSession({ id: 'offline-day', status: 'open', offline: true, opening_cash: cash });
+          setIsDayOpen(true); setShowDayOpenModal(false); setOpeningCash('');
+          haptics.success();
+          toast.info('Day opened offline — it will sync automatically when internet returns');
+          moment('no_internet', 'Day open saved — will sync when back online.');
+        } else {
+          toast.error('No internet and offline storage unavailable — cannot open the day');
+        }
+      } else {
+        toast.error(err.response?.data?.detail || 'Failed to open day');
+      }
+    }
     finally { setLoading(false); }
   };
 
@@ -334,8 +365,8 @@ export default function POSLayout() {
     return location.pathname.startsWith(item.to);
   };
 
-  /* ── "More" items (filtered by role) ── */
-  const moreNavItems = allNavItems.filter(item => hasAccess(item.feature));
+  /* ── "More" items (filtered by role + kitchen setup) ── */
+  const moreNavItems = allNavItems.filter(item => hasAccess(item.feature) && navVisible(item));
   const sidebarMoreItems = moreNavItems.filter(item => !sidebarItems.some(s => s.to === item.to));
 
   /* ── mobile More sheet layout: big core tiles + compact module rows ── */
@@ -378,7 +409,7 @@ export default function POSLayout() {
         {/* Primary nav */}
         <nav className="flex-1 px-2.5 space-y-0.5">
           {sidebarItems
-            .filter(item => hasAccess(item.feature))
+            .filter(item => hasAccess(item.feature) && navVisible(item))
             .map((item) => {
               // subscription lock applies only where a matching addon exists;
               // role-gating is handled by hasAccess above.
@@ -721,7 +752,7 @@ export default function POSLayout() {
       {/* ──────────── BOTTOM NAV BAR (mobile only) ──────────── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#12151B] border-t border-gray-200 dark:border-white/[0.07] z-40 pb-[env(safe-area-inset-bottom)]" data-testid="bottom-nav">
         <div className="flex items-stretch justify-around h-16 px-1 max-w-md mx-auto">
-          {bottomTabs.map((item) => {
+          {bottomTabs.filter(navVisible).map((item) => {
             const active = isBottomTabActive(item);
             return (
               <NavLink

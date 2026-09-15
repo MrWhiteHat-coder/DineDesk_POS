@@ -14,7 +14,7 @@
  * Events that trigger a sync pass: browser `online`, app boot, and manual
  * "Sync now" from the offline banner.
  */
-import { orderAPI } from './api';
+import { orderAPI, daySessionAPI, readOfflineDayIntent, clearOfflineDayIntent } from './api';
 import { getPendingOrders, markOrderSynced, markOrderFailed, recordAttempt } from './offlineOrders';
 
 let syncing = false;
@@ -52,6 +52,28 @@ const runSyncPass = async ({ silent = false, toast } = {}) => {
   let synced = 0;
   let failed = 0;
   try {
+    /* Day-open intent MUST replay before any queued orders — the backend
+       rejects orders outside an open day session. A 400 here means the day
+       was already opened from another terminal → clear the intent either way. */
+    const dayIntent = readOfflineDayIntent();
+    if (dayIntent) {
+      try {
+        await daySessionAPI.open(dayIntent.opening_cash || 0);
+        clearOfflineDayIntent();
+        emit({ type: 'day-open-synced' });
+        if (toast && !silent) toast.success('Offline day-open synced');
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status && status >= 400 && status < 500) {
+          // Already open (400) or genuinely rejected — never retry an open.
+          clearOfflineDayIntent();
+        } else {
+          // Network down mid-pass — stop before touching queued orders.
+          syncing = false;
+          return { synced: 0, offline: true };
+        }
+      }
+    }
     const pending = await getPendingOrders();
     for (const record of pending) {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) break;

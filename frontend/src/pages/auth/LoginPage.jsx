@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth, getPostAuthPath } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { authAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/input';
-import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import usePageMeta from '../../lib/usePageMeta';
 import logoUrl from '../../assets/dinedesk-logo.png';
 import {
   Mail, Lock, Eye, EyeOff, ArrowRight, Monitor, ConciergeBell, UtensilsCrossed,
   Package, BarChart3, ShieldCheck, Headphones, Rocket, QrCode, Globe, ChevronRight,
-  AlertTriangle, RefreshCw, Sparkles,
+  AlertTriangle, RefreshCw, Sparkles, Shield,
 } from 'lucide-react';
 
 /* Feature tiles — icons drawn in DineDesk green, matching the reference */
@@ -30,25 +29,12 @@ const stats = [
   { icon: Rocket, value: 'New Product', label: 'Building Together' },
 ];
 
-function MicrosoftLogo() {
-  return (
-    <svg className="w-[18px] h-[18px]" viewBox="0 0 23 23" aria-hidden="true">
-      <rect x="1" y="1" width="10" height="10" fill="#F25022" />
-      <rect x="12" y="1" width="10" height="10" fill="#7FBA00" />
-      <rect x="1" y="12" width="10" height="10" fill="#00A4EF" />
-      <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
-    </svg>
-  );
-}
 
 export default function LoginPage() {
   usePageMeta({ noindex: true });
-  const { login, googleLogin } = useAuth();
+  const { login } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
-  // Must come from the build environment (Vercel). No hard-coded fallback:
-  // without an explicit client id the shared button shows "not configured".
-  const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -56,9 +42,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [resending, setResending] = useState(false);
-  // Busy only while the Google credential is actually being exchanged with the
-  // backend. A cancelled popup never sets it, so no indefinite spinner.
-  const [googleBusy, setGoogleBusy] = useState(false);
 
   // Prefill the remembered email ("Keep me signed in" stores the email only —
   // never the password).
@@ -95,32 +78,20 @@ export default function LoginPage() {
     }
   };
 
+  // DineDesk auth is email-only: sign-up is completed with the 6-digit code
+  // emailed during registration. If a user abandons that step and tries to log
+  // in, we send them back to the signup screen's verification step instead of
+  // trapping them here.
   const handleResendVerification = async () => {
     setResending(true);
     try {
-      await authAPI.resendVerification(unverifiedEmail);
-      toast.success('Verification email sent! Check your inbox.');
+      await authAPI.resendSignupOtp(unverifiedEmail);
+      toast.success('New code sent! Complete signup from the verification screen.');
+      navigate('/register', { state: { step: 'otp', email: unverifiedEmail } });
     } catch (err) {
-      toast.error('Could not resend. Try again shortly.');
+      toast.error(err.response?.data?.detail || 'Could not resend. Try again shortly.');
     } finally {
       setResending(false);
-    }
-  };
-
-  // Called by the shared Google button once the popup returns a credential.
-  const handleGoogleCredential = async (credential) => {
-    if (googleBusy) return; // ignore duplicate callbacks while exchanging
-    setGoogleBusy(true);
-    try {
-      const { user: userData, restaurant: restaurantData } = await googleLogin(credential);
-      toast.success('Welcome back! Signed in with Google.');
-      navigate(getPostAuthPath(userData, restaurantData));
-    } catch (err) {
-      // Keep the failure visible on the page instead of forcing a reload —
-      // the api layer no longer redirects anonymous 401s.
-      toast.error(err.response?.data?.detail || 'Google sign-in failed. Please try again.');
-    } finally {
-      setGoogleBusy(false);
     }
   };
 
@@ -276,15 +247,15 @@ export default function LoginPage() {
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">Email not verified</p>
                     <p className="text-xs text-amber-700/80 dark:text-amber-200/70 mb-3">
-                      Please verify <span className="font-semibold">{unverifiedEmail}</span> before logging in. Check your inbox for the verification link.
+                      Please verify <span className="font-semibold">{unverifiedEmail}</span> with the 6-digit code we emailed you. Check your inbox, or request a new code.
                     </p>
                     <button
                       onClick={handleResendVerification}
                       disabled={resending}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-300 dark:hover:text-amber-200 disabled:opacity-50"
                     >
-                      <RefreshCw className={`w-3 h-3 ${resending ? 'animate-spin' : ''}`} />
-                      {resending ? 'Sending...' : 'Resend Verification Email'}
+                      <Shield className={`w-3 h-3 ${resending ? '' : ''}`} />
+                      {resending ? 'Sending...' : 'Send a new code & finish signup'}
                     </button>
                   </div>
                 </div>
@@ -370,33 +341,14 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px bg-gray-100 dark:bg-white/[0.08]" />
-              <span className="text-[10px] text-gray-400 dark:text-white/40 font-semibold uppercase tracking-widest">or continue with</span>
+              <span className="text-[10px] text-gray-400 dark:text-white/40 font-semibold uppercase tracking-widest">secure email sign-in</span>
               <div className="flex-1 h-px bg-gray-100 dark:bg-white/[0.08]" />
             </div>
 
-            {/* Social sign-in */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <GoogleSignInButton
-                clientId={GOOGLE_CLIENT_ID}
-                onSuccess={handleGoogleCredential}
-                onError={(message) => toast.error(message)}
-                disabled={googleBusy}
-              />
-              <button
-                type="button"
-                onClick={() => toast.info('Microsoft sign-in is coming soon.')}
-                className="h-11 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-800 dark:text-white/80 font-semibold text-[13px] flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-300 dark:hover:border-white/20 transition-all"
-              >
-                <MicrosoftLogo />
-                Continue with Microsoft
-              </button>
-            </div>
-            {googleBusy && (
-              <div className="flex items-center justify-center gap-2 mt-2" data-testid="google-busy">
-                <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-                <span className="text-xs text-gray-500 dark:text-white/50">Signing in with Google…</span>
-              </div>
-            )}
+            <p className="text-center text-xs text-gray-400 dark:text-white/40 flex items-center justify-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-[#268A4E] dark:text-[#3FCE85]" />
+              DineDesk uses email + password only — no social logins, no data sharing.
+            </p>
 
             {/* Quick Login row (reference) */}
             <button

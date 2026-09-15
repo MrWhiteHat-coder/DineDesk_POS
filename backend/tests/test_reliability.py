@@ -103,6 +103,7 @@ class StubDB:
         self.day_sessions = StubCol()
         self.inventory = StubCol()
         self.wallet_transactions = StubCol()
+        self.restaurants = StubCol()
         self.notification_settings = StubCol()
 
     def command(self, cmd):
@@ -194,6 +195,9 @@ PAID_ORDER = {
     "change_amount": 0,
 }
 
+# Unpaid running order — cancellable with a reason (never a paid one)
+UNPAID_ORDER = {**PAID_ORDER, "payment_status": "pending", "payment_method": "pending"}
+
 
 class TestCancelGuard:
     def test_cancel_without_reason_blocked(self, stub_db, monkeypatch):
@@ -207,14 +211,23 @@ class TestCancelGuard:
 
     def test_cancel_with_reason_audited(self, stub_db, monkeypatch):
         monkeypatch.setattr(server, "MANAGER_PIN", "")
-        order = {**PAID_ORDER, "table_number": None}
+        order = {**UNPAID_ORDER, "table_number": None}
         stub_db.orders.docs["o1"] = order
-        # wallet + tables reads happen on cancel of paid orders — tolerate absences
         stub_db.day_sessions.docs["s1"] = {"id": "s1", "restaurant_id": "r1", "status": "open"}
         asyncio.run(update_order_status("o1", OrderUpdate(status="cancelled"),
                                         cancel_reason="customer left", manager_pin=None, user=USER))
         actions = [d["action"] for d in stub_db.audit_logs.inserted]
         assert "order.cancel" in actions
+
+    def test_cancel_completed_order_blocked(self, stub_db, monkeypatch):
+        """Completed/paid bills are financial records — cancel must be rejected."""
+        monkeypatch.setattr(server, "MANAGER_PIN", "")
+        stub_db.orders.docs["o1"] = {**PAID_ORDER, "status": "completed"}
+        with pytest.raises(HTTPException) as e:
+            asyncio.run(update_order_status("o1", OrderUpdate(status="cancelled"),
+                                            cancel_reason="mistake", manager_pin=None, user=USER))
+        assert e.value.status_code == 400
+        assert "completed or paid" in str(e.value.detail).lower()
 
     def test_cancel_with_pin_configured_requires_pin(self, stub_db, monkeypatch):
         monkeypatch.setattr(server, "MANAGER_PIN", "9911")
@@ -271,3 +284,63 @@ class TestDayCloseGuard:
             asyncio.run(close_day(closing_cash=0, force=False, user=USER))
         assert e.value.status_code == 400
         assert "no open day session" in str(e.value.detail).lower()
+
+
+# ──────────── Kitchen gating: Ready-before-complete (KDS enabled only) ────────────
+
+class TestKitchenGating:
+    def _with_restaurant(self, stub_db, kitchen_enabled):
+        stub_db.restaurants.docs["r1"] = {"id": "r1", "name": "T", "kitchen_enabled": kitchen_enabled, "tax_rate": 5.0}
+
+    def test_kitchen_on_blocks_complete_before_ready(self, stub_db, monkeypatch):
+        from server import update_order_status
+        monkeypatch.setattr(server, "MANAGER_PIN", "")
+        self._with_restaurant(stub_db, True)
+        stub_db.orders.docs["o1"] = {**UNPAID_ORDER, "status": "preparing", "payment_status": "paid"}
+        with pytest.raises(HTTPException) as e:
+            asyncio.run(update_order_status("o1", OrderUpdate(status="completed"), user=USER))
+        assert e.value.status_code == 400
+        # Blocked either by transition guard or by the kitchen-ready rule
+        assert "ready" in str(e.value.detail).lower() or "invalid status" in str(e.value.detail).lower()
+
+    def test_kitchen_on_allows_complete_after_ready(self, stub_db, monkeypatch):
+        from server import update_order_status
+        monkeypatch.setattr(server, "MANAGER_PIN", "")
+        self._with_restaurant(stub_db, True)
+        stub_db.orders.docs["o1"] = {**UNPAID_ORDER, "status": "ready", "payment_status": "paid", "order_type": "takeaway"}
+        res = asyncio.run(update_order_status("o1", OrderUpdate(status="completed"), user=USER))
+        assert res.status == "completed"
+
+    def test_kitchen_off_bypasses_ready_requirement(self, stub_db, monkeypatch):
+        """No kitchen setup → order goes straight to billing; completion never blocked."""
+        from server import update_order_status
+        monkeypatch.setattr(server, "MANAGER_PIN", "")
+        self._with_restaurant(stub_db, False)
+        stub_db.orders.docs["o1"] = {**UNPAID_ORDER, "status": "received", "payment_status": "paid", "order_type": "takeaway"}
+        res = asyncio.run(update_order_status("o1", OrderUpdate(status="completed"), user=USER))
+        assert res.status == "completed"
+
+    def test_kitchen_on_blocks_pay_before_ready(self, stub_db, monkeypatch):
+        from server import pay_order, OrderPayment
+        self._with_restaurant(stub_db, True)
+        stub_db.orders.docs["o1"] = {**UNPAID_ORDER, "status": "received", "order_type": "dine_in", "table_number": 2}
+        with pytest.raises(HTTPException) as e:
+            asyncio.run(pay_order("o1", OrderPayment(payment_method="cash"), user=USER))
+        assert e.value.status_code == 400
+
+    def test_kitchen_off_allows_direct_pay(self, stub_db, monkeypatch):
+        from server import pay_order, OrderPayment
+        self._with_restaurant(stub_db, False)
+        stub_db.orders.docs["o1"] = {**UNPAID_ORDER, "status": "received", "order_type": "dine_in", "table_number": 2}
+        stub_db.wallet_transactions.docs = {}
+        res = asyncio.run(pay_order("o1", OrderPayment(payment_method="upi"), user=USER))
+        assert res.payment_status == "paid"
+
+    def test_split_tolerance_paise(self, stub_db, monkeypatch):
+        """Split sums within ₹0.01 of the total are accepted (was ₹1.00)."""
+        from server import pay_order, OrderPayment, PaymentSplit
+        self._with_restaurant(stub_db, False)
+        stub_db.orders.docs["o1"] = {**UNPAID_ORDER, "status": "ready", "order_type": "dine_in", "table_number": 3, "total_amount": 100.00}
+        splits = [PaymentSplit(method="cash", amount=50.00), PaymentSplit(method="upi", amount=50.01)]
+        res = asyncio.run(pay_order("o1", OrderPayment(payment_splits=splits), user=USER))
+        assert res.payment_status == "paid"

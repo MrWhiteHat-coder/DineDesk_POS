@@ -1,0 +1,59 @@
+{
+  "name": "dinedesk-desktop",
+  "productName": "DineDesk POS",
+  "version": "1.0.0",
+  "description": "DineDesk POS — Restaurant Operating System (Windows desktop)",
+  "author": "Trident Ventures",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "DD_DESKTOP_DEV=1 electron .",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "in.revontechnologies.dinedesk.pos",
+    "productName": "DineDesk POS",
+    "copyright": "Copyright © 2026 Trident Ventures",
+    "directories": {
+      "output": "../release/windows",
+      "buildResources": "."
+    },
+    "files": [
+      "main.js",
+      "icon.ico",
+      "icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/build",
+        "to": "app-build",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.ico",
+      "artifactName": "DineDesk-POS-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DineDesk POS",
+      "artifactName": "DineDesk-POS-Setup-${version}.${ext}"
+    }
+  }
+}

@@ -17,8 +17,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   sessionStorage.clear();
   localStorage.clear();
-  delete window.google;
-  process.env.REACT_APP_GOOGLE_CLIENT_ID = '';
+
   process.env.REACT_APP_BACKEND_URL = '';
 });
 

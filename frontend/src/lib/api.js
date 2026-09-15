@@ -3,23 +3,18 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://dinedesk-pos.onrender.com';
 
 // Endpoints that return 401 for reasons OTHER than an expired/missing session
-// (bad credentials, wrong OTP, invalid Google token, …). A 401 here must stay
+// (bad credentials, wrong OTP, …). A 401 here must stay
 // visible as an error message instead of wiping the session/reloading the page.
 const PUBLIC_AUTH_PATHS = [
   '/auth/login',
-  '/auth/google',
   '/auth/register',
-  '/auth/send-otp',
-  '/auth/verify-otp',
+  '/auth/verify-signup-otp',
+  '/auth/resend-signup-otp',
   '/auth/verify-email',
   '/auth/resend-verification',
   '/auth/forgot-password',
   '/auth/reset-password',
 ];
-
-// Google token exchange can legitimately take several seconds (popup → token
-// verification on the backend). Give it 60s instead of failing early.
-export const GOOGLE_LOGIN_TIMEOUT_MS = 60000;
 
 const api = axios.create({
   baseURL: API_URL ? `${API_URL}/api` : '/api',
@@ -56,7 +51,7 @@ api.interceptors.response.use(
 
       // Only a request that was actually sent with a bearer token can mean
       // "your session expired". Anonymous 401s (wrong password, bad OTP,
-      // invalid Google credential, …) must not reload the page or hide the
+      //      wrong password, bad OTP, …) must not reload the page or hide the
       // error behind a redirect.
       if (hadSession && !isPublicAuthPath) {
         sessionStorage.removeItem('token');
@@ -97,8 +92,8 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
-  googleLogin: (credential) =>
-    api.post('/auth/google', { credential }, { timeout: GOOGLE_LOGIN_TIMEOUT_MS }),
+  verifySignupOtp: (email, otp) => api.post('/auth/verify-signup-otp', { email, otp }),
+  resendSignupOtp: (email) => api.post('/auth/resend-signup-otp', { email }),
   getMe: () => api.get('/auth/me'),
   getPermissions: () => api.get('/auth/permissions'),
   verifyEmail: (token) => api.post('/auth/verify-email', { token }),
@@ -160,6 +155,29 @@ export const daySessionAPI = {
   closeForce: (cash, force = false) => api.post(`/day-session/close?closing_cash=${cash}&force=${force}`),
   getCurrent: () => api.get('/day-session/current'),
   getHistory: () => api.get('/day-session/history'),
+};
+
+/* Offline day-opening: opening a day must work with zero connectivity (it's
+ * the first thing a counter does each morning). The intent is queued in
+ * localStorage and replayed by the sync engine BEFORE any queued orders —
+ * the backend rejects orders without an open session, so day-open must sync
+ * first. If a session is already open server-side (opened from another
+ * terminal), the replay is a harmless no-op. */
+const OFFLINE_DAY_KEY = 'dinedesk-offline-day-open';
+export const readOfflineDayIntent = () => {
+  try {
+    const raw = localStorage.getItem(OFFLINE_DAY_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+export const clearOfflineDayIntent = () => {
+  try { localStorage.removeItem(OFFLINE_DAY_KEY); } catch { /* noop */ }
+};
+export const queueOfflineDayOpen = (openingCash) => {
+  try {
+    localStorage.setItem(OFFLINE_DAY_KEY, JSON.stringify({ opening_cash: openingCash || 0, created_at: new Date().toISOString() }));
+    return true;
+  } catch { return false; }
 };
 
 // Inventory APIs

@@ -4,7 +4,7 @@ import { kdsAPI } from '../../lib/api';
 /*
  * Restaurant Moments — the restaurant feels alive.
  *
- * Brand-illustrated popup moments, fired only by REAL events:
+ * Brand-illustrated moments, fired only by REAL events:
  *   order placed → chef runs the KOT to the kitchen
  *   kitchen starts cooking / order ready / order completed  (KDS status diffs)
  *   payment success, walk-in customer, discount applied, day closed,
@@ -13,9 +13,10 @@ import { kdsAPI } from '../../lib/api';
  *
  * Rules:
  *   - Real events only — no fabricated activity (honest-data rule).
- *   - One moment at a time, auto-dismiss, never blocks clicks.
- *   - Mobile: above the bottom nav (left). Desktop: bottom-left.
+ *   - One moment at a time, CENTERED on screen, auto-dismiss, never blocks clicks.
  *   - Same type max once / 30s. Queue capped. Mute via localStorage.
+ *   - momentAndWait() resolves when the moment finishes — used to sequence
+ *     payment success → moment → receipt popup.
  */
 
 import orderPlacedImg from '../../assets/moments/order_placed.png';
@@ -61,13 +62,13 @@ const TONES = {
   rose: 'border-rose-200/80 dark:border-rose-400/20 bg-white/95 dark:bg-[#161A20]/95',
 };
 
-const SHOW_MS = 4600;
+const SHOW_MS = 3400;
 const EXIT_MS = 380;
 const TYPE_COOLDOWN_MS = 30000;
 const MAX_QUEUE = 3;
 
 export default function RestaurantMoments() {
-  const [current, setCurrent] = useState(null); // {key, type, sub}
+  const [current, setCurrent] = useState(null); // {key, type, sub, resolve}
   const [leaving, setLeaving] = useState(false);
   const queueRef = useRef([]);
   const busyRef = useRef(false);
@@ -87,28 +88,40 @@ export default function RestaurantMoments() {
       timerRef.current = setTimeout(() => {
         setCurrent(null);
         busyRef.current = false;
+        next.resolve?.();
         pump();
       }, EXIT_MS);
     }, SHOW_MS);
   }, []);
 
-  const enqueue = useCallback((type, sub) => {
-    if (localStorage.getItem('dinedesk-moments-muted') === 'true') return;
+  const enqueue = useCallback((type, sub, resolve) => {
     const now = Date.now();
-    if (now - (lastFiredRef.current[type] || 0) < TYPE_COOLDOWN_MS) return;
+    const suppressed =
+      localStorage.getItem('dinedesk-moments-muted') === 'true' ||
+      now - (lastFiredRef.current[type] || 0) < TYPE_COOLDOWN_MS ||
+      queueRef.current.length >= MAX_QUEUE;
+    if (suppressed) {
+      // Callers waiting on the moment (payment → receipt sequencing) must not
+      // hang when the moment is muted/cooled-down — resolve at once.
+      if (resolve) setTimeout(resolve, 350);
+      return;
+    }
     lastFiredRef.current[type] = now;
-    if (queueRef.current.length >= MAX_QUEUE) return;
-    queueRef.current.push({ key: `${type}-${now}`, type, sub });
+    queueRef.current.push({ key: `${type}-${now}`, type, sub, resolve });
     pump();
   }, [pump]);
 
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(timerRef.current);
+    // Never leave sequenced callers hanging if we unmount mid-moment.
+    if (busyRef.current && current?.resolve) current.resolve();
+  }, [current]);
 
   /* ── external event bus: window.dispatchEvent(momentEvent('payment_success')) ── */
   useEffect(() => {
     const onMoment = (e) => {
       const t = e.detail && e.detail.type;
-      if (t && MOMENT_TYPES[t]) enqueue(t, e.detail.sub);
+      if (t && MOMENT_TYPES[t]) enqueue(t, e.detail.sub, e.detail.resolve);
     };
     window.addEventListener('dinedesk:moment', onMoment);
     return () => window.removeEventListener('dinedesk:moment', onMoment);
@@ -147,22 +160,24 @@ export default function RestaurantMoments() {
 
   return (
     <div
-      className={`fixed z-[60] left-3 bottom-[calc(4.5rem_+_env(safe-area-inset-bottom,0px))] lg:bottom-5 pointer-events-none select-none transition-all duration-300 ease-out ${leaving ? 'opacity-0 translate-y-3 scale-95' : 'opacity-100 translate-y-0 scale-100 animate-moment-in'}`}
+      className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none select-none px-4"
       role="status"
       aria-live="polite"
       data-testid="restaurant-moment"
     >
-      <div className={`flex items-center gap-1.5 pl-1 pr-4 py-1.5 rounded-2xl border shadow-[0_12px_40px_-10px_rgba(15,36,23,0.35)] backdrop-blur-sm ${TONES[cfg.tone]}`}>
+      <div
+        className={`flex items-center gap-3 pl-2.5 pr-6 py-2.5 rounded-2xl border shadow-[0_24px_70px_-18px_rgba(15,36,23,0.45)] backdrop-blur-sm transition-all duration-300 ease-out ${TONES[cfg.tone]} ${leaving ? 'opacity-0 scale-95' : 'opacity-100 scale-100 animate-moment-in'}`}
+      >
         <img
           src={cfg.img}
           alt=""
           aria-hidden="true"
-          className={`w-[86px] h-[68px] object-contain object-bottom ${cfg.anim}`}
+          className={`w-[92px] h-[74px] object-contain object-bottom ${cfg.anim}`}
           draggable="false"
         />
-        <div className="min-w-0 pr-1">
-          <p className="text-[13px] font-bold font-heading text-slate-900 dark:text-white leading-tight">{cfg.title}</p>
-          <p className="text-[11px] text-slate-500 dark:text-white/50 leading-snug">{current.sub || cfg.sub}</p>
+        <div className="min-w-0">
+          <p className="text-[14px] font-bold font-heading text-slate-900 dark:text-white leading-tight">{cfg.title}</p>
+          <p className="text-[12px] text-slate-500 dark:text-white/50 leading-snug">{current.sub || cfg.sub}</p>
         </div>
       </div>
     </div>
@@ -173,3 +188,12 @@ export default function RestaurantMoments() {
 export const moment = (type, sub) => {
   window.dispatchEvent(new CustomEvent('dinedesk:moment', { detail: { type, sub } }));
 };
+
+/**
+ * Fire a moment and wait for it to finish — sequenced flows like
+ * payment success → moment → receipt popup. Resolves immediately (short
+ * beat) when moments are muted or the type is on cooldown.
+ */
+export const momentAndWait = (type, sub) => new Promise((resolve) => {
+  window.dispatchEvent(new CustomEvent('dinedesk:moment', { detail: { type, sub, resolve } }));
+});

@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { UtensilsCrossed, ArrowRight, ArrowLeft, Store, Phone, MapPin, ShieldCheck, BadgeCheck, BadgeX, Loader2, CalendarDays } from 'lucide-react';
+import { UtensilsCrossed, ArrowRight, ArrowLeft, Store, Phone, MapPin, ShieldCheck, CalendarDays } from 'lucide-react';
 import logoUrl from '../../assets/dinedesk-logo.png';
 
 export default function RestaurantSetupPage() {
@@ -39,6 +39,7 @@ export default function RestaurantSetupPage() {
     pincode: '',
     fssai_license_number: '',
     fssai_expiry_date: '',
+    kitchen_enabled: false, // "Do you have a kitchen setup?" — enables KDS workflow
   });
 
   const updateField = (field, value) => {
@@ -54,28 +55,6 @@ export default function RestaurantSetupPage() {
     }));
   };
 
-  // FSSAI license verification state
-  const [licenseVerifying, setLicenseVerifying] = useState(false);
-  const [licenseResult, setLicenseResult] = useState(null); // {valid, status, message}
-
-  const verifyLicense = async () => {
-    const license = String(formData.fssai_license_number || '').trim();
-    if (!/^\d{14}$/.test(license)) {
-      setLicenseResult({ valid: false, status: 'invalid_format', message: 'FSSAI license must be a 14-digit number.' });
-      return;
-    }
-    setLicenseVerifying(true);
-    setLicenseResult(null);
-    try {
-      const res = await restaurantAPI.verifyLicense(license);
-      setLicenseResult(res.data);
-    } catch {
-      setLicenseResult({ valid: true, status: 'format_verified', message: 'Verification successful — valid FSSAI format. Government registry could not be reached right now.' });
-    } finally {
-      setLicenseVerifying(false);
-    }
-  };
-
   const handleNext = () => {
     if (step === 1) {
       if (!formData.name || !formData.restaurant_type || !formData.num_tables) {
@@ -84,13 +63,15 @@ export default function RestaurantSetupPage() {
       }
     }
     if (step === 2) {
+      // FSSAI verification is disabled for now — license details are optional.
+      // If provided, they must be well-formed so downstream expiry reminders work.
       const license = String(formData.fssai_license_number || '').trim();
-      if (!/^\d{14}$/.test(license)) {
-        toast.error('FSSAI food license number (14 digits) is mandatory for registration');
+      if (license && !/^\d{14}$/.test(license)) {
+        toast.error('FSSAI license number must be 14 digits (or leave it empty for now)');
         return;
       }
-      if (!formData.fssai_expiry_date) {
-        toast.error('Please add the license expiry date from your FSSAI certificate');
+      if (license && !formData.fssai_expiry_date) {
+        toast.error('Please add the license expiry date, or clear the license number');
         return;
       }
     }
@@ -117,6 +98,7 @@ export default function RestaurantSetupPage() {
         ...formData,
         num_tables: parseInt(formData.num_tables),
         avg_daily_orders: parseInt(formData.avg_daily_orders) || 0,
+        kitchen_enabled: !!formData.kitchen_enabled,
         fssai_license_number: formData.fssai_license_number.trim(),
         fssai_expiry_date: formData.fssai_expiry_date || null,
       });
@@ -231,6 +213,32 @@ export default function RestaurantSetupPage() {
                     />
                   </div>
                 </div>
+
+                {/* Kitchen setup — decides whether orders run through the Kitchen Display */}
+                <div className="space-y-2">
+                  <Label>Do you have a kitchen setup? *</Label>
+                  <p className="text-[11px] text-slate-500 -mt-1">
+                    Yes → orders flow through the Kitchen Display (New → Preparing → Ready). No → orders go straight to billing.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[{ v: true, label: 'Yes, we cook on-site', hint: 'KDS workflow enabled', test: 'kitchen-yes' }, { v: false, label: 'No kitchen', hint: 'Direct billing flow', test: 'kitchen-no' }].map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => updateField('kitchen_enabled', opt.v)}
+                        data-testid={opt.test}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          formData.kitchen_enabled === opt.v
+                            ? 'border-[#0F2417] bg-emerald-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <p className="font-semibold text-slate-900 text-sm">{opt.label}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{opt.hint}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </>
             )}
 
@@ -305,75 +313,41 @@ export default function RestaurantSetupPage() {
                   )}
                 </div>
 
-                {/* FSSAI food license — mandatory per Indian regulation */}
+                {/* FSSAI food license — optional for now (verification disabled) */}
                 <div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-emerald-700" />
                     <div>
-                      <Label htmlFor="fssai-license">FSSAI Food License Number *</Label>
-                      <p className="text-[11px] text-slate-500">14-digit number on your FSSAI certificate — mandatory for registration in India</p>
+                      <Label htmlFor="fssai-license">FSSAI Food License Number <span className="font-normal text-slate-400">(optional)</span></Label>
+                      <p className="text-[11px] text-slate-500">14-digit number on your FSSAI certificate — add it now or update it later in settings.</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="fssai-license"
-                      value={formData.fssai_license_number}
-                      onChange={(e) => {
-                        updateField('fssai_license_number', e.target.value.replace(/\D/g, '').slice(0, 14));
-                        setLicenseResult(null);
-                      }}
-                      placeholder="e.g. 12415002000123"
-                      inputMode="numeric"
-                      className="h-12 font-mono tracking-wider"
-                      data-testid="fssai-license-input"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={verifyLicense}
-                      disabled={licenseVerifying || formData.fssai_license_number.length !== 14}
-                      className="h-12 px-4 whitespace-nowrap"
-                      data-testid="fssai-verify-btn"
-                    >
-                      {licenseVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-1.5" />}
-                      Verify
-                    </Button>
-                  </div>
-                  {licenseResult && (
-                    <div
-                      className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
-                        licenseResult.valid
-                          ? 'border-emerald-200 bg-white text-emerald-800'
-                          : 'border-red-200 bg-white text-red-700'
-                      }`}
-                      data-testid="fssai-verify-result"
-                    >
-                      {licenseResult.valid
-                        ? <BadgeCheck className="w-4 h-4 mt-px flex-shrink-0 text-emerald-600" />
-                        : <BadgeX className="w-4 h-4 mt-px flex-shrink-0 text-red-500" />}
-                      <span>
-                        {licenseResult.message}
-                        {licenseResult.registry_status === 'ACTIVE' && licenseResult.premises_address && (
-                          <span className="block mt-1 text-emerald-700/80">Registered premises: {licenseResult.premises_address}</span>
-                        )}
-                      </span>
+                  <Input
+                    id="fssai-license"
+                    value={formData.fssai_license_number}
+                    onChange={(e) => updateField('fssai_license_number', e.target.value.replace(/\D/g, '').slice(0, 14))}
+                    placeholder="e.g. 12415002000123"
+                    inputMode="numeric"
+                    className="h-12 font-mono tracking-wider"
+                    data-testid="fssai-license-input"
+                  />
+                  {formData.fssai_license_number && (
+                    <div className="space-y-2">
+                      <Label htmlFor="fssai-expiry">License Expiry Date</Label>
+                      <div className="relative">
+                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Input
+                          id="fssai-expiry"
+                          type="date"
+                          value={formData.fssai_expiry_date}
+                          onChange={(e) => updateField('fssai_expiry_date', e.target.value)}
+                          className="pl-10 h-12"
+                          data-testid="fssai-expiry-input"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">We remind you 30 days before expiry so you never fall out of compliance.</p>
                     </div>
                   )}
-                  <div className="space-y-2">
-                    <Label htmlFor="fssai-expiry">License Expiry Date *</Label>
-                    <div className="relative">
-                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <Input
-                        id="fssai-expiry"
-                        type="date"
-                        value={formData.fssai_expiry_date}
-                        onChange={(e) => updateField('fssai_expiry_date', e.target.value)}
-                        className="pl-10 h-12"
-                        data-testid="fssai-expiry-input"
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-500">We remind you 30 days before expiry so you never fall out of compliance.</p>
-                  </div>
                 </div>
               </>
             )}
