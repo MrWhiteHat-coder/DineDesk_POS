@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { tableAPI } from '../../lib/api';
 import { toast } from 'sonner';
+import { moment } from '../../components/pos/RestaurantMoments';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -73,6 +74,9 @@ export default function TablesPage() {
     try {
       await tableAPI.updateStatus(tableId, newStatus);
       toast.success('Table status updated');
+      // Living brand art — only on real table events
+      if (newStatus === 'available') moment('table_cleaned');
+      else if (newStatus === 'reserved') moment('reservation');
       fetchTables();
     } catch (err) {
       toast.error('Failed to update status');

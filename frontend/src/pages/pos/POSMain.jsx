@@ -259,6 +259,10 @@ export default function POSMain() {
     setCustomerName(order.customer_name || '');
     setCustomerPhone(order.customer_phone || '');
     setCustomerEmail(order.customer_email || '');
+    // Walk-in orders come back from the server as "Walk-in Customer" with no
+    // phone — restore the walk-in flag so payment isn't blocked by validation
+    // that only applies to new orders (bug: "Customer phone is required").
+    setIsWalkIn(!order.customer_phone && (!order.customer_name || order.customer_name === 'Walk-in Customer'));
     /* Merge server lines by menu_item_id so repeated lines of the same dish
        (e.g. two rounds of coffee added separately) become one cart row —
        otherwise delta math and the qty stepper desync from the server. */

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api, { customerCRM_API } from '../../lib/api';
+import { moment } from '../../components/pos/RestaurantMoments';
+import newCustomerImg from '../../assets/moments/new_customer.png';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -10,8 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { Label } from '../../components/ui/label';
 import {
   Users, Search, Plus, Phone, Mail, Star, Crown,
-  Award, Calendar, ShoppingCart, TrendingUp, Gift,
-  ChevronRight, X, UserPlus, Coins
+  Award, Calendar, ShoppingCart, TrendingUp, Gift,  ChevronRight, X, UserPlus, Coins
 } from 'lucide-react';
 
 const TIER_CONFIG = {
@@ -52,6 +53,7 @@ export default function CustomersPage() {
     try {
       await customerCRM_API.create(newCustomer);
       toast.success('Customer added!');
+      moment('customer_saved', `${newCustomer.name} joined your guest list.`);
       setShowAdd(false);
       setNewCustomer({ name: '', phone: '', email: '' });
       fetchCustomers();
@@ -188,9 +190,9 @@ export default function CustomersPage() {
         {filtered.length === 0 ? (
           <Card className="trident-watermark">
             <CardContent className="p-12 text-center">
-              <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No customers yet</p>
-              <p className="text-sm text-gray-400 mt-1">Add your first customer to start building loyalty</p>
+              <img src={newCustomerImg} alt="" aria-hidden="true" className="w-32 h-28 mx-auto mb-4 object-contain moment-bob" draggable="false" />
+              <p className="text-gray-900 dark:text-white font-heading font-bold text-lg">No customers yet</p>
+              <p className="text-sm text-gray-500 dark:text-white/50 mt-1">Add your first customer to start building loyalty</p>
             </CardContent>
           </Card>
         ) : (
