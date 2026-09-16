@@ -336,6 +336,18 @@ export default function LoginPage() {
                   <>Sign In <ArrowRight className="w-4 h-4" /></>
                 )}
               </button>
+
+              {/* New restaurant? Create account — the only signup entry point */}
+              <p className="text-center text-sm text-gray-500 dark:text-white/50 pt-1">
+                New to DineDesk?{' '}
+                <Link
+                  to="/register"
+                  data-testid="login-register-link"
+                  className="font-bold text-[#268A4E] hover:text-[#1F6E3E] dark:text-[#3FCE85] dark:hover:text-[#6BDD9E] transition-colors"
+                >
+                  Create your restaurant account
+                </Link>
+              </p>
             </form>
 
             {/* Divider */}

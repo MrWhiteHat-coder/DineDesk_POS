@@ -4765,8 +4765,11 @@ _cors_list = [o.strip() for o in _cors_env.split(',') if o.strip()]
 # (If CORS_ORIGINS env var is stale, production still works.)
 for _o in [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://localhost:5173',
-    'https://revontechologies.in',
+    'https://revontechnologies.in',      # apex — serves 308 to www, still must pass preflight
+    'https://www.revontechnologies.in',
+    'https://revontechologies.in',       # legacy misspelled domain kept for safety
     'https://www.revontechologies.in',
     'app://local',          # DineDesk POS Windows desktop app (Electron app:// scheme)
 ]:
