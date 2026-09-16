@@ -25,6 +25,10 @@ export default function RegisterPage() {
     title: 'Create Your DineDesk Account — Restaurant POS from ₹999/month',
     noindex: false,
   });
+  // LoginPage can hand us an unverified email: /register {state:{step:'otp', email}}
+  // jumps straight back into the verification step. Must be declared before any
+  // useState that reads it (TDZ crash otherwise → blank /register page).
+  const routeState = useLocation().state || {};
   const [name, setName] = useState('');
   const [email, setEmail] = useState(routeState.email || '');
   const [password, setPassword] = useState('');
@@ -36,9 +40,6 @@ export default function RegisterPage() {
   const [resending, setResending] = useState(false);
 
   const navigate = useNavigate();
-  // LoginPage can hand us an unverified email: /register {state:{step:'otp', email}}
-  // jumps straight back into the verification step.
-  const routeState = useLocation().state || {};
   const { dark, toggle } = useTheme();
 
   // Email OTP state

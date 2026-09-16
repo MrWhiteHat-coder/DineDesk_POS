@@ -1105,6 +1105,7 @@ async def send_signup_otp_email(email: str, name: str, otp: str):
             if resp.status_code not in (200, 201, 202):
                 raise RuntimeError(f"SendGrid status {resp.status_code}")
             logger.info(f"Signup OTP sent to {email} via SendGrid")
+            await log_action("auth", "otp_email_sent", details=f"provider=sendgrid to={email}")
             return
         if GMAIL_USER and GMAIL_APP_PASSWORD:
             from email.mime.text import MIMEText
@@ -1121,10 +1122,15 @@ async def send_signup_otp_email(email: str, name: str, otp: str):
                     server.sendmail(GMAIL_USER, [email], msg.as_string())
             await asyncio.to_thread(_smtp)
             logger.info(f"Signup OTP sent to {email} via SMTP")
+            await log_action("auth", "otp_email_sent", details=f"provider=smtp to={email}")
             return
         logger.warning(f"No email provider configured — signup OTP for {email}: {otp}")
     except Exception as e:
         logger.error(f"Failed to send signup OTP to {email}: {e}")
+        try:
+            await log_action("auth", "otp_email_failed", details=f"to={email} error={str(e)[:200]}")
+        except Exception:
+            pass
 
 async def send_verification_email(email: str, name: str, token: str):
     """Send email verification link to newly registered user (SendGrid or SMTP)."""
@@ -1413,6 +1419,7 @@ async def register(user_data: UserCreate):
         user["signup_otp_attempts"] = 0
         await db.users.insert_one(user)
         asyncio.create_task(send_signup_otp_email(user_data.email, user_data.name, raw_otp))
+        await log_action("auth", "signup_otp_sent", details=user_data.email)
         return RegisterResponse(
             message="We've sent a 6-digit verification code to your email. Enter it to activate your account.",
             email=user_data.email
