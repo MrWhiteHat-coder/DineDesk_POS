@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
 import { createOrderResilient } from '../../lib/resilientOrder';
+import { calcBill } from '../../lib/billing';
+import { useAuth } from '../../contexts/AuthContext';
+import { moment } from '../../components/pos/RestaurantMoments';
 import haptics from '../../lib/haptics';
 import { sounds } from '../../lib/sounds';
 import { toast } from 'sonner';
@@ -17,6 +20,7 @@ const FALLBACK = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=20
 
 export default function QuickPOSPage() {
   const { isDayOpen } = useOutletContext();
+  const { restaurant } = useAuth();
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [tables, setTables] = useState([]);
@@ -94,9 +98,13 @@ export default function QuickPOSPage() {
   const removeItem = (id) => setCart(prev => prev.filter(c => c.id !== id));
   const updateQty = (id, delta) => setCart(prev => prev.map(c => c.id === id ? { ...c, qty: Math.max(1, c.qty + delta) } : c));
 
+  /* Canonical billing arithmetic (lib/billing.js) — mirrors the backend:
+     tax on the FULL subtotal at restaurant.tax_rate (was hardcoded 5%). */
   const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const tax = subtotal * 0.05;
-  const total = subtotal + tax;
+  const taxRate = restaurant?.tax_rate ?? 5;
+  const bill = calcBill(cart.map(c => ({ price: c.price, quantity: c.qty })), 0, taxRate);
+  const tax = bill.tax;
+  const total = bill.total;
 
   const totalPaid = paymentSplits.reduce((s, sp) => s + (sp.amount || 0), 0);
   const remaining = Math.max(0, total - totalPaid);
@@ -135,8 +143,8 @@ export default function QuickPOSPage() {
       const result = await createOrderResilient(payload, { total });
       haptics.success();
       sounds.done();
-      if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); }
-      else { toast.success(`Order #${result.data.order_number} done!`); }
+      if (!result.online) { moment('no_internet'); toast.info('Saved offline — will sync automatically when back online'); }
+      else { moment(customerName.trim() ? 'order_placed' : 'new_customer'); toast.success(`Order #${result.data.order_number} done!`); }
       if (result.online) {
         try {
           const rcpt = await receiptAPI.get(result.data.id);

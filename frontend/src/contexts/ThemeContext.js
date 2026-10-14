@@ -4,7 +4,9 @@ const ThemeContext = createContext({ dark: false, toggle: () => {} });
 
 export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(() => {
-    try { return localStorage.getItem('dd-theme') === 'dark'; } catch (e) { return false; }
+    // Dark is the product's default look (premium charcoal + amber);
+    // persisting 'light' is the only way back to light.
+    try { return localStorage.getItem('dd-theme') !== 'light'; } catch (e) { return true; }
   });
 
   useEffect(() => {
@@ -14,7 +16,7 @@ export function ThemeProvider({ children }) {
     /* Status-bar theming for the installed PWA: the Android Chrome status bar
        paints this color, so it must match the app surface in BOTH themes or a
        jarring white strip floats above Night Shift. */
-    const brandColor = dark ? '#0D100E' : '#F4F7F3';
+    const brandColor = dark ? '#101412' : '#F4F7F3';
     let meta = document.head.querySelector('meta[name="theme-color"]');
     if (!meta) {
       meta = document.createElement('meta');

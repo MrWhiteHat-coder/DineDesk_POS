@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
 import { createOrderResilient } from '../../lib/resilientOrder';
+import { moment, momentAndWait } from '../../components/pos/RestaurantMoments';
+import { calcBill, projectRunningOrder } from '../../lib/billing';
+import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -32,6 +35,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
 
 export default function POSMain() {
   const { isDayOpen } = useOutletContext();
+  const { restaurant } = useAuth();
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [tables, setTables] = useState([]);
@@ -119,24 +123,30 @@ export default function POSMain() {
   const clearCart = () => { setCart([]); setApplyDiscount(false); generateOrderNumber(); setSelectedRunningOrder(null); setCustomerName(''); setCustomerPhone(''); setCustomerEmail(''); };
   const updateNotes = (id, notes) => setCart(prev => prev.map(c => c.item.id === id ? { ...c, notes } : c));
 
-  const subtotal = cart.reduce((s, c) => s + c.item.price * c.quantity, 0);
-  const discountAmount = applyDiscount && subtotal >= 50 ? subtotal * 0.1 : 0;
-  const taxAmount = (subtotal - discountAmount) * 0.05;
+  const subtotal = round2(cart.reduce((s, c) => s + c.item.price * c.quantity, 0));
+  const discountAmount = applyDiscount && subtotal >= 50 ? round2(subtotal * 0.1) : 0;
+  /* Canonical billing arithmetic (lib/billing.js): the backend taxes the FULL
+     subtotal at restaurant.tax_rate, THEN subtracts the discount. Mirroring
+     this is required so the displayed total equals the server's bill — the
+     old screen taxED the discounted remainder and hardcoded 5%, disagreeing
+     with the actual payable amount whenever a discount or custom rate applies. */
+  const taxRate = restaurant?.tax_rate ?? 5;
+  const bill = calcBill(cart.map(c => ({ price: c.item.price, quantity: c.quantity })), discountAmount, taxRate);
+  const taxAmount = bill.tax;
   /* Running order: charge only the DELTA on top of the server's authoritative
-     total — extra units of existing items AND brand-new items. The original
-     order was already priced by the backend; re-computing from the merged
-     cart double-counts existing items, and ignoring quantity increases on
-     existing items silently undercharges. */
+     total — projected exactly like the backend add-items recomputation
+     (tax on the full new subtotal, discount carried unchanged). */
   const serverQtyMap = {};
   (selectedRunningOrder?.items || []).forEach(i => { serverQtyMap[i.menu_item_id] = (serverQtyMap[i.menu_item_id] || 0) + i.quantity; });
-  const deltaSubtotal = selectedRunningOrder
-    ? cart.reduce((s, c) => s + c.item.price * Math.max(0, c.quantity - (serverQtyMap[c.item.id] || 0)), 0)
-    : 0;
-  const deltaDiscount = applyDiscount && deltaSubtotal >= 50 ? deltaSubtotal * 0.1 : 0;
-  const deltaTax = (deltaSubtotal - deltaDiscount) * 0.05;
+  const deltaLines = selectedRunningOrder
+    ? cart.filter(c => c.quantity > (serverQtyMap[c.item.id] || 0))
+          .map(c => ({ price: c.item.price, quantity: c.quantity - (serverQtyMap[c.item.id] || 0) }))
+    : [];
+  const projected = selectedRunningOrder ? projectRunningOrder(selectedRunningOrder, deltaLines, taxRate) : null;
+  const deltaSubtotal = projected ? projected.deltaSubtotal : 0;
   const total = selectedRunningOrder
-    ? round2(selectedRunningOrder.total_amount + deltaSubtotal + deltaTax - deltaDiscount)
-    : round2(subtotal + taxAmount - discountAmount);
+    ? round2(selectedRunningOrder.total_amount + projected.dtotal)
+    : bill.total;
   /* New items not yet sent to the kitchen — Update must run before Settle,
      otherwise the guest would pay for food the order doesn't contain yet. */
   const hasOrderChanges = selectedRunningOrder
@@ -190,8 +200,8 @@ export default function POSMain() {
         const hasCust = !!(custName || customerPhone.trim());
         const result = await createOrderResilient({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: custName || 'Walk-in Customer', customer_phone: customerPhone.trim() || null, customer_email: customerEmail.trim() || null }, { total });
         haptics.success();
-        if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); }
-        else { toast.success(`Order #${result.data.order_number} placed!`); }
+        if (!result.online) { moment('no_internet'); toast.info('Saved offline — will sync automatically when back online'); }
+        else { moment('sending_kitchen'); toast.success(`Order #${result.data.order_number} placed!`); }
         clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
       } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
     } else { openPaymentModal(); }
@@ -243,13 +253,14 @@ export default function POSMain() {
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
       const result = await createOrderResilient(payload, { total });
-      if (!result.online) { toast.info('Order saved offline with payment recorded — syncs automatically when back online'); }
+      if (!result.online) { moment('no_internet'); toast.info('Order saved offline with payment recorded — syncs automatically when back online'); }
       else {
         toast.success(`Order #${result.data.order_number} completed!`);
+        await momentAndWait('payment_success');
         await fetchAndShowReceipt(result.data.id);
       }
       clearCart(); setShowPaymentModal(false);
-    } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
+    } catch (err) { moment('error_retry'); toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
   };
 
   const handleReleaseAndPay = async (orderId) => {
@@ -297,8 +308,9 @@ export default function POSMain() {
       toast.success('Payment confirmed!');
       setShowPaymentModal(false);
       fetchRunningOrders(); fetchTables(); clearCart(); setSelectedRunningOrder(null);
+      await momentAndWait('payment_success');
       await fetchAndShowReceipt(orderId);
-    } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
+    } catch (err) { moment('error_retry'); toast.error(err.response?.data?.detail || 'Payment failed'); }
   };
 
   const selectRunningOrder = (order) => {

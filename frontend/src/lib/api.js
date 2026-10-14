@@ -146,6 +146,8 @@ export const orderAPI = {
   updateStatus: (id, status, opts = {}) => api.put(`/orders/${id}/status`, { status }, { params: { cancel_reason: opts.reason, manager_pin: opts.managerPin } }),
   addItems: (id, data) => api.post(`/orders/${id}/add-items`, data),
   pay: (id, data) => api.post(`/orders/${id}/pay`, data),
+  // Full void of a PAID order — reasons audited server-side; optional stock restore.
+  refund: (id, data) => api.post(`/orders/${id}/refund`, data),
 };
 
 // Day Session APIs

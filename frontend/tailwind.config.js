@@ -27,11 +27,19 @@ module.exports = {
           'paper': '#FFFFFF',      // primary surface
           'paper-dim': '#F9FAFB',
           'line': '#E5E7EB',
-          'night': '#0F1115',      // Night Shift background
-          'night-card': '#161A20', // Night Shift card surface
-          'success': '#059669',
-          'warning': '#F59E0B',
-          'error': '#DC2626',
+          'night': '#101412',      // Night Shift main background (deep charcoal)
+          'night-side': '#141915', // Night Shift sidebar
+          'night-card': '#191F1B', // Night Shift card/panel surface
+          'night-input': '#202721',// Night Shift input background
+          'night-border': '#303832',// Night Shift border/divider
+          'ivory': '#F4F1E8',      // primary text on dark
+          'sage': '#A5ADA5',       // secondary text on dark
+          'amber': { DEFAULT: '#F4A261', deep: '#E88D45' }, // primary accent
+          'amber-ink': '#20170F',  // text on amber buttons
+          'success': '#78C091',
+          'warning': '#F4A261',
+          'info': '#82B4E8',
+          'error': '#E76F51',
         },
         // shadcn semantic tokens — wired to CSS vars so components (Card,
         // Dialog, Dropdown, Switch, Badge, Button...) adapt to Night Shift.

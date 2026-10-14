@@ -87,42 +87,48 @@ code {
        NIGHT SHIFT — dark theme tokens
        ═══════════════════════════════ */
     html.dark {
-        --dd-ink: #FFFFFF;
-        --dd-ink-soft: #E5E7EB;
-        --dd-on-ink: #0F1115;
-        --dd-ring: #F3F4F6;
-        --dd-bg: #161A20;
-        --dd-surface: #14181D;
-        --dd-border: #262B33;
-        --dd-text: #F3F4F6;
-        --dd-text-secondary: #9CA3AF;
+        /* Primary interactive accent: warm amber, on-ink = deep warm brown */
+        --dd-ink: #F4A261;
+        --dd-ink-soft: #E88D45;
+        --dd-on-ink: #20170F;
+        --dd-ring: #F4A261;
+        --dd-info: #82B4E8;
+        --dd-success: #78C091;
+        --dd-error: #E76F51;
+        --dd-bg: #101412;            /* main background */
+        --dd-side: #141915;          /* sidebar background */
+        --dd-surface: #191F1B;       /* cards and panels */
+        --dd-input: #202721;         /* input backgrounds */
+        --dd-border: #303832;        /* borders and dividers */
+        --dd-text: #F4F1E8;          /* warm ivory primary text */
+        --dd-text-secondary: #A5ADA5;
         --dd-shadow-card: 0 1px 3px rgba(0,0,0,0.4);
         --dd-shadow-elevated: 0 4px 12px rgba(0,0,0,0.5);
 
-        --background: 220 13% 7%;
-        --foreground: 0 0% 93%;
-        --card: 220 12% 11%;
-        --card-foreground: 0 0% 93%;
-        --popover: 220 12% 11%;
-        --popover-foreground: 0 0% 93%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 220 10% 18%;
-        --secondary-foreground: 0 0% 93%;
-        --muted: 220 10% 16%;
-        --muted-foreground: 220 6% 62%;
-        --accent: 0 0% 98%;
-        --accent-foreground: 0 0% 9%;
-        --destructive: 0 72% 55%;
+        --background: 160 9% 7%;       /* #101412 */
+        --foreground: 63 30% 93%;      /* #F4F1E8 */
+        --card: 160 10% 11%;           /* #191F1B */
+        --card-foreground: 63 30% 93%;
+        --popover: 160 10% 11%;
+        --popover-foreground: 63 30% 93%;
+        --primary: 31 85% 67%;         /* #F4A261 */
+        --primary-foreground: 30 45% 9%;  /* #20170F */
+        --secondary: 160 8% 20%;      /* #303832 */
+        --secondary-foreground: 63 30% 93%;
+        --muted: 160 8% 17%;           /* #202721 */
+        --muted-foreground: 100 4% 66%; /* #A5ADA5 */
+        --accent: 160 10% 11%;         /* #191F1B */
+        --accent-foreground: 63 30% 93%;
+        --destructive: 10 77% 61%;     /* #E76F51 */
         --destructive-foreground: 0 0% 100%;
-        --border: 220 10% 20%;
-        --input: 220 10% 20%;
-        --ring: 0 0% 85%;
-        --chart-1: 0 0% 95%;
-        --chart-2: 0 0% 70%;
-        --chart-3: 0 0% 50%;
-        --chart-4: 0 0% 35%;
-        --chart-5: 0 0% 25%;
+        --border: 160 8% 19%;          /* #303832 */
+        --input: 160 8% 13%;           /* #202721 */
+        --ring: 31 85% 67%;            /* amber focus ring */
+        --chart-1: 31 85% 67%;         /* amber */
+        --chart-2: 138 30% 61%;        /* success green */
+        --chart-3: 210 65% 71%;        /* info blue */
+        --chart-4: 10 77% 61%;         /* error coral */
+        --chart-5: 100 4% 66%;         /* secondary text */
     }
 }
 
@@ -135,8 +141,8 @@ code {
         background-color: #F4F7F3;
     }
     html.dark body {
-        background-color: #0D100E;
-        color: #F3F4F6;
+        background-color: #101412;
+        color: #F4F1E8;
     }
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Manrope', sans-serif;
@@ -274,9 +280,9 @@ html.dark .dd-badge-error { color: #FCA5A5; }
     background: #a3a3a3;
 }
 
-html.dark ::-webkit-scrollbar-track { background: #14181D; }
-html.dark ::-webkit-scrollbar-thumb { background: #2E343D; }
-html.dark ::-webkit-scrollbar-thumb:hover { background: #3D444E; }
+html.dark ::-webkit-scrollbar-track { background: #141915; }
+html.dark ::-webkit-scrollbar-thumb { background: #303832; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #3D4740; }
 
 /* DineDesk POS utilities */
 .pos-card {

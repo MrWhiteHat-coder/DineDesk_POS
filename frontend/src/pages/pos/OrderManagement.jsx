@@ -17,6 +17,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import servedTableImg from '../../assets/moments/served_table.png';
+import { guard } from '../../components/pos/GuardReasonDialog';
 
 const statusConfig = {
   received: { label: 'New', color: 'bg-blue-500', icon: Clock },
@@ -132,6 +133,7 @@ export default function OrderManagement() {
                   key={order.id}
                   order={order}
                   onUpdateStatus={updateOrderStatus}
+                  onRefund={fetchOrders}
                 />
               ))}
             </div>
@@ -158,7 +160,7 @@ export default function OrderManagement() {
   );
 }
 
-function OrderCard({ order, onUpdateStatus }) {
+function OrderCard({ order, onUpdateStatus, onRefund }) {
   const status = safeStatus(order.status);
   const orderType = safeOrderType(order.order_type);
   const StatusIcon = status.icon;
@@ -257,6 +259,28 @@ function OrderCard({ order, onUpdateStatus }) {
             data-testid={`update-status-${order.id}`}
           >
             Mark as {statusConfig[nextStatus].label}
+          </Button>
+        )}
+
+        {/* Void / refund a PAID bill — audited, reason required, PIN-gated
+            server-side; money goes back to the actual payment methods. */}
+        {order.payment_status === 'paid' && !nextStatus && (
+          <Button
+            variant="outline"
+            onClick={() => guard.confirm({
+              title: `Void order #${order.order_number}?`,
+              description: `₹${(order.total_amount ?? 0).toFixed(2)} goes back to ${order.payment_method === 'split' ? 'the split payment methods' : order.payment_method}. Stock returns to inventory unless you note the food as waste.`,
+              confirmLabel: 'Void & refund',
+              action: async (reason) => {
+                await orderAPI.refund(order.id, { reason, restock: !/waste/i.test(reason) });
+                toast.success(`Order #${order.order_number} refunded`);
+                onRefund();
+              },
+            })}
+            className="w-full mt-2 border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-400/30 dark:text-rose-300 dark:hover:bg-rose-950/30"
+            data-testid={`refund-${order.id}`}
+          >
+            Void & refund
           </Button>
         )}
 
