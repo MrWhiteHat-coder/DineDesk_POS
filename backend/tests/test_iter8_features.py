@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 import random
 import string
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL') or 'http://localhost:8000'  # conftest skips when this is unreachable
 
 # Test credentials - loaded from environment
 TEST_EMAIL = os.environ.get('TEST_EMAIL', 'demo@restaurant.com')

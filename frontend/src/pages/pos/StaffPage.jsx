@@ -129,18 +129,28 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="space-y-6" data-testid="staff-page">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-bold text-slate-900">Staff Management</h1>
-        <Button
-          onClick={() => setShowModal(true)}
-          className="bg-black hover:bg-gray-800"
-          data-testid="add-staff-btn"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Staff
-        </Button>
+    <div className="space-y-5 max-w-[1400px] animate-fade-in" data-testid="staff-page">
+      {/* Header — reference: eyebrow + title + script quote + Add Staff */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(240px,340px)_auto] gap-4 items-stretch">
+        <div className="flex flex-col justify-center">
+          <p className="text-[11px] font-bold tracking-[0.14em] text-[#268A4E] dark:text-[#3FCE85] uppercase">Staff Management</p>
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">Your Team, Our Strength 💚</h1>
+          <p className="text-sm text-slate-500 dark:text-white/50 mt-1">Manage staff, track activity, and keep your restaurant running smoothly.</p>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50/80 dark:bg-emerald-400/[0.06] border border-emerald-100 dark:border-emerald-400/15 p-4 flex flex-col justify-center">
+          <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] leading-snug">"Happy team serves happy food!"</p>
+          <p className="text-[10px] text-slate-400 dark:text-white/40 mt-1 self-end">— DineDesk</p>
+        </div>
+        <div className="flex items-center justify-end">
+          <Button
+            onClick={() => setShowModal(true)}
+            className="h-11 rounded-xl bg-[#0F2417] hover:bg-[#1a3d28] dark:bg-[#2E9E5B] dark:hover:bg-[#288A50] text-white font-bold"
+            data-testid="add-staff-btn"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Staff
+          </Button>
+        </div>
       </div>
 
       {/* DineDesk Guard — immutable activity trail (owner/manager only) */}

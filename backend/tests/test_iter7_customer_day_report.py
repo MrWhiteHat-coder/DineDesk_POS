@@ -11,7 +11,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL').rstrip('/')
+BASE_URL = (os.environ.get('REACT_APP_BACKEND_URL') or 'http://localhost:8000').rstrip('/')  # conftest skips when this is unreachable
 
 class TestCustomerLookup:
     """Test customer phone lookup API for auto-suggest feature"""

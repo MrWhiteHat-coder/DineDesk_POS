@@ -39,8 +39,15 @@ import {
   CircleDollarSign,
   Monitor,
   CalendarDays,
+  XCircle,
+  Zap,
+  Plus,
+  IndianRupee,
+  ShoppingCart,
+  BarChart3,
+  ClipboardList,
 } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 /* ───────── helpers ───────── */
 
@@ -85,123 +92,6 @@ function tableVisual(table, order) {
   return { ring: 'ring-gray-300/70 dark:ring-white/15 bg-gray-100 dark:bg-white/[0.05]', dot: 'bg-gray-400 dark:bg-white/30', label: 'Available', chip: 'bg-gray-400 dark:bg-white/30' };
 }
 
-/* Mini sparkline (metric cards) */
-function Spark({ data, color = '#2E9E5B' }) {
-  if (!data || data.length < 2) return null;
-  return (
-    <div className="w-16 h-8 hidden sm:block flex-shrink-0 spark-draw" aria-hidden="true">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id={`spark-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Area
-            type="monotone"
-            dataKey="v"
-            stroke={color}
-            strokeWidth={1.5}
-            fill={`url(#spark-${color.replace('#', '')})`}
-            isAnimationActive
-            animationDuration={900}
-            animationEasing="ease-out"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-/* ───────── PROMO BANNER (z3 reference — offers carousel) ───────── */
-const PROMO_SLIDES = [
-  {
-    id: 'off150',
-    tag: 'LIMITED TIME',
-    title: 'Minimum ₹150 OFF',
-    sub: 'On your next order above ₹500 — auto-applied at billing',
-    cta: 'Order now',
-  },
-  {
-    id: 'combo',
-    tag: 'COMBO WEEK',
-    title: 'Buy 1 Get 1 on Combos',
-    sub: 'Select combo items — discount applies to the cheaper one',
-    cta: 'See combos',
-  },
-  {
-    id: 'upi',
-    tag: 'PAY DAY',
-    title: '5% back on UPI payments',
-    sub: 'Trident Coins credited instantly on every UPI bill',
-    cta: 'Pay via UPI',
-  },
-];
-
-function PromoBanner({ onClaim }) {
-  const [slide, setSlide] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    if (paused) return undefined;
-    const iv = setInterval(() => setSlide(s => (s + 1) % PROMO_SLIDES.length), 4500);
-    return () => clearInterval(iv);
-  }, [paused]);
-
-  const current = PROMO_SLIDES[slide];
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0F2417] via-[#1B5A38] to-[#2E9E5B] text-white animate-fade-in"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onTouchStart={() => setPaused(true)}
-      onTouchEnd={() => setPaused(false)}
-      data-testid="promo-banner"
-    >
-      {/* Soft decorative dots (calm, brand-tinted) */}
-      <div className="absolute -left-6 -top-10 w-32 h-32 rounded-full bg-white/[0.06] pointer-events-none" aria-hidden="true" />
-      <div className="absolute right-10 -bottom-14 w-40 h-40 rounded-full bg-white/[0.05] pointer-events-none" aria-hidden="true" />
-
-      <div className="relative px-4 md:px-6 py-4 md:py-5 flex items-center gap-4">
-        {/* Gift icon in a glass chip */}
-        <div className="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-          <Gift className="w-5 h-5 md:w-6 md:h-6 text-amber-300" />
-        </div>
-
-        {/* Copy — swaps with the slide */}
-        <div className="flex-1 min-w-0">
-          <p className="text-[9px] md:text-[10px] font-bold tracking-[0.14em] text-emerald-200/90">{current.tag}</p>
-          <h3 key={current.id} className="font-heading font-extrabold text-base md:text-xl leading-tight mt-0.5 animate-promo-in">
-            {current.title}
-          </h3>
-          <p className="text-[11px] md:text-xs text-white/70 mt-0.5 truncate">{current.sub}</p>
-        </div>
-
-        <button
-          onClick={onClaim}
-          className="hidden sm:flex items-center gap-1 px-4 h-10 rounded-full bg-white text-[#0F2417] text-xs font-bold hover:bg-emerald-50 active:scale-95 transition-all flex-shrink-0"
-        >
-          {current.cta} <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Slide dots */}
-      <div className="relative flex items-center justify-center gap-1.5 pb-2.5">
-        {PROMO_SLIDES.map((s, i) => (
-          <button
-            key={s.id}
-            onClick={() => setSlide(i)}
-            aria-label={`Show offer ${i + 1}`}
-            className={`promo-dot h-1.5 rounded-full transition-all ${i === slide ? 'w-5 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ═══════════════════════════════════════════════════════
    CONTROL ROOM DASHBOARD
    ═══════════════════════════════════════════════════════ */
@@ -217,8 +107,6 @@ export default function POSDashboard() {
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [mapTab, setMapTab] = useState('floor');
-  const [selectedTableId, setSelectedTableId] = useState(null);
   const [newOrderPulse, setNewOrderPulse] = useState(false);
   const [longPressTable, setLongPressTable] = useState(null);
   const [tableActionLoading, setTableActionLoading] = useState(false);
@@ -227,6 +115,7 @@ export default function POSDashboard() {
   const [receiptData, setReceiptData] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showOrdersDetail, setShowOrdersDetail] = useState(false);
+  const [tableFilter, setTableFilter] = useState('all');
   const receiptRef = useRef(null);
   const seenOrderIdsRef = useRef(null);
   const pulseTimerRef = useRef(null);
@@ -393,8 +282,6 @@ export default function POSDashboard() {
   const orderForTable = (table) =>
     todayOrders.find(o => String(o.table_number) === String(table.table_number) && ['pending', 'preparing', 'ready', 'completed'].includes(o.status));
 
-  const selectedTable = tables.find(t => t.id === selectedTableId) || null;
-  const selectedTableOrder = selectedTable ? orderForTable(selectedTable) : null;
 
   /* ── receipt (preserved logic) ── */
   const openReceipt = async (order) => {
@@ -449,22 +336,6 @@ export default function POSDashboard() {
     }
   };
 
-  /* Live Service Map: Floor → Orders → Kitchen swipe navigation */
-  const TAB_ORDER = ['floor', 'orders', 'kitchen'];
-  const tabTouch = useRef(null);
-  const handleTabTouchStart = (e) => { tabTouch.current = e.touches[0]?.clientX ?? null; };
-  const handleTabTouchEnd = (e) => {
-    if (tabTouch.current === null) return;
-    const endX = e.changedTouches[0]?.clientX;
-    if (endX === undefined) { tabTouch.current = null; return; }
-    const dx = endX - tabTouch.current;
-    tabTouch.current = null;
-    if (Math.abs(dx) < 56) return; // too short — not a swipe
-    const idx = TAB_ORDER.indexOf(mapTab);
-    const next = dx < 0 ? Math.min(TAB_ORDER.length - 1, idx + 1) : Math.max(0, idx - 1);
-    if (next !== idx) { setMapTab(TAB_ORDER[next]); setSelectedTableId(null); haptics.press(); }
-  };
-
   /* ── greeting ── */
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -515,95 +386,137 @@ export default function POSDashboard() {
   }
 
   /* ═════════ RENDER ═════════ */
-  return (
-    <div className="space-y-5 animate-fade-in max-w-[1400px]" data-testid="pos-dashboard">
 
-      {/* ═══ GREETING + METRICS ═══ */}
-      <div className="flex flex-col lg:flex-row lg:items-stretch gap-4">
-        <div className="flex-1 min-w-0">
-          <h1 className="font-heading-xl text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+  /* Hourly sales (real orders → local-time buckets). Plain derivation —
+     runs after the loading gate, so hooks must live above it. */
+  const computeHourlySales = (orders) => {
+    const buckets = Array.from({ length: 24 }, (_, h) => ({ hour: h, sales: 0 }));
+    orders.forEach(o => {
+      if (o.status === 'cancelled') return;
+      try {
+        const h = new Date(o.created_at).getHours();
+        buckets[h].sales += (o.total_amount || 0);
+      } catch { /* skip malformed */ }
+    });
+    return buckets;
+  };
+  const hourlySales = computeHourlySales(todayOrders);
+
+  const todaySales = todayOrders.filter(o => o.status !== 'cancelled').reduce((a, o) => a + (o.total_amount || 0), 0);
+  const avgOrderValue = todayOrders.length > 0 ? todaySales / todayOrders.length : 0;
+  const cancelledOrders = todayOrders.filter(o => o.status === 'cancelled');
+  const servedOrders = todayOrders.filter(o => o.status === 'completed');
+  const newOrders = todayOrders.filter(o => o.status === 'pending');
+
+  /* Top selling items (real line items → revenue) */
+  const computeTopItems = (orders) => {
+    const map = {};
+    orders.forEach(o => {
+      if (o.status === 'cancelled') return;
+      (o.items || []).forEach(it => {
+        if (!map[it.name]) map[it.name] = { name: it.name, qty: 0, revenue: 0 };
+        map[it.name].qty += (it.quantity || 0);
+        map[it.name].revenue += (it.total || 0);
+      });
+    });
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  };
+  const topItems = computeTopItems(todayOrders);
+
+  const availableTables = tables.filter(t => t.status !== 'occupied' && t.status !== 'reserved');
+  const reservedTables = tables.filter(t => t.status === 'reserved');
+  const filteredTables = tableFilter === 'occupied' ? occupiedTables
+    : tableFilter === 'available' ? availableTables
+    : tableFilter === 'reserved' ? reservedTables
+    : tables;
+
+  const fmtHour = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'AM' : 'PM'}`;
+  const fmtAxis = (v) => (v >= 1000 ? `₹${(v / 1000).toFixed(1).replace(/\.0$/, '')}K` : `₹${v}`);
+
+  const statusRows = [
+    { key: 'new', label: 'New Orders', count: newOrders.length, icon: ClipboardList, tone: 'bg-emerald-50 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-300' },
+    { key: 'prep', label: 'Preparing', count: preparingOrders.length, icon: Flame, tone: 'bg-amber-50 dark:bg-amber-400/10 text-amber-600 dark:text-amber-300' },
+    { key: 'ready', label: 'Ready', count: readyOrders.length, icon: CheckCircle, tone: 'bg-blue-50 dark:bg-blue-400/10 text-blue-600 dark:text-blue-300' },
+    { key: 'served', label: 'Served', count: servedOrders.length, icon: ConciergeBell, tone: 'bg-gray-100 dark:bg-white/[0.07] text-gray-500 dark:text-white/60' },
+    { key: 'cancelled', label: 'Cancelled', count: cancelledOrders.length, icon: XCircle, tone: 'bg-red-50 dark:bg-red-400/10 text-red-600 dark:text-red-300' },
+  ];
+
+  const quickLinks = [
+    { label: 'Add Menu', icon: UtensilsCrossed, to: '/pos/menu' },
+    { label: 'Manage Tables', icon: Monitor, to: '/pos/tables' },
+    { label: 'Inventory', icon: Package, to: '/pos/inventory' },
+    { label: 'Create Bill', icon: Receipt, to: '/pos/order-management' },
+    { label: 'Add Customer', icon: Users, to: '/pos/customers' },
+    { label: 'View Reports', icon: BarChart3, to: '/pos/analytics' },
+  ];
+
+  return (
+    <div className="space-y-4 md:space-y-5 animate-fade-in max-w-[1400px]" data-testid="pos-dashboard">
+
+      {/* ═══ GREETING + HERO BRAND BANNER ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(280px,400px)] gap-4 items-stretch">
+        <div className="flex flex-col justify-center">
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
             {greeting}, {firstName} <span aria-hidden="true">🌱</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-white/50 mt-1.5 flex items-center gap-2 flex-wrap">
-            <span className="hidden md:inline">
-              {tables.length > 0
-                ? `${occupiedTables.length} table${occupiedTables.length !== 1 ? 's' : ''} active · ${attentionCount} thing${attentionCount !== 1 ? 's' : ''} need attention · ${kitchenLine}`
-                : `${kitchenLine} · add tables from the Tables page to see your floor`}
-            </span>
-            <span className="md:hidden">
-              {attentionCount > 0
-                ? `${attentionCount} thing${attentionCount !== 1 ? 's' : ''} need attention`
-                : kitchenLine !== 'kitchen running normally' ? kitchenLine : 'Service running smoothly'}
-            </span>
-            <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${hasData ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-white/45'}`}>
+          <p className="text-sm text-gray-500 dark:text-white/50 mt-1.5">
+            {isDayOpen ? "Everything looks good. Here's what's happening today." : 'Day is not open yet — open the day to start billing.'}
+          </p>
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full ${hasData ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-white/45'}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${hasData ? 'bg-emerald-500 animate-calm-pulse' : 'bg-gray-400'}`} />
               {hasData ? 'Live data' : 'No service yet'}
             </span>
-          </p>
+            {attentionCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full bg-red-50 text-red-600 dark:bg-red-400/10 dark:text-red-300">
+                <AlertTriangle className="w-3 h-3" /> {attentionCount} need attention
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Metric cards */}
-        <div className="grid grid-cols-3 gap-2 md:gap-3 lg:w-[440px] flex-shrink-0">
-          {/* Sales today */}
-          <button
-            onClick={() => navigate('/pos/analytics')}
-            className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all"
-            data-testid="sales-today-card"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center"><Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-300" /></div>
-              <Spark data={salesHistory} />
-            </div>
-            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">
-              <CountUp value={analytics?.daily_sales ?? lastSales ?? 0} prefix="₹" />
-            </p>
-            <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
-              Sales today
-              {deltaChip(salesDelta)}
-            </p>
-          </button>
-
-          {/* Active orders */}
-          <button
-            onClick={() => setShowOrdersDetail(true)}
-            className={`text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all ${newOrderPulse ? 'live-pulse' : ''}`}
-            data-testid="active-orders-card"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center"><Users className="w-4 h-4 text-blue-600 dark:text-blue-300" /></div>
-              <Spark data={ordersHistory} color="#3B82F6" />
-            </div>
-            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">
-              <CountUp value={activeOrders.length} />
-            </p>
-            <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
-              Active orders
-              {deltaChip(ordersDelta)}
-            </p>
-          </button>
-
-          {/* Tables occupied */}
-          <div
-            className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3 md:p-3.5"
-            data-testid="tables-occupied-card"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-white/[0.06] flex items-center justify-center"><Monitor className="w-4 h-4 text-gray-500 dark:text-white/50" /></div>
-              <Spark data={ordersHistory} color="#6B7280" />
-            </div>
-            <p className="font-numbers text-xl font-bold text-gray-900 dark:text-white leading-none">{occupiedTables.length} / {tables.length}</p>
-            <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 flex items-center gap-1">
-              Tables occupied
-              {tables.length > 0 && <span className="font-bold text-emerald-500">{occupancyPct}%</span>}
-            </p>
-          </div>
+        {/* Brand hero */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F2417] via-[#1B5A38] to-[#2E9E5B] text-white p-5 md:p-6 min-h-[128px] flex flex-col justify-center" data-testid="hero-banner">
+          <div className="absolute -right-8 -top-12 w-44 h-44 rounded-full bg-white/[0.07] pointer-events-none" aria-hidden="true" />
+          <div className="absolute right-20 -bottom-16 w-40 h-40 rounded-full bg-white/[0.05] pointer-events-none" aria-hidden="true" />
+          <h3 className="relative font-heading font-extrabold text-xl md:text-2xl leading-snug">Great food<br />brings people together.</h3>
+          <p className="relative text-xs md:text-sm text-white/70 mt-1.5">Let's make today amazing!</p>
+          <p className="relative font-script text-base md:text-lg text-emerald-200/85 self-end text-right leading-tight mt-1" aria-hidden="true">Good Food, Better People</p>
         </div>
       </div>
 
-      {/* ═══ PROMO BANNER — offers carousel (z3 reference) ═══ */}
-      <PromoBanner onClaim={() => navigate('/pos/orders')} />
+      {/* ═══ STAT CARDS ═══ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3.5">
+        <button onClick={() => navigate('/pos/analytics')} className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="sales-today-card">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mb-2.5"><IndianRupee className="w-5 h-5 text-emerald-600 dark:text-emerald-300" /></div>
+          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Today's Sales</p>
+          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight"><CountUp value={todaySales} prefix="₹" /></p>
+          <p className="text-[10px] mt-0.5 flex items-center gap-1 text-gray-400 dark:text-white/40">vs. yesterday {deltaChip(salesDelta)}</p>
+        </button>
 
-      {/* ═══ DAY CLOSED NOTE (replaces old amber banner — calm, actionable, one-tap open) ═══ */}
+        <button onClick={() => setShowOrdersDetail(true)} className={`text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all ${newOrderPulse ? 'live-pulse' : ''}`} data-testid="total-orders-card">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center mb-2.5"><ShoppingCart className="w-5 h-5 text-blue-600 dark:text-blue-300" /></div>
+          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Total Orders</p>
+          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight"><CountUp value={todayOrders.length} /></p>
+          <p className="text-[10px] mt-0.5 flex items-center gap-1 text-gray-400 dark:text-white/40">vs. yesterday {deltaChip(ordersDelta)}</p>
+        </button>
+
+        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4" data-testid="active-tables-card">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mb-2.5"><Users className="w-5 h-5 text-emerald-600 dark:text-emerald-300" /></div>
+          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Active Tables</p>
+          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{occupiedTables.length} / {tables.length}</p>
+          <p className="text-[10px] mt-0.5 text-gray-400 dark:text-white/40 truncate">{occupiedTables.length} occupied · {availableTables.length} available</p>
+        </div>
+
+        <button onClick={() => navigate('/pos/inventory')} className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="low-stock-card">
+          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-400/10 flex items-center justify-center mb-2.5"><Package className="w-5 h-5 text-red-500" /></div>
+          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Low Stock Items</p>
+          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{lowStockItems.length}</p>
+          <p className="text-[10px] mt-0.5 text-gray-400 dark:text-white/40">{lowStockItems.length > 0 ? 'Need attention' : 'All stocked up'}</p>
+        </button>
+      </div>
+
+      {/* ═══ DAY CLOSED NOTE ═══ */}
       {!isDayOpen && (
         <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] border border-amber-200/70 dark:border-amber-400/20 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm" data-testid="day-closed-banner">
           <Timer className="w-5 h-5 text-amber-500 flex-shrink-0" />
@@ -625,345 +538,227 @@ export default function POSDashboard() {
         </div>
       )}
 
-      {/* ═══ MAP + RIGHT RAIL ═══ */}
+      {/* ═══ SALES OVERVIEW + ORDER STATUS + QUICK ACTIONS ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* ── LIVE SERVICE MAP ── */}
-        <Card className="lg:col-span-2 bg-white dark:bg-[#12151B] border-gray-200 dark:border-white/[0.07] rounded-2xl" data-testid="live-service-map">
-          <CardContent className="p-4 md:p-5">
-            <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-              <div>
-                <h2 className="font-heading font-bold text-gray-900 dark:text-white text-lg leading-tight">Live Service Map</h2>
-                <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">Your restaurant. In real time.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {/* Tabs */}
-                <div className="flex bg-gray-100 dark:bg-white/[0.06] rounded-xl p-1">
-                  {[
-                    { key: 'floor', label: 'Floor' },
-                    { key: 'orders', label: 'Orders' },
-                    { key: 'kitchen', label: 'Kitchen' },
-                  ].map(t => (
-                    <button
-                      key={t.key}
-                      onClick={() => { setMapTab(t.key); setSelectedTableId(null); }}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${mapTab === t.key ? 'bg-[#2E9E5B] text-white shadow-sm' : 'text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white'}`}
-                      data-testid={`map-tab-${t.key}`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        {/* Sales Overview */}
+        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="sales-overview-card">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div>
+              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Sales Overview</h2>
+              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Real-time sales movement</p>
             </div>
-
-            {/* Swipe between Floor → Orders → Kitchen (touch devices) */}
-            <div
-              onTouchStart={handleTabTouchStart}
-              onTouchEnd={handleTabTouchEnd}
-            >
-            {/* FLOOR */}
-            {mapTab === 'floor' && (
-              tables.length === 0 ? (
-                <div className="py-14 text-center" data-testid="floor-empty">
-                  <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-3"><Monitor className="w-7 h-7 text-gray-400 dark:text-white/30" /></div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No tables yet</p>
-                  <p className="text-xs text-gray-400 dark:text-white/40 mt-1 mb-4">Add your tables to see the live floor here.</p>
-                  <button onClick={() => navigate('/pos/tables')} className="px-4 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all">Go to Tables</button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5" data-testid="floor-grid">
-                    {tables.map((table) => {
-                      const order = orderForTable(table);
-                      const vis = tableVisual(table, order);
-                      const mins = order ? minutesSince(order.created_at) : null;
-                      const isSelected = selectedTableId === table.id;
-                      return (
-                        <button
-                          key={table.id}
-                          onClick={() => setSelectedTableId(isSelected ? null : table.id)}
-                          onContextMenu={(e) => { e.preventDefault(); setLongPressTable(table); }}
-                          onTouchStart={() => startTableLongPress(table)}
-                          onTouchEnd={cancelTableLongPress}
-                          onTouchMove={cancelTableLongPress}
-                          className={`relative rounded-2xl p-2.5 ring-1 ${vis.ring} text-left transition-all hover:scale-[1.03] ${isSelected ? 'ring-2 ring-gray-900 dark:ring-white scale-[1.03] shadow-lg' : ''}`}
-                          data-testid={`floor-table-${table.table_number}`}
-                        >
-                          <p className="font-numbers font-bold text-sm text-gray-900 dark:text-white leading-none">T{String(table.table_number).padStart(2, '0')}</p>
-                          <p className="text-[10px] text-gray-500 dark:text-white/40 leading-none mt-1.5">{table.capacity} seats</p>
-                          <div className="flex items-center gap-1.5 mt-2.5">
-                            <span className={`w-1.5 h-1.5 rounded-full ${vis.chip}`} />
-                            <span className="text-[10px] font-bold text-gray-700 dark:text-white/70 leading-none">{vis.label}</span>
-                          </div>
-                          {mins !== null && ['pending', 'preparing', 'ready'].includes(order.status) && (
-                            <p className="font-numbers text-[10px] text-gray-500 dark:text-white/45 leading-none mt-1">{mins} min</p>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Kitchen queue strip */}
-                  {(preparingOrders.length > 0 || readyOrders.length > 0) && (
-                    <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1" data-testid="kitchen-queue">
-                      <span className="text-[10px] font-bold text-gray-400 dark:text-white/35 uppercase tracking-wider flex-shrink-0">Kitchen →</span>
-                      {[...preparingOrders, ...readyOrders].slice(0, 5).map(o => {
-                        const st = STATUS_STYLES[o.status] || STATUS_STYLES.pending;
-                        return (
-                          <button key={o.id} onClick={() => openReceipt(o)} className={`flex items-center gap-2 flex-shrink-0 px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-white/[0.07] ${st.bg} hover:shadow-sm transition-all`}>
-                            <span className="font-numbers text-xs font-bold text-gray-900 dark:text-white">#{o.order_number}</span>
-                            <span className={`text-[9px] font-bold ${st.text}`}>{st.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Table popover */}
-                  {selectedTable && (
-                    <div className="mt-4 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] rounded-2xl p-4 animate-fade-in" data-testid="table-detail">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <p className="font-heading font-bold text-gray-900 dark:text-white">Table {String(selectedTable.table_number).padStart(2, '0')}</p>
-                          {(() => {
-                            const vis = tableVisual(selectedTable, selectedTableOrder);
-                            return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${vis.ring} text-gray-700 dark:text-white/80`}>{vis.label}</span>;
-                          })()}
-                        </div>
-                        {selectedTableOrder && ['pending', 'preparing', 'ready'].includes(selectedTableOrder.status) && (
-                          <p className="font-numbers text-sm font-bold text-amber-600 dark:text-amber-300">{minutesSince(selectedTableOrder.created_at)} min</p>
-                        )}
-                      </div>
-
-                      {selectedTableOrder ? (
-                        <>
-                          <div className="flex items-center gap-2 mb-2.5 text-xs text-gray-500 dark:text-white/45">
-                            <span>Up to {selectedTable.capacity} guests</span>
-                            {selectedTableOrder.order_type === 'dine_in' && <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-white/[0.08] rounded-md font-semibold text-gray-600 dark:text-white/60">Dine-In</span>}
-                            <span>· {getOrderTime(selectedTableOrder)}</span>
-                          </div>
-                          <div className="space-y-1 mb-3">
-                            {(selectedTableOrder.items || []).slice(0, 4).map((item, i) => (
-                              <div key={`${item.name}-${i}`} className="flex items-center justify-between text-xs">
-                                <span className="text-gray-700 dark:text-white/70"><span className="font-semibold">{item.quantity} ×</span> {item.name}</span>
-                                <span className="font-numbers text-gray-900 dark:text-white/80">₹{item.total?.toFixed(0)}</span>
-                              </div>
-                            ))}
-                            {(selectedTableOrder.items || []).length === 0 && <p className="text-xs text-gray-400 dark:text-white/35">No item details on this order.</p>}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-numbers text-base font-bold text-gray-900 dark:text-white mr-auto">₹{selectedTableOrder.total_amount?.toFixed(0)}</p>
-                            <button onClick={() => navigate('/pos/orders')} className="px-3.5 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all" data-testid="table-open-order">Open Order</button>
-                            <button onClick={() => openReceipt(selectedTableOrder)} className="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/15 text-gray-700 dark:text-white/70 text-xs font-bold hover:bg-white dark:hover:bg-white/[0.06] transition-all">View Bill</button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-gray-500 dark:text-white/45 flex-1">This table is free right now.</p>
-                          <button onClick={() => navigate('/pos/orders')} className="px-3.5 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all">New Order Here</button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            )}
-
-            {/* ORDERS */}
-            {mapTab === 'orders' && (
-              todayOrders.length === 0 ? (
-                <div className="py-14 text-center" data-testid="orders-tab-empty">
-                  <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center mx-auto mb-3"><Receipt className="w-7 h-7 text-gray-400 dark:text-white/30" /></div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No orders yet</p>
-                  <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Your first order today will appear here.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-[340px] overflow-y-auto pr-1" data-testid="orders-tab-grid">
-                  {todayOrders.map(order => {
-                    const st = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
-                    return (
-                      <button key={order.id} onClick={() => openReceipt(order)} className={`text-left rounded-2xl border border-gray-200 dark:border-white/[0.07] p-3 ${st.bg} hover:shadow-sm transition-all`} data-testid={`order-row-${order.id}`}>
-                        <p className="font-numbers font-bold text-base text-gray-900 dark:text-white leading-none">#{order.order_number}</p>
-                        <p className="text-[10px] text-gray-500 dark:text-white/45 mt-1.5 leading-none">{order.table_number ? `Table ${order.table_number}` : (order.order_type || '').replace('_', ' ')} · {getOrderTime(order)}</p>
-                        <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-2.5 ${st.bg} ${st.text}`}>{st.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )
-            )}
-
-            {/* KITCHEN */}
-            {mapTab === 'kitchen' && (
-              preparingOrders.length === 0 && readyOrders.length === 0 ? (
-                <div className="py-14 text-center" data-testid="kitchen-tab-empty">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mx-auto mb-3"><CheckCircle className="w-7 h-7 text-emerald-500" /></div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-white/70">Kitchen all clear</p>
-                  <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Nothing cooking or waiting right now.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5" data-testid="kitchen-tab-grid">
-                  {[...preparingOrders, ...readyOrders].map(order => {
-                    const st = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
-                    const mins = minutesSince(order.created_at);
-                    const late = mins > 10 && order.status !== 'ready';
-                    return (
-                      <button key={order.id} onClick={() => openReceipt(order)} className={`text-left rounded-2xl border p-3.5 transition-all hover:shadow-sm ${late ? 'border-red-300 dark:border-red-400/40 bg-red-50 dark:bg-red-400/10' : 'border-gray-200 dark:border-white/[0.07] bg-gray-50 dark:bg-white/[0.04]'}`}>
-                        <div className="flex items-center justify-between">
-                          <p className="font-numbers font-bold text-lg text-gray-900 dark:text-white leading-none">#{order.order_number}</p>
-                          <span className={`font-numbers text-xs font-bold ${late ? 'text-red-500' : 'text-gray-500 dark:text-white/45'}`}>{mins} min</span>
-                        </div>
-                        <p className="text-[10px] text-gray-500 dark:text-white/45 mt-1.5">{order.table_number ? `Table ${order.table_number}` : (order.order_type || '').replace('_', ' ')} · {(order.items || []).length} items</p>
-                        <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mt-2 ${st.bg} ${st.text}`}>{st.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )
-            )}
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-white/50 border border-gray-200 dark:border-white/[0.08] rounded-lg px-2.5 py-1"><CalendarDays className="w-3.5 h-3.5" /> Today</span>
+          </div>
+          <div className="h-40 mt-2" data-testid="sales-chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={hourlySales.filter(b => b.hour >= 7 && b.hour <= 23)} margin={{ top: 8, right: 4, left: -14, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
+                <XAxis dataKey="hour" tickFormatter={(h) => fmtHour(h)} tick={{ fontSize: 9 }} interval={3} axisLine={false} tickLine={false} stroke="#9CA3AF" />
+                <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 9 }} axisLine={false} tickLine={false} stroke="#9CA3AF" />
+                <Tooltip
+                  formatter={(v) => [`₹${Number(v).toFixed(2)}`, 'Sales']}
+                  labelFormatter={(h) => fmtHour(h)}
+                  contentStyle={{ borderRadius: 12, border: '1px solid rgba(128,128,128,0.2)', fontSize: 12, background: '#0F2417', color: '#fff' }}
+                  cursor={{ fill: 'rgba(46,158,91,0.08)' }}
+                />
+                <Bar dataKey="sales" fill="#2E9E5B" radius={[5, 5, 0, 0]} maxBarSize={22} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          {/* Summary tiles */}
+          <div className="space-y-2 mt-3">
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-white/[0.04] rounded-xl px-3.5 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center"><Receipt className="w-4 h-4 text-emerald-600 dark:text-emerald-300" /></div>
+                <span className="text-xs font-semibold text-gray-500 dark:text-white/50">Total Sales</span>
+              </div>
+              <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">₹{todaySales.toFixed(0)}</span>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* ── RIGHT RAIL ── */}
-        <div className="space-y-4">
-
-          {/* Quick Capture */}
-          <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4" data-testid="quick-actions-card">
-            <h3 className="font-heading font-bold text-gray-900 dark:text-white text-base mb-3">Quick Capture</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => navigate('/pos/orders')} className="col-span-2 flex items-center gap-3 p-3 rounded-xl bg-[#2E9E5B] text-white hover:brightness-105 active:scale-[0.98] transition-all" data-testid="quick-new-order">
-                <span className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0"><Monitor className="w-5 h-5" /></span>
-                <span className="text-sm font-bold">New Order</span>
-              </button>
-              <button onClick={() => navigate('/pos/tables')} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] transition-all" data-testid="quick-reservation">
-                <CalendarPlus className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
-                <span className="text-[11px] font-bold text-gray-700 dark:text-white/70">Reservation</span>
-              </button>
-              <button onClick={() => toast.info('Expense tracking arrives with the Wallet upgrade.')} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] transition-all" data-testid="quick-expense">
-                <Receipt className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
-                <span className="text-[11px] font-bold text-gray-700 dark:text-white/70">Expense</span>
-              </button>
-              <button onClick={() => navigate('/pos/kds')} className="col-span-2 flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] transition-all" data-testid="quick-kot">
-                <UtensilsCrossed className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
-                <span className="text-[13px] font-bold text-gray-700 dark:text-white/70">KOT · Kitchen tickets</span>
-              </button>
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-white/[0.04] rounded-xl px-3.5 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center"><ShoppingCart className="w-4 h-4 text-blue-600 dark:text-blue-300" /></div>
+                <span className="text-xs font-semibold text-gray-500 dark:text-white/50">Total Orders</span>
+              </div>
+              <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">{todayOrders.length}</span>
+            </div>
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-white/[0.04] rounded-xl px-3.5 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-400/10 flex items-center justify-center"><IndianRupee className="w-4 h-4 text-amber-600 dark:text-amber-300" /></div>
+                <span className="text-xs font-semibold text-gray-500 dark:text-white/50">Avg. Order Value</span>
+              </div>
+              <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">₹{avgOrderValue.toFixed(0)}</span>
             </div>
           </div>
+        </div>
 
-          {/* Attention Now */}
-          <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4" data-testid="attention-panel">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
-                Attention Now
-                {attentionItems.length > 0 && (
-                  <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{attentionItems.length}</span>
-                )}
-              </h3>
-              <button onClick={() => navigate('/pos/notifications')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
+        {/* Order Status */}
+        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="order-status-card">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div>
+              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><ClipboardList className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Order Status</h2>
+              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Live kitchen updates</p>
             </div>
+            <button onClick={() => setShowOrdersDetail(true)} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
+          </div>
+          <div className="space-y-1">
+            {statusRows.map(row => (
+              <button key={row.key} onClick={() => navigate('/pos/kds')} className="w-full flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors text-left" data-testid={`status-row-${row.key}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${row.tone}`}><row.icon className="w-5 h-5" strokeWidth={1.9} /></div>
+                <span className="text-sm font-semibold text-gray-800 dark:text-white/85 flex-1">{row.label}</span>
+                <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">{row.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {attentionItems.length === 0 ? (
-              <div className="py-8 text-center" data-testid="attention-empty">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mx-auto mb-2.5"><CheckCircle className="w-6 h-6 text-emerald-500" /></div>
-                <p className="text-sm font-semibold text-gray-700 dark:text-white/70">All calm</p>
-                <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">Nothing needs your attention right now.</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {attentionItems.map(item => (
-                  <div key={item.key} className="flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors" data-testid={item.testid}>
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${item.tone}`}>
-                      <item.icon className="w-5 h-5" strokeWidth={1.8} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold text-gray-900 dark:text-white truncate">{item.title}</p>
-                      <p className="text-[11px] text-gray-500 dark:text-white/45 truncate">{item.desc}</p>
-                    </div>
-                    <button
-                      onClick={item.run}
-                      className="flex-shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-gray-200 dark:border-white/15 text-gray-700 dark:text-white/75 hover:bg-[#2E9E5B] hover:text-white hover:border-[#2E9E5B] transition-all active:scale-[0.97]"
-                    >
-                      {item.action}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* Quick Actions */}
+        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="quick-actions-card">
+          <div className="mb-3">
+            <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Zap className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Quick Actions</h2>
+            <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Get things done faster</p>
+          </div>
+          <button onClick={() => navigate('/pos/orders')} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#2E9E5B] text-white hover:brightness-105 active:scale-[0.98] transition-all mb-3" data-testid="quick-new-order">
+            <span className="flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center"><Plus className="w-5 h-5" /></span><span className="text-sm font-bold">New Order</span></span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <div className="grid grid-cols-3 gap-2">
+            {quickLinks.map(l => (
+              <button key={l.label} onClick={() => navigate(l.to)} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] active:scale-[0.97] transition-all" data-testid={`quick-${l.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                <l.icon className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
+                <span className="text-[10px] font-bold text-gray-700 dark:text-white/70 text-center leading-tight">{l.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ═══ TODAY'S SERVICE FLOW ═══ */}
-      <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="service-flow-panel">
-        <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-          <div>
-            <h2 className="font-heading font-bold text-gray-900 dark:text-white text-lg leading-tight">Today's Service Flow</h2>
-            <p className="text-xs text-gray-400 dark:text-white/40 mt-0.5">From orders to happy guests.</p>
+      {/* ═══ ACTIVE TABLES + TOP SELLING + INVENTORY ALERTS ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Active Tables */}
+        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="active-tables-panel">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div>
+              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Monitor className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Active Tables</h2>
+              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Live table status</p>
+            </div>
+            <button onClick={() => navigate('/pos/tables')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
           </div>
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-white/50 border border-gray-200 dark:border-white/[0.08] rounded-lg px-2.5 py-1.5">
-            <CalendarDays className="w-3.5 h-3.5" /> Today
-          </span>
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            {[{ k: 'all', l: `All (${tables.length})` }, { k: 'occupied', l: `Occupied (${occupiedTables.length})` }, { k: 'available', l: `Available (${availableTables.length})` }, { k: 'reserved', l: `Reserved (${reservedTables.length})` }].map(f => (
+              <button key={f.k} onClick={() => setTableFilter(f.k)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all ${tableFilter === f.k ? 'bg-[#0F2417] dark:bg-[#2E9E5B] text-white' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/[0.1]'}`} data-testid={`table-filter-${f.k}`}>{f.l}</button>
+            ))}
+          </div>
+          {tables.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No tables yet</p>
+              <p className="text-xs text-gray-400 dark:text-white/40 mt-1 mb-3">Add tables to see your live floor.</p>
+              <button onClick={() => navigate('/pos/tables')} className="px-4 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all">Go to Tables</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5" data-testid="active-tables-grid">
+              {filteredTables.slice(0, 8).map((table) => {
+                const vis = tableVisual(table, orderForTable(table));
+                return (
+                  <div
+                    key={table.id}
+                    onContextMenu={(e) => { e.preventDefault(); setLongPressTable(table); }}
+                    onTouchStart={() => startTableLongPress(table)}
+                    onTouchEnd={cancelTableLongPress}
+                    onTouchMove={cancelTableLongPress}
+                    className={`relative rounded-2xl p-3 ring-1 ${vis.ring} cursor-pointer select-none`}
+                    data-testid={`table-card-${table.table_number}`}
+                    title="Long-press / right-click for quick actions"
+                  >
+                    <div className="flex items-start justify-between">
+                      <p className="font-numbers font-bold text-sm text-gray-900 dark:text-white leading-none">T{String(table.table_number).padStart(2, '0')}</p>
+                      <MoreHorizontal className="w-3.5 h-3.5 text-gray-400 dark:text-white/30" />
+                    </div>
+                    <p className="text-[10px] text-gray-500 dark:text-white/40 mt-1">{table.capacity} seats</p>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <span className={`w-1.5 h-1.5 rounded-full ${vis.chip}`} />
+                      <span className={`text-[10px] font-bold ${vis.label === 'Available' ? 'text-emerald-600 dark:text-emerald-300' : vis.label === 'Payment' ? 'text-red-500' : 'text-gray-700 dark:text-white/70'}`}>{vis.label}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 items-stretch">
-          {/* Orders Placed */}
-          <div className="bg-gray-50 dark:bg-white/[0.04] rounded-2xl p-3.5" data-testid="flow-placed">
-            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-gray-200 dark:border-white/[0.08] flex items-center justify-center mb-2.5"><Receipt className="w-4 h-4 text-gray-500 dark:text-white/50" /></div>
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Orders Placed</p>
-            <p className="flex items-baseline gap-1.5">
-              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{todayOrders.length}</span>
-              {ordersDelta !== null && <span className={`text-[10px] font-bold ${ordersDelta >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>↑ {ordersDelta >= 0 ? '+' : ''}{ordersDelta}%</span>}
-            </p>
+        {/* Top Selling Items */}
+        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="top-items-panel">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div>
+              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><UtensilsCrossed className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Top Selling Items</h2>
+              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Today's most ordered items</p>
+            </div>
+            <button onClick={() => navigate('/pos/analytics')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
           </div>
-
-          <div className="hidden md:flex items-center justify-center text-gray-300 dark:text-white/20"><ArrowRight className="w-5 h-5" /></div>
-
-          {/* In Kitchen */}
-          <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] rounded-2xl p-3.5" data-testid="flow-kitchen">
-            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-amber-200/60 dark:border-amber-400/20 flex items-center justify-center mb-2.5"><Flame className="w-4 h-4 text-amber-500" /></div>
-            <p className="text-[11px] font-semibold text-gray-600 dark:text-white/50">In Kitchen</p>
-            <p className="flex items-baseline gap-1.5">
-              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{preparingOrders.length}</span>
-              {preparingOrders.length > 0 && <span className="text-[10px] font-semibold text-gray-500 dark:text-white/45">Avg {avgKitchenMin} min</span>}
-            </p>
-          </div>
-
-          <div className="hidden md:flex items-center justify-center text-gray-300 dark:text-white/20"><ArrowRight className="w-5 h-5" /></div>
-
-          {/* Serving at Tables */}
-          <div className="bg-blue-50/70 dark:bg-blue-400/[0.07] rounded-2xl p-3.5" data-testid="flow-serving">
-            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-blue-200/60 dark:border-blue-400/20 flex items-center justify-center mb-2.5"><ConciergeBell className="w-4 h-4 text-blue-500" /></div>
-            <p className="text-[11px] font-semibold text-gray-600 dark:text-white/50">Ready to Serve</p>
-            <p className="flex items-baseline gap-1.5">
-              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{readyOrders.length}</span>
-              {readyOrders.length > 0 && <span className="text-[10px] font-semibold text-gray-500 dark:text-white/45">Avg {avgServeMin} min</span>}
-            </p>
-          </div>
-
-          <div className="hidden md:flex items-center justify-center text-gray-300 dark:text-white/20"><ArrowRight className="w-5 h-5" /></div>
-
-          {/* Payments */}
-          <div className="bg-gray-50 dark:bg-white/[0.04] rounded-2xl p-3.5" data-testid="flow-payments">
-            <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.07] border border-gray-200 dark:border-white/[0.08] flex items-center justify-center mb-2.5"><CreditCard className="w-4 h-4 text-gray-500 dark:text-white/50" /></div>
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Payments</p>
-            <p className="flex items-baseline gap-1.5">
-              <span className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{unpaidCompleted.length}</span>
-              <span className="text-[10px] font-semibold text-gray-500 dark:text-white/45">pending</span>
-            </p>
-          </div>
+          {topItems.length === 0 ? (
+            <div className="py-10 text-center" data-testid="top-items-empty">
+              <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No sales yet today</p>
+              <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Your best sellers will show up here.</p>
+            </div>
+          ) : (
+            <div className="space-y-1" data-testid="top-items-list">
+              {topItems.map((item, idx) => (
+                <div key={item.name} className="flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300' : idx === 1 ? 'bg-blue-50 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300' : idx === 2 ? 'bg-orange-50 text-orange-600 dark:bg-orange-400/10 dark:text-orange-300' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.07] dark:text-white/50'}`}>{idx + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-gray-900 dark:text-white truncate">{item.name}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-white/40">{item.qty} orders</p>
+                  </div>
+                  <span className="font-numbers text-sm font-bold text-gray-900 dark:text-white">₹{item.revenue.toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Flow verdict — honest, computed from real state */}
-        <div className={`mt-3 rounded-xl px-4 py-2.5 flex items-center gap-2 text-xs font-semibold ${delayedOrders.length > 0
-          ? 'bg-red-50 dark:bg-red-400/10 text-red-600 dark:text-red-300'
-          : 'bg-emerald-50 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-300'}`}
-          data-testid="flow-verdict"
-        >
-          {delayedOrders.length > 0
-            ? <><AlertTriangle className="w-4 h-4 flex-shrink-0" />{delayedOrders.length} order{delayedOrders.length > 1 ? 's' : ''} waiting over 10 minutes — check Attention Now.</>
-            : <><TrendingUp className="w-4 h-4 flex-shrink-0" />Smooth flow{todayOrders.length > 0 ? '' : ' — ready for the first order'}.</>}
+        {/* Inventory Alerts */}
+        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="inventory-alerts-panel">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div>
+              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Package className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Inventory Alerts</h2>
+              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Items running low</p>
+            </div>
+            <button onClick={() => navigate('/pos/inventory')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
+          </div>
+          {lowStockItems.length === 0 ? (
+            <div className="py-10 text-center" data-testid="inventory-alerts-empty">
+              <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-gray-700 dark:text-white/70">Everything stocked</p>
+              <p className="text-xs text-gray-400 dark:text-white/40 mt-1">No low stock alerts right now.</p>
+            </div>
+          ) : (
+            <div className="space-y-1" data-testid="inventory-alerts-list">
+              {lowStockItems.slice(0, 5).map(item => (
+                <div key={item.id} className="flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center flex-shrink-0"><Package className="w-4 h-4 text-red-500" /></div>
+                  <p className="text-[13px] font-bold text-gray-900 dark:text-white flex-1 truncate">{item.name}</p>
+                  <span className="font-numbers text-xs font-bold text-red-500">{item.quantity} {item.unit || ''} left</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ FOOTER STRIP ═══ */}
+      <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl px-4 md:px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-3" data-testid="dashboard-footer">
+        <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] flex-1">🌿 A well-run kitchen is a happy kitchen.</p>
+        <div className="flex items-center gap-2.5 text-xs">
+          <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0"><CheckCircle className="w-3.5 h-3.5 text-white" /></span>
+          <div className="leading-tight">
+            <p className="font-bold text-gray-900 dark:text-white">All Systems Operational</p>
+            <p className="text-[10px] text-gray-400 dark:text-white/40">POS · Kitchen · Inventory · Online Orders</p>
+          </div>
+        </div>
+        <div className="text-right leading-tight md:ml-4">
+          <p className="font-heading font-extrabold text-sm text-gray-900 dark:text-white">DineDesk</p>
+          <p className="text-[10px] text-gray-400 dark:text-white/40">Version 1.0.0</p>
         </div>
       </div>
 

@@ -272,15 +272,23 @@ export default function MenuManagement() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in" data-testid="menu-management">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl font-bold text-slate-900">Menu Management</h1>
-        <div className="flex gap-2">
+    <div className="space-y-5 animate-fade-in max-w-[1400px]" data-testid="menu-management">
+      {/* Header — reference style */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(240px,340px)_auto] gap-4 items-stretch">
+        <div className="flex flex-col justify-center">
+          <p className="text-[11px] font-bold tracking-[0.14em] text-[#268A4E] dark:text-[#3FCE85] uppercase">Menu Management</p>
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">Craft a menu people crave 🍽️</h1>
+          <p className="text-sm text-slate-500 dark:text-white/50 mt-1">Dishes, categories and prices — always in your control.</p>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50/80 dark:bg-emerald-400/[0.06] border border-emerald-100 dark:border-emerald-400/15 p-4 flex flex-col justify-center">
+          <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] leading-snug">"A great menu tells a story."</p>
+          <p className="text-[10px] text-slate-400 dark:text-white/40 mt-1 self-end">— DineDesk</p>
+        </div>
+        <div className="flex flex-col gap-2 justify-center">
           <Button
             variant="outline"
             onClick={() => setShowCategoryModal(true)}
-            className="h-9 px-3 rounded-lg text-sm"
+            className="h-10 px-4 rounded-xl text-sm font-bold border-slate-200 dark:border-white/10"
             data-testid="add-category-btn"
           >
             <FolderPlus className="w-4 h-4 mr-1.5" />
@@ -288,7 +296,7 @@ export default function MenuManagement() {
           </Button>
           <Button
             onClick={() => openItemModal()}
-            className="h-9 px-3 rounded-lg bg-[#0F2417] hover:bg-[#1a3d28] text-sm"
+            className="h-10 px-4 rounded-xl bg-[#0F2417] hover:bg-[#1a3d28] dark:bg-[#2E9E5B] dark:hover:bg-[#288A50] text-white text-sm font-bold"
             data-testid="add-item-btn"
           >
             <Plus className="w-4 h-4 mr-1.5" />

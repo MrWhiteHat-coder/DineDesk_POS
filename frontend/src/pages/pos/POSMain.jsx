@@ -11,7 +11,6 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { ChefShrugging, ChefWinking } from '../../components/illustrations/ChefBot';
 import haptics from '../../lib/haptics';
-import { moment, momentAndWait } from '../../components/pos/RestaurantMoments';
 import useDragToDismiss from '../../lib/useDragToDismiss';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -174,7 +173,7 @@ export default function POSMain() {
           if (deltas.length === 0) { setCheckoutLoading(false); handleReleaseAndPay(selectedRunningOrder.id); return; }
           await orderAPI.addItems(selectedRunningOrder.id, { items: deltas });
           haptics.success();
-          toast.success('Order updated!'); moment('order_placed');
+          toast.success('Order updated!');
           clearCart();
           await fetchRunningOrders(); fetchTables();
           // Reopen the bill so the fresh total is ready to settle — waiters
@@ -191,8 +190,8 @@ export default function POSMain() {
         const hasCust = !!(custName || customerPhone.trim());
         const result = await createOrderResilient({ order_type: 'dine_in', table_number: parseInt(tableNumber), items: cart.map(c => ({ menu_item_id: c.item.id, quantity: c.quantity, notes: c.notes || null })), payment_method: 'pending', discount_amount: discountAmount, customer_name: custName || 'Walk-in Customer', customer_phone: customerPhone.trim() || null, customer_email: customerEmail.trim() || null }, { total });
         haptics.success();
-        if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); moment('no_internet'); }
-        else { toast.success(`Order #${result.data.order_number} placed!`); moment(hasCust ? 'sending_kitchen' : 'new_customer'); }
+        if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); }
+        else { toast.success(`Order #${result.data.order_number} placed!`); }
         clearCart(); setTableNumber(''); fetchRunningOrders(); fetchTables();
       } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
     } else { openPaymentModal(); }
@@ -243,12 +242,12 @@ export default function POSMain() {
         payload.payment_method = 'split';
         payload.payment_splits = paymentSplits.map(s => ({ method: s.method, amount: s.amount }));
       }
-      const result = await createOrderResilient(payload, { total });        if (!result.online) { toast.info('Order saved offline with payment recorded — syncs automatically when back online'); moment('no_internet'); }
-        else {
-          toast.success(`Order #${result.data.order_number} completed!`);
-          await momentAndWait(orderType === 'dine_in' ? 'table_cleaned' : 'payment_success');
-          await fetchAndShowReceipt(result.data.id);
-        }
+      const result = await createOrderResilient(payload, { total });
+      if (!result.online) { toast.info('Order saved offline with payment recorded — syncs automatically when back online'); }
+      else {
+        toast.success(`Order #${result.data.order_number} completed!`);
+        await fetchAndShowReceipt(result.data.id);
+      }
       clearCart(); setShowPaymentModal(false);
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed'); } finally { setCheckoutLoading(false); }
   };
@@ -298,9 +297,6 @@ export default function POSMain() {
       toast.success('Payment confirmed!');
       setShowPaymentModal(false);
       fetchRunningOrders(); fetchTables(); clearCart(); setSelectedRunningOrder(null);
-      // Sequence: payment success → centered moment completes → receipt popup.
-      // The receipt must never jump ahead of the success moment.
-      await momentAndWait('payment_success');
       await fetchAndShowReceipt(orderId);
     } catch (err) { toast.error(err.response?.data?.detail || 'Payment failed'); }
   };
@@ -378,6 +374,15 @@ export default function POSMain() {
     <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:h-[calc(100vh_-_7rem)] animate-fade-in" data-testid="pos-main">
       {/* Left: Menu Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:min-h-0">
+        {/* Reference-style page heading */}
+        <div className="hidden lg:flex items-end justify-between mb-3">
+          <div>
+            <h1 className="font-heading text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              Let's Serve Something Amazing! <span aria-hidden="true">🌿</span>
+            </h1>
+            <p className="text-xs text-slate-400 dark:text-white/40 mt-0.5">Fresh ingredients. Great food. Happier people.</p>
+          </div>
+        </div>
         {/* Running Orders */}
         {runningOrders.length > 0 && (
           <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
@@ -611,7 +616,7 @@ export default function POSMain() {
           )}
 
           {cart.length > 0 && (
-            <button onClick={() => { const next = !applyDiscount; setApplyDiscount(next); if (next) moment('discount_applied'); }} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-xs transition-colors ${applyDiscount ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`} data-testid="discount-toggle">
+            <button onClick={() => { const next = !applyDiscount; setApplyDiscount(next); }} className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-xs transition-colors ${applyDiscount ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`} data-testid="discount-toggle">
               <Tag className="w-4 h-4" /><div className="text-left"><p className="font-semibold">{applyDiscount ? 'Applied: 10% off' : 'Save 10% on this bill'}</p><p className="text-[10px] opacity-70">Minimum buy ₹50.00 · tap to {applyDiscount ? 'remove' : 'apply'}</p></div>
               <span className={`ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full ${applyDiscount ? 'bg-green-500 text-white' : 'bg-emerald-600 text-white'}`}>{applyDiscount ? '✓ APPLIED' : 'APPLY'}</span>
             </button>

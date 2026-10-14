@@ -39,8 +39,18 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl" data-testid="settings-page">
-      <h1 className="font-heading text-2xl font-bold text-slate-900">Settings</h1>
+    <div className="space-y-5 max-w-3xl animate-fade-in" data-testid="settings-page">
+      {/* Header — reference style */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(240px,320px)] gap-4 items-stretch">
+        <div className="flex flex-col justify-center">
+          <p className="text-[11px] font-bold tracking-[0.14em] text-[#268A4E] dark:text-[#3FCE85] uppercase">Settings</p>
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">Your restaurant, your rules 🌿</h1>
+          <p className="text-sm text-slate-500 dark:text-white/50 mt-1">Details, subscription and integrations — all in one calm place.</p>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50/80 dark:bg-emerald-400/[0.06] border border-emerald-100 dark:border-emerald-400/15 p-4 flex flex-col justify-center">
+          <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] leading-snug">"Good settings make great service."</p>
+        </div>
+      </div>
 
       {/* Restaurant Info */}
       <Card>

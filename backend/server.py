@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request
+from pymongo.errors import DuplicateKeyError
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import asyncio
 from dotenv import load_dotenv
@@ -104,9 +105,12 @@ EMAIL_CONFIGURED = bool(SENDGRID_API_KEY or (GMAIL_USER and GMAIL_APP_PASSWORD))
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@dinedesk.in')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
 
-# Public demo tenant for product walkthroughs (email + password + full access)
-DEMO_EMAIL = os.environ.get('DEMO_EMAIL', 'demo@dinedesk.in')
-DEMO_PASSWORD = os.environ.get('DEMO_PASSWORD', '123456')
+# Demo tenant for product walkthroughs (email + password + full access).
+# SECURITY: seeding is OFF by default — a production deployment that forgets
+# this variable must NOT ship a known-credential owner account. Enable it
+# explicitly (e.g. ENABLE_DEMO_ACCOUNT=true) in a development/demo environment
+# only. Existing tenants/data are never deleted by this flag.
+ENABLE_DEMO_ACCOUNT = os.environ.get('ENABLE_DEMO_ACCOUNT', 'false').strip().lower() in ('true', '1', 'yes')
 
 # Lifespan context manager
 @asynccontextmanager
@@ -134,14 +138,12 @@ async def lifespan(app_instance: FastAPI):
             logger.warning("ADMIN_PASSWORD not set — skipping admin bootstrap")
 
         # --- Demo account seed ---
-        # A ready-to-explore tenant (demo@dinedesk.in / 123456) with a
-        # fully active subscription and every Store add-on enabled, so
-        # reviewers see the complete product instead of empty screens.
-        # Fully isolated own-tenant data; set ENABLE_DEMO_ACCOUNT=false to
-        # skip seeding (e.g. a hardened private deployment).
-        demo_enabled = os.environ.get('ENABLE_DEMO_ACCOUNT', 'true').strip().lower() not in ('false', '0', 'no')
+        # OFF by default (ENABLE_DEMO_ACCOUNT=false). Enable explicitly in
+        # development/demo environments; never deletes existing data — the
+        # seed only runs when the demo user does not exist yet.
+        demo_enabled = ENABLE_DEMO_ACCOUNT
         if not demo_enabled:
-            logger.info("Demo account seeding disabled (ENABLE_DEMO_ACCOUNT=false)")
+            logger.info("Demo account seeding disabled (ENABLE_DEMO_ACCOUNT is not enabled)")
         try:
             demo = await db.users.find_one({"email": DEMO_EMAIL})
             if not demo and demo_enabled:
@@ -311,12 +313,57 @@ async def lifespan(app_instance: FastAPI):
         await db.wastage.create_index([("restaurant_id", 1), ("created_at", -1)])
         await db.audit_logs.create_index([("restaurant_id", 1), ("created_at", -1)])
         await db.stock_movements.create_index([("restaurant_id", 1), ("inventory_item_id", 1), ("created_at", -1)])
+
+        # FIX 2: database-level uniqueness for order numbers.
+        # Legacy collisions are DETECTED and REPORTED first — customer orders
+        # are never silently renumbered or dropped.
+        try:
+            _dups = await db.orders.aggregate([
+                {"$group": {"_id": {"restaurant_id": "$restaurant_id", "order_number": "$order_number"},
+                            "n": {"$sum": 1}, "samples": {"$push": "$id"}}},
+                {"$match": {"n": {"$gt": 1}}},
+                {"$limit": 10},
+            ]).to_list(10)
+            if _dups:
+                logger.error(
+                    "LEGACY DUPLICATE ORDER NUMBERS detected — unique index NOT created. "
+                    "Resolve manually (scripts/backfill_subscription_docs.py sibling tooling): %s",
+                    [{"restaurant": d["_id"]["restaurant_id"], "order_number": d["_id"]["order_number"],
+                      "count": d["n"], "sample_ids": d["samples"][:3]} for d in _dups])
+            else:
+                await db.orders.create_index(
+                    [("restaurant_id", 1), ("order_number", 1)], unique=True)
+        except Exception as _idx_err:
+            logger.warning(f"Order-number uniqueness index not established: {_idx_err}")
+
+        # FIX 1/FIX 2: idempotency — one client_uuid per tenant (offline replay
+        # double-insert protection). Partial index: only replay-able orders.
+        try:
+            await db.orders.create_index(
+                [("restaurant_id", 1), ("client_uuid", 1)], unique=True,
+                partialFilterExpression={"client_uuid": {"$type": "string"}})
+        except Exception as _idx_err:
+            logger.warning(f"Order client_uuid idempotency index not established: {_idx_err}")
+
+        # FIX 4: fast, tenant-scoped CRM order history lookups.
+        try:
+            await db.orders.create_index([("restaurant_id", 1), ("customer_id", 1)])
+        except Exception as _idx_err:
+            logger.warning(f"Order customer_id index not established: {_idx_err}")
         await db.day_sessions.create_index([("restaurant_id", 1), ("status", 1)])
         await db.orders.create_index([("restaurant_id", 1), ("status", 1), ("created_at", -1)])
         await db.orders.create_index([("restaurant_id", 1), ("client_uuid", 1)])
         await db.inventory.create_index([("restaurant_id", 1), ("id", 1)])
         await db.menu_items.create_index([("restaurant_id", 1), ("id", 1)])
         logger.info("Database indexes created")
+
+        # Phase-1 stabilization: crash recovery for inventory deducted before
+        # the order insert completed. Ledger-driven + claimed, so it is
+        # idempotent and can never double-restock.
+        try:
+            await recover_orphaned_order_deductions()
+        except Exception as _rec_err:
+            logger.warning(f"Orphaned-deduction recovery skipped: {_rec_err}")
 
         # --- Data repair: normalize legacy order statuses ---
         # Old KDS clients could store literal 'served' which sits outside the
@@ -641,6 +688,7 @@ class OrderResponse(BaseModel):
     order_type: str
     table_number: Optional[int] = None
     items: List[Dict[str, Any]]
+    customer_id: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     customer_email: Optional[str] = None
@@ -672,6 +720,9 @@ class DaySessionResponse(BaseModel):
     cash_sales: float
     card_sales: float
     upi_sales: float
+    # FIX 3: allocation-derived totals + explicit legacy-warning surfacing
+    payment_breakdown: Optional[Dict[str, float]] = None
+    reconciliation_warnings: Optional[List[str]] = None
 
 # Inventory Models
 class InventoryItemCreate(BaseModel):
@@ -912,66 +963,293 @@ async def record_stock_movement(restaurant_id: str, inventory_item_id: str, item
     }
     await db.stock_movements.insert_one(doc)
 
-async def deduct_inventory(restaurant_id: str, order_items_data: list):
-    """Deduct inventory based on recipe for each ordered item."""
+class InsufficientStockError(Exception):
+    """Stock-validated deduction cannot cover the needed quantity. Carries
+    the ingredient details for an HTTP 409 response."""
+    def __init__(self, item_name: str, need: float, have: float):
+        self.item_name, self.need, self.have = item_name, need, have
+        super().__init__(f"Insufficient stock for '{item_name}' (need {need}, have {have})")
+
+
+async def _stock_add(restaurant_id: str, inv_item_id: str, qty: float):
+    """Atomically ADD qty to one inventory item ($inc — no read-modify-write).
+
+    Returns (new_quantity, item_doc) or (None, None) if the item is gone.
+    Also maintains is_low_stock so the flag stays consistent with stock.
+    """
+    updated = await db.inventory.find_one_and_update(
+        {"id": inv_item_id, "restaurant_id": restaurant_id},
+        {"$inc": {"quantity": qty}},
+        return_document=True,  # AFTER — post-update doc
+    )
+    if not updated:
+        return None, None
+    await db.inventory.update_one(
+        {"id": inv_item_id, "restaurant_id": restaurant_id},
+        {"$set": {"is_low_stock": updated["quantity"] <= updated.get("min_quantity", 0)}},
+    )
+    return updated["quantity"], updated
+
+
+async def _deduct_one(restaurant_id: str, inv_item_id: str, need: float,
+                      enforce_stock: bool):
+    """Atomically deduct up to `need` units of one inventory item.
+
+    Concurrency safety: the decrement is conditional ($inc filtered on the
+    current quantity) so two concurrent consumers of the same ingredient
+    serialize on MongoDB instead of last-write-winning, and stock can never
+    go NEGATIVE. Legacy behavior (stock_validation off) floors at zero: the
+    real applied amount may be less than `need` — the caller records the
+    ACTUAL applied delta in the ledger. With stock_validation on (per-
+    restaurant flag), a shortage raises InsufficientStockError instead.
+
+    Returns (actual_applied, new_quantity, item_doc).
+    """
+    for _attempt in range(8):  # bounded CAS retries under contention
+        inv = await db.inventory.find_one(
+            {"id": inv_item_id, "restaurant_id": restaurant_id}, {"_id": 0})
+        if not inv:
+            return 0.0, None, None  # item deleted — nothing to deduct (unchanged legacy behavior)
+        available = float(inv.get("quantity", 0))
+        if enforce_stock and available < need:
+            raise InsufficientStockError(inv.get("name", inv_item_id), need, available)
+        actual = min(available, need)
+        if actual <= 0:
+            return 0.0, available, inv
+        post = await db.inventory.find_one_and_update(
+            {"id": inv_item_id, "restaurant_id": restaurant_id,
+             "quantity": {"$gte": actual}},
+            {"$inc": {"quantity": -actual}},
+            return_document=True,  # AFTER
+        )
+        if post is None:
+            continue  # raced — re-read and retry
+        new_qty = post["quantity"]
+        await db.inventory.update_one(
+            {"id": inv_item_id, "restaurant_id": restaurant_id},
+            {"$set": {"is_low_stock": new_qty <= inv.get("min_quantity", 0)}},
+        )
+        return actual, new_qty, inv
+    # Contention exhausted the retries — re-read one final time without a
+    # further change so the caller records a truthful ledger delta of zero.
+    inv = await db.inventory.find_one(
+        {"id": inv_item_id, "restaurant_id": restaurant_id}, {"_id": 0})
+    return 0.0, (inv or {}).get("quantity"), inv
+
+
+async def _compensate_inventory(restaurant_id: str, applied: list, reason: str,
+                                ref_order_id: str = None):
+    """Reverse a list of already-applied deductions (inv_item_id, delta<0).
+
+    The explicit, tested compensation mechanism for multi-ingredient
+    partial failure: if a later ingredient's deduction fails, every earlier
+    applied deduction is atomically reversed and the ledger records the
+    reversal so the ledger always explains actual stock. Each reversal also
+    maintains is_low_stock via _stock_add.
+    """
+    for inv_item_id, delta in applied:
+        new_qty, item = await _stock_add(restaurant_id, inv_item_id, abs(delta))
+        if new_qty is None:
+            continue  # item deleted mid-flight — cannot re-add; surfaced by ledger below
+        await record_stock_movement(
+            restaurant_id, inv_item_id, item.get("name", ""), item.get("unit", ""),
+            abs(delta), "adjustment", "order_deduction_rollback", ref_order_id,
+            note=reason, balance_after=new_qty)
+    applied.clear()
+
+
+async def deduct_inventory(restaurant_id: str, order_items_data: list,
+                           ref_order_id: str = None):
+    """All-or-nothing recipe-based inventory deduction for a logical order.
+
+    When ref_order_id is provided, every sale_usage ledger row is tagged
+    ref_type='order_deduction'/ref_id=<order_id> so a crash between the
+    deduction and the order insert is RECOVERABLE from the ledger at startup
+    (recover_orphaned_order_deductions).
+
+    Every ingredient change is an atomic conditional decrement; if any later
+    ingredient fails (insufficient stock with validation on), all earlier
+    deductions of this SAME logical order are atomically compensated and a
+    409 is raised by the caller — so a partial deduction can never be left
+    behind. Returns the list of applied (inv_item_id, delta) pairs.
+    """
+    restaurant = await db.restaurants.find_one({"id": restaurant_id}, {"_id": 0})
+    enforce_stock = bool((restaurant or {}).get("stock_validation", False))
+    applied = []  # (inv_item_id, actual_negative_delta)
     for item_data in order_items_data:
         menu_item = await db.menu_items.find_one({"id": item_data["menu_item_id"]}, {"_id": 0})
         if not menu_item or not menu_item.get("recipe"):
             continue
         for ingredient in menu_item["recipe"]:
-            qty_to_deduct = ingredient["quantity_needed"] * item_data["quantity"]
-            inv_item = await db.inventory.find_one({
-                "id": ingredient["inventory_item_id"],
-                "restaurant_id": restaurant_id
-            })
-            if inv_item:
-                new_qty = max(0, inv_item["quantity"] - qty_to_deduct)
-                await db.inventory.update_one(
-                    {"id": ingredient["inventory_item_id"]},
-                    {"$set": {
-                        "quantity": new_qty,
-                        "is_low_stock": new_qty <= inv_item["min_quantity"]
-                    }}
-                )
-                await record_stock_movement(restaurant_id, ingredient["inventory_item_id"], inv_item.get("name", ""), inv_item.get("unit", ""),
-                                            -qty_to_deduct, "sale_usage", "menu_item", item_data.get("menu_item_id"),
-                                            note=f"Recipe usage: {menu_item.get('name')}", balance_after=new_qty)
+            need = float(ingredient["quantity_needed"]) * item_data["quantity"]
+            try:
+                actual, new_qty, inv_doc = await _deduct_one(
+                    restaurant_id, ingredient["inventory_item_id"], need, enforce_stock)
+            except InsufficientStockError:
+                await _compensate_inventory(
+                    restaurant_id, applied,
+                    f"Order deduction rolled back — insufficient stock for {ingredient.get('inventory_item_name') or ingredient['inventory_item_id']}",
+                    ref_order_id=ref_order_id)
+                raise
+            if actual:
+                await record_stock_movement(
+                    restaurant_id, ingredient["inventory_item_id"],
+                    (inv_doc or {}).get("name", ""), (inv_doc or {}).get("unit", ""),
+                    -actual, "sale_usage",
+                    "order_deduction" if ref_order_id else "menu_item",
+                    ref_order_id if ref_order_id else item_data.get("menu_item_id"),
+                    note=f"Recipe usage: {menu_item.get('name')}", balance_after=new_qty)
+                applied.append((ingredient["inventory_item_id"], -actual))
+    return applied
 
 
-def _restock_inventory(restaurant_id: str, order_items: list):
-    """Fire-and-forget inventory restore for cancelled orders (recipe-aware).
+async def restock_for_cancelled_order(restaurant_id: str, order: dict):
+    """SYNCHRONOUS inventory restore for a cancelled order (recipe-aware).
 
-    Restores the same quantities that deduct_inventory removed. Runs as a
-    background task so cancellation stays fast; failures are logged.
+    Replaces the old fire-and-forget background task: the cancellation
+    request itself waits for the restoration, so a process restart can no
+    longer silently drop a stock-affecting operation. Idempotent DOUBLE-
+    REVERSAL protection is enforced by the caller's `cancel_effects_done`
+    claim flag on the order document — this function runs at most once per
+    logical cancellation.
     """
-    async def _run():
-        try:
-            for item_data in order_items:
-                menu_item = await db.menu_items.find_one({"id": item_data["menu_item_id"]}, {"_id": 0})
-                if not menu_item or not menu_item.get("recipe"):
-                    continue
-                for ingredient in menu_item["recipe"]:
-                    qty_to_restore = ingredient["quantity_needed"] * item_data.get("quantity", 0)
-                    inv_item = await db.inventory.find_one({
-                        "id": ingredient["inventory_item_id"],
-                        "restaurant_id": restaurant_id
-                    })
-                    if inv_item:
-                        new_qty = inv_item["quantity"] + qty_to_restore
-                        await db.inventory.update_one(
-                            {"id": ingredient["inventory_item_id"]},
-                            {"$set": {
-                                "quantity": new_qty,
-                                "is_low_stock": new_qty <= inv_item["min_quantity"]
-                            }}
-                        )
-                        await record_stock_movement(restaurant_id, ingredient["inventory_item_id"], inv_item.get("name", ""), inv_item.get("unit", ""),
-                                                    qty_to_restore, "cancel_restock", "order", item_data.get("menu_item_id"),
-                                                    note="Order cancelled — stock restored", balance_after=new_qty)
-        except Exception as e:
-            logger.error(f"Inventory restock failed: {e}")
-    asyncio.create_task(_run())
+    for item_data in order.get("items", []):
+        menu_item = await db.menu_items.find_one({"id": item_data["menu_item_id"]}, {"_id": 0})
+        if not menu_item or not menu_item.get("recipe"):
+            continue
+        for ingredient in menu_item["recipe"]:
+            qty_to_restore = float(ingredient["quantity_needed"]) * item_data.get("quantity", 0)
+            if qty_to_restore <= 0:
+                continue
+            new_qty, inv_item = await _stock_add(restaurant_id, ingredient["inventory_item_id"], qty_to_restore)
+            if new_qty is None:
+                continue  # inventory item deleted — ledger row below is skipped (nothing changed)
+            await record_stock_movement(restaurant_id, ingredient["inventory_item_id"], inv_item.get("name", ""), inv_item.get("unit", ""),
+                                        qty_to_restore, "cancel_restock", "order", item_data.get("menu_item_id"),
+                                        note="Order cancelled — stock restored", balance_after=new_qty)
 
+
+# ─────────── Phase-1 crash recovery: orphaned order deductions ───────────
+# Window covered: create_order deducts inventory BEFORE inserting the order;
+# if the process dies in between, the deduction is in the stock ledger but
+# the order (and therefore the cancel-restock path) never existed.
+
+_ORDER_DEDUCTION_REF_TYPES = [
+    "order_deduction",          # sale_usage rows tagged during create/add-items
+    "order_deduction_rollback",  # normal compensation rows (e.g. stock-validation 409)
+    "order_deduction_recovery",  # rows written by this recovery (makes it idempotent)
+]
+RECOVERY_GRACE_SECONDS = 300  # rows younger than this are skipped (another worker may be mid-request)
+
+async def _claim_orphan_recovery(restaurant_id: str, ref_order_id: str,
+                                 ttl_seconds: float = RECOVERY_GRACE_SECONDS) -> bool:
+    """Atomically claim (restaurant, ref_order_id) for recovery across app workers.
+
+    The insert itself is the atomic claim: only the worker whose insert lands
+    may restock. The claim flips to 'done' after recovery completes; a
+    'processing' claim OLDER than the TTL belongs to a dead or hung process
+    and is reclaimed via delete-then-insert — two concurrent reclaimers
+    cannot both win the re-insert. The restock amount is RECOMPUTED FROM THE
+    LEDGER every run, never remembered from the claim, so reclaiming can at
+    worst resume the remainder (ledger arithmetic is idempotent).
+    """
+    key = f"{restaurant_id}:{ref_order_id}"
+    claim = {"_id": key, "restaurant_id": restaurant_id, "ref_order_id": ref_order_id,
+             "status": "processing", "claimed_at": datetime.now(timezone.utc).isoformat()}
+    try:
+        await db.stock_recovery_claims.insert_one(claim)
+        return True
+    except DuplicateKeyError:
+        existing = await db.stock_recovery_claims.find_one({"_id": key})
+        if isinstance(existing, dict):
+            if existing.get("status") == "done":
+                return False
+            try:
+                age = (datetime.now(timezone.utc) -
+                       datetime.fromisoformat(str(existing.get("claimed_at")))).total_seconds()
+            except (ValueError, TypeError):
+                age = ttl_seconds + 1  # malformed — treat as stale
+            if age < ttl_seconds:
+                return False  # another worker is actively (or just was) recovering
+        await db.stock_recovery_claims.delete_one({"_id": key})
+        try:
+            await db.stock_recovery_claims.insert_one(claim)
+            return True
+        except DuplicateKeyError:
+            return False
+
+async def recover_orphaned_order_deductions(grace_seconds: float = RECOVERY_GRACE_SECONDS):
+    """Restore inventory from deduction ledger rows whose ORDER never landed.
+
+    Called once at startup (no in-flight requests exist on this process; the
+    grace window protects against a concurrent app worker). Safe/idempotent:
+
+    • The outstanding amount is recomputed each run as −(Σ ledger deltas for
+      the ref) — recovery rows themselves carry the same ref_id, so a crash
+      DURING recovery resumes with the remainder only. Stock is therefore
+      NEVER restocked twice.
+    • Ledger row is written BEFORE the $inc (ledger-first). The only residual
+      window is a crash between that row and the $inc: the ledger then shows
+      a recovery row whose balance_after exceeds actual stock — loud and
+      reviewable, never a silent double-restock.
+    • A positive net delta (ledger corruption) is logged and left untouched.
+    • Legacy rows written before this feature (ref_type='menu_item') are
+      unattributable and intentionally not touched.
+    """
+    try:
+        rows = await db.stock_movements.find(
+            {"ref_type": {"$in": _ORDER_DEDUCTION_REF_TYPES}}).to_list(None)
+    except Exception as e:
+        logger.warning(f"Orphaned-deduction scan skipped: {e}")
+        return
+    if not rows:
+        return
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=grace_seconds)).isoformat()
+    groups: dict = {}
+    for r in rows:
+        rid, ref = r.get("restaurant_id"), r.get("ref_id")
+        if rid and ref:
+            groups.setdefault((rid, ref), []).append(r)
+    for (rid, ref), grows in groups.items():
+        try:
+            if any(str(r.get("created_at", "")) > cutoff for r in grows):
+                continue  # recent — another worker's create may still be in flight
+            if await db.orders.find_one({"id": ref}):
+                continue  # order landed — its deductions are legitimately owned
+            per_item: dict = {}
+            for r in grows:
+                iid = r.get("inventory_item_id")
+                if iid:
+                    per_item[iid] = round(per_item.get(iid, 0) + float(r.get("delta") or 0), 4)
+            if any(v > 0 for v in per_item.values()):
+                logger.error(
+                    "Orphaned deduction group %s/%s has POSITIVE net ledger delta — "
+                    "stock left untouched, manual reconciliation required", rid, ref)
+                continue
+            outstanding = {iid: -net for iid, net in per_item.items() if net < 0}
+            if not outstanding:
+                continue  # already compensated (e.g. stock-validation 409)
+            if not await _claim_orphan_recovery(rid, ref):
+                continue
+            for iid, qty in outstanding.items():
+                inv = await db.inventory.find_one({"id": iid, "restaurant_id": rid}, {"_id": 0})
+                # Ledger row FIRST (same ref_id) → arithmetic idempotency.
+                await record_stock_movement(
+                    rid, iid, (inv or {}).get("name", ""), (inv or {}).get("unit", ""),
+                    qty, "adjustment", "order_deduction_recovery", ref,
+                    note="Startup crash recovery — order insert never completed",
+                    balance_after=((inv or {}).get("quantity", 0) + qty) if inv else None)
+                if inv:
+                    await _stock_add(rid, iid, qty)
+                logger.warning(
+                    "Crash recovery: restored %.4f of inventory item %s for orphaned "
+                    "order deduction %s (restaurant %s)", qty, iid, ref, rid)
+            await db.stock_recovery_claims.update_one(
+                {"_id": f"{rid}:{ref}"},
+                {"$set": {"status": "done",
+                          "done_at": datetime.now(timezone.utc).isoformat()}})
+        except Exception as e:
+            logger.warning(f"Recovery skipped for group {rid}/{ref}: {e}")
 
 async def _get_next_order_number(restaurant_id: str) -> str:
     """Atomic per-restaurant-per-day order number (no duplicates under load).
@@ -988,6 +1266,65 @@ async def _get_next_order_number(restaurant_id: str) -> str:
         return_document=True
     )
     return f"{today}{doc['seq']:04d}"
+
+
+async def _insert_order_with_generated_number(restaurant_id: str, order: dict, max_attempts: int = 3):
+    """Insert an order with a counters-based per-restaurant/day number.
+
+    The number comes from the SAME atomic counters sequence the POS path
+    uses (find_one_and_update $inc), replacing the webhook count_documents
+    approach that produced duplicate numbers under concurrent delivery.
+    If a duplicate key still occurs (legacy duplicates or a failed unique
+    index), the NEXT atomic number is taken and insertion retried — no
+    duplicate order is ever created. max_attempts exhausted → 409.
+    """
+    for _attempt in range(max_attempts):
+        order["order_number"] = await _get_next_order_number(restaurant_id)
+        try:
+            await db.orders.insert_one(order)
+            return order
+        except DuplicateKeyError:
+            continue
+    raise HTTPException(
+        status_code=409,
+        detail="Order number could not be allocated — duplicate order numbers exist for this day. Resolve legacy collisions first.")
+
+
+def _payment_allocations(order: dict):
+    """Authoritative per-method payment allocations for one order (FIX 3).
+
+    Derived from the PERSISTED payment_splits when present and consistent
+    with the order total (paise-tolerant like creation-time validation); a
+    legacy single-method order maps to one allocation of its own method.
+    Historical split orders with NO allocation details are bucketed under
+    'split' with an explicit reconciliation WARNING — never an invented
+    cash/card/UPI attribution.
+
+    Returns (allocations: [(method, amount)], warning: Optional[str]).
+    """
+    total = round(order.get("total_amount"), 2) if order.get("total_amount") is not None else 0.0
+    order_number = order.get("order_number", "?")
+    splits = order.get("payment_splits") or []
+    if splits:
+        # Validate the RAW method strings — normalization to 'unknown' must
+        # happen only after validity is established, else an empty method
+        # would silently validate a corrupt allocation.
+        raw_methods = [str(s.get("method") or "").strip().lower() for s in splits]
+        raw_amounts = [round(float(s.get("amount", 0)), 2) for s in splits]
+        valid = (
+            all(raw_methods)
+            and all(a > 0 for a in raw_amounts)
+            and abs(int(round(sum(raw_amounts) * 100)) - int(round(total * 100))) <= 1
+        )
+        if valid:
+            return list(zip(raw_methods, raw_amounts)), None
+    pm = order.get("payment_method") or "unknown"
+    if pm == "split":
+        # Old record: split at the order level but allocations never persisted.
+        return [("split", total)], f"Order #{order_number}: legacy split payment without allocation detail — attributed to 'split', NOT cash/card/UPI"
+    if pm == "unknown":
+        return [("unknown", total)], f"Order #{order_number}: no payment method recorded — attributed to 'unknown'"
+    return [(pm, total)], None
 
 
 def _validate_order_transition(old_status: str, new_status: str):
@@ -1906,10 +2243,101 @@ async def update_my_restaurant(data: RestaurantUpdate, user: dict = Depends(get_
     restaurant = await db.restaurants.find_one({"id": user["restaurant_id"]}, {"_id": 0})
     return RestaurantResponse(**restaurant)
 
+# ============== ADD-ON ENTITLEMENT GATE (server-side) ==============
+# Mirrors the frontend FeatureContext mapping so a paid module cannot be
+# used by calling the REST API directly with any valid token. Called ONLY
+# inside Depends() — FastAPI's dependency cache guarantees one Mongo query
+# per request, so the hot order/billing path stays fast.
+ADDON_FEATURES = {
+    # Keys MUST match the authoritative STORE_ADDONS catalog ids below
+    # ("Multi-Branch Dashboard" is sold as multi_branch, "Advanced Analytics"
+    # as analytics_pro) so a tenant that pays via /store/subscribe actually
+    # unlocks the module. Route gates pass FEATURE names; _FEATURE_TO_ADDON
+    # resolves them to these add-on ids.
+    "inventory": ["inventory", "purchase_orders", "wastage"],
+    "crm_loyalty": ["customers", "trident_coins"],
+    "multi_branch": ["branches"],
+    "analytics_pro": ["analytics"],
+    "whatsapp": ["notifications"],
+    "gift_cards": ["gift_cards"],
+}
+
+FEATURE_ADDON_NAME = {
+    "inventory": "Inventory Management",
+    "branches": "Multi-Branch Dashboard",
+    "multi_branch": "Multi-Branch Dashboard",
+    "analytics": "Advanced Analytics",
+    "analytics_pro": "Advanced Analytics",
+    "purchase_orders": "Inventory Management",
+    "wastage": "Inventory Management",
+    "customers": "CRM & Loyalty",
+    "trident_coins": "CRM & Loyalty",
+    "crm_loyalty": "CRM & Loyalty",
+    "branches": "Multi-Branch Dashboard",
+    "analytics": "Advanced Analytics",
+    "notifications": "WhatsApp Marketing",
+    "gift_cards": "Gift Cards & Vouchers",
+}
+
+# Reverse index: feature/module-name → add-on id that unlocks it. The value
+# lists in ADDON_FEATURES name FEATURES; routes may gate either by feature
+# (e.g. "customers") or directly by add-on id (e.g. "crm_loyalty").
+_FEATURE_TO_ADDON = {}
+for _addon, _feats in ADDON_FEATURES.items():
+    for _f in _feats:
+        _FEATURE_TO_ADDON.setdefault(_f, _addon)
+
+async def require_addon(feature: str, user: dict):
+    """Allow base/platform features for every logged-in user; for addon-gated
+    features, require the corresponding add-on to be active on the caller's
+    restaurant. Platform admins always pass (they manage the platform)."""
+    role = user.get("role", "")
+    if role == "admin":
+        return
+    rid = user.get("restaurant_id")
+    if not rid:
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    # Resolve the feature argument to the add-on id(es) that unlock it
+    if feature in _FEATURE_TO_ADDON:
+        required_addons = {_FEATURE_TO_ADDON[feature]}
+    elif feature in ADDON_FEATURES:
+        # route gated directly by the add-on id (e.g. "crm_loyalty")
+        required_addons = {feature}
+    else:
+        return  # unknown/base feature — no entitlement gate
+    sub = await db.restaurant_subscriptions.find_one(
+        {"restaurant_id": rid},
+        {"_id": 0, "active_addons": 1},
+    )
+    active = set((sub or {}).get("active_addons", []) or [])
+    if not (active & required_addons):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Add-on required — {FEATURE_ADDON_NAME.get(feature, feature)} is not active for this restaurant"
+        )
+
+def _addon_dep(feature: str):
+    """FastAPI dependency factory: 403 unless the caller's restaurant has the
+    add-on that unlocks <feature>. Used as a Depends(...) guard."""
+    async def _dep(user: dict = Depends(get_current_user)):
+        await require_addon(feature, user)
+        return user
+    return _dep
+
+async def _require_inventory_if_recipe(user: dict, touches_recipe: bool):
+    """Menu CRUD is a BASE capability (every restaurant must manage its
+    cards); the Inventory add-on specifically sells 'recipe management', so
+    only recipe-bearing menu work is entitlement-gated. Plain menu editing
+    must keep working for tenants without the add-on."""
+    if touches_recipe:
+        await require_addon("inventory", user)
+
+
+
 # ============== BRANCH ROUTES ==============
 
 @api_router.post("/branches")
-async def create_branch(data: BranchCreate, user: dict = Depends(get_current_user)):
+async def create_branch(data: BranchCreate, user: dict = Depends(_addon_dep("branches"))):
     check_role(user, "branches")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
@@ -1958,16 +2386,27 @@ async def create_branch(data: BranchCreate, user: dict = Depends(get_current_use
     return BranchResponse(**result)
 
 @api_router.get("/branches", response_model=List[BranchResponse])
-async def get_branches(user: dict = Depends(get_current_user)):
+async def get_branches(user: dict = Depends(_addon_dep("branches"))):
     if not user.get("restaurant_id"):
         return []
     branches = await db.branches.find({"restaurant_id": user["restaurant_id"], "is_active": True}, {"_id": 0}).to_list(50)
     return [BranchResponse(**b) for b in branches]
 
 @api_router.put("/branches/{branch_id}", response_model=BranchResponse)
-async def update_branch(branch_id: str, data: BranchCreate, user: dict = Depends(get_current_user)):
+async def update_branch(branch_id: str, data: BranchCreate, user: dict = Depends(_addon_dep("branches"))):
     check_role(user, "branches")
+    branch = await db.branches.find_one({"id": branch_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
     update_data = data.model_dump()
+    # Security: login_password is NEVER persisted on the branch document.
+    # Authentication lives in the users collection (bcrypt hash only).
+    # The management UI keeps credentials on the LOGIN user; updating them
+    # here rotates the branch manager's password in the users collection.
+    update_data.pop("login_password", None)
+    if update_data.get("login_email") and update_data.get("login_email") != branch.get("login_email"):
+        raise HTTPException(status_code=400, detail="Branch login email is managed on the branch manager user and cannot be changed via branch update")
+    update_data.pop("login_email", None)  # keep a no-op email in the payload from resetting anything
     await db.branches.update_one(
         {"id": branch_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": update_data}
@@ -1975,10 +2414,21 @@ async def update_branch(branch_id: str, data: BranchCreate, user: dict = Depends
     branch = await db.branches.find_one({"id": branch_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not branch:
         raise HTTPException(status_code=404, detail="Branch not found")
+    # If the caller also supplied a new password, rotate it on the branch's
+    # manager user (hashed only). Never logged, never echoed in the response.
+    if data.login_password:
+        if len(data.login_password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        result = await db.users.update_one(
+            {"branch_id": branch_id, "restaurant_id": user.get("restaurant_id"), "role": "manager"},
+            {"$set": {"password": hash_password(data.login_password)}}
+        )
+        if result.modified_count == 0:
+            logger.warning("Branch password rotation found no matching manager user (branch %s) — nothing changed" % branch_id)
     return BranchResponse(**branch)
 
 @api_router.delete("/branches/{branch_id}")
-async def delete_branch(branch_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def delete_branch(branch_id: str, reason: Optional[str] = None, user: dict = Depends(_addon_dep("branches"))):
     check_role(user, "branches")
     branch = await db.branches.find_one({"id": branch_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not branch:
@@ -2034,7 +2484,6 @@ async def get_my_subscriptions(user: dict = Depends(get_current_user)):
     subscriptions = await db.subscriptions.find({"restaurant_id": user["restaurant_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [SubscriptionResponse(**s) for s in subscriptions]
 
-# ============== MENU CATEGORY ROUTES ==============
 
 @api_router.post("/menu/categories", response_model=MenuCategoryResponse)
 async def create_category(data: MenuCategoryCreate, user: dict = Depends(get_current_user)):
@@ -2111,7 +2560,7 @@ REASON_LABELS = {
 }
 
 @api_router.get("/wastage", response_model=List[WasteLogResponse])
-async def list_wastage(days: int = 30, user: dict = Depends(get_current_user)):
+async def list_wastage(days: int = 30, user: dict = Depends(_addon_dep("inventory"))):
     """Waste logs for this restaurant, newest first."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     logs = await db.wastage.find(
@@ -2121,7 +2570,7 @@ async def list_wastage(days: int = 30, user: dict = Depends(get_current_user)):
     return logs
 
 @api_router.post("/wastage", response_model=WasteLogResponse)
-async def create_waste_log(data: WasteLogCreate, user: dict = Depends(get_current_user)):
+async def create_waste_log(data: WasteLogCreate, user: dict = Depends(_addon_dep("inventory"))):
     """Log wastage for an inventory item — deducts stock immediately and
     records the estimated cost impact (restaurant Intelligence feed)."""
     if not user.get("restaurant_id"):
@@ -2137,13 +2586,12 @@ async def create_waste_log(data: WasteLogCreate, user: dict = Depends(get_curren
 
     unit_cost = inv.get("cost_per_unit", 0) or 0
     estimated_cost = round(data.quantity * unit_cost, 2)
-    new_qty = max(0, inv.get("quantity", 0) - data.quantity)
-    await db.inventory.update_one(
-        {"id": inv["id"]},
-        {"$set": {"quantity": new_qty, "is_low_stock": new_qty <= inv.get("min_quantity", 0)}}
-    )
+    # FIX 1: atomic floored deduction (was read-modify-write $set)
+    _real_used, new_qty, inv_after = await _deduct_one(
+        user["restaurant_id"], inv["id"], float(data.quantity), enforce_stock=False)
+    new_qty = new_qty if new_qty is not None else inv.get("quantity", 0)
     await record_stock_movement(user["restaurant_id"], inv["id"], inv.get("name", ""), inv.get("unit", ""),
-                                -data.quantity, "wastage", "wastage", None, user=user,
+                                -_real_used, "wastage", "wastage", None, user=user,
                                 note=data.reason + (f" — {data.notes}" if data.notes else ""), balance_after=new_qty)
 
     log = {
@@ -2225,6 +2673,7 @@ async def create_menu_item(data: MenuItemCreate, user: dict = Depends(get_curren
     check_role(user, "menu")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
+    await _require_inventory_if_recipe(user, bool(data.recipe))
     item_id = str(uuid.uuid4())
     recipe_data = [r.model_dump() for r in data.recipe] if data.recipe else []
     item = {
@@ -2263,6 +2712,7 @@ async def get_menu_items(category_id: Optional[str] = None,
 async def update_menu_item(item_id: str, data: MenuItemUpdate, user: dict = Depends(get_current_user)):
     check_role(user, "menu")
     update_data = {}
+    await _require_inventory_if_recipe(user, data.recipe is not None)
     for k, v in data.model_dump().items():
         if v is not None:
             if k == "recipe":
@@ -2386,15 +2836,36 @@ async def close_day(closing_cash: float = 0, force: bool = False, user: dict = D
 
     orders = await db.orders.find({"day_session_id": session["id"], "payment_status": "paid"}, {"_id": 0}).to_list(1000)
     total_sales = sum(o["total_amount"] for o in orders)
-    cash_sales = sum(o["total_amount"] for o in orders if o["payment_method"] == "cash")
-    card_sales = sum(o["total_amount"] for o in orders if o["payment_method"] == "card")
-    upi_sales = sum(o["total_amount"] for o in orders if o["payment_method"] == "upi")
+    # FIX 3: reconciliation is derived from persisted payment ALLOCATIONS
+    # (order.payment_splits), not the order-level payment_method — split
+    # bills are attributed to their actual cash/card/UPI shares. Legacy
+    # split orders without allocations go into the 'split' bucket and are
+    # reported as explicit reconciliation warnings, never invented.
+    bucket_other = {}
+    reconcil_warnings = []
+    cash_sales = card_sales = upi_sales = 0.0
+    for o in orders:
+        allocations, warn = _payment_allocations(o)
+        if warn:
+            reconcil_warnings.append(warn)
+        for _method, _amount in allocations:
+            if _method == "cash":
+                cash_sales = round(cash_sales + _amount, 2)
+            elif _method == "card":
+                card_sales = round(card_sales + _amount, 2)
+            elif _method == "upi":
+                upi_sales = round(upi_sales + _amount, 2)
+            else:
+                bucket_other[_method] = round(bucket_other.get(_method, 0) + _amount, 2)
+    payment_breakdown = {**(bucket_other or {}), "cash": cash_sales, "card": card_sales, "upi": upi_sales}
     now = datetime.now(timezone.utc)
     await db.day_sessions.update_one(
         {"id": session["id"]},
         {"$set": {"status": "closed", "closed_at": now.isoformat(), "closing_cash": closing_cash,
                   "total_sales": total_sales, "total_orders": len(orders),
-                  "cash_sales": cash_sales, "card_sales": card_sales, "upi_sales": upi_sales}}
+                  "cash_sales": cash_sales, "card_sales": card_sales, "upi_sales": upi_sales,
+                  "payment_breakdown": payment_breakdown,
+                  "reconciliation_warnings": reconcil_warnings}}
     )
     updated = await db.day_sessions.find_one({"id": session["id"]}, {"_id": 0})
     await write_audit(user, "day.close", "day_session", session["id"], session.get("opened_at", ""),
@@ -2494,6 +2965,8 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
             raise HTTPException(status_code=400, detail="Change amount cannot be greater than or equal to cash tendered total — check the amount paid")
     # Idempotent replay: an offline order syncing after reconnect must not
     # create a second copy if the first sync attempt already landed.
+    # (A unique (restaurant_id, client_uuid) index backs this; the insert
+    # below handles the concurrent-replay duplicate-key race.)
     if data.client_uuid:
         existing = await db.orders.find_one(
             {"restaurant_id": user["restaurant_id"], "client_uuid": data.client_uuid},
@@ -2501,6 +2974,18 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         )
         if existing:
             return OrderResponse(**existing)
+
+    # FIX 4: persist the authoritative customer identifier when the order is
+    # linked to a CRM customer (selected by phone at the POS). Guest orders
+    # (no phone) stay unattached.
+    customer_link_id = None
+    if data.customer_phone:
+        cust = await db.customers.find_one(
+            {"restaurant_id": user["restaurant_id"], "phone": data.customer_phone},
+            {"_id": 0, "id": 1},
+        )
+        if cust:
+            customer_link_id = cust["id"]
 
     order_id = str(uuid.uuid4())
     order = {
@@ -2512,6 +2997,7 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         "order_type": data.order_type,
         "table_number": data.table_number,
         "items": order_items,
+        "customer_id": customer_link_id,
         "customer_name": data.customer_name,
         "customer_phone": data.customer_phone,
         "customer_email": data.customer_email,
@@ -2527,15 +3013,44 @@ async def create_order(data: OrderCreate, user: dict = Depends(get_current_user)
         "created_by": user["id"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.orders.insert_one(order)
+
+    # All-or-nothing recipe deduction BEFORE the order insert: if this 409s
+    # (stock validation), no order residue is left behind. applied is kept so
+    # a lost insert race can be compensated (below).
+    try:
+        applied_deductions = await deduct_inventory(user["restaurant_id"], [
+            {"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items],
+            ref_order_id=order_id)
+    except InsufficientStockError as _ise:
+        raise HTTPException(status_code=409, detail=str(_ise))
+
+    try:
+        await db.orders.insert_one(order)
+    except DuplicateKeyError:
+        # Concurrent offline replay of the SAME client_uuid won the insert.
+        # Return the original order — and reverse THIS attempt's deduction so
+        # ingredients are never deducted twice for one logical order.
+        if data.client_uuid:
+            existing = await db.orders.find_one(
+                {"restaurant_id": user["restaurant_id"], "client_uuid": data.client_uuid},
+                {"_id": 0, "created_by": 0},
+            )
+            if existing:
+                await _compensate_inventory(
+                    user["restaurant_id"], applied_deductions,
+                    "Idempotent replay lost the insert race — deduction of the duplicate attempt reversed",
+                    ref_order_id=order_id)
+                return OrderResponse(**existing)
+        # duplicate order NUMBER (legacy collision without an index) — take
+        # the next atomic number and insert once more.
+        order["order_number"] = await _get_next_order_number(user["restaurant_id"])
+        await db.orders.insert_one(order)
 
     if data.order_type == "dine_in" and data.table_number:
         await db.tables.update_one(
             {"restaurant_id": user["restaurant_id"], "table_number": data.table_number},
             {"$set": {"status": "occupied", "current_order_id": order_id}}
         )
-
-    await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
 
     if not is_pending_payment:
         # Record wallet entries for validated payment(s)
@@ -2639,20 +3154,37 @@ async def update_order_status(order_id: str, data: OrderUpdate, cancel_reason: O
 
     await db.orders.update_one({"id": order_id}, {"$set": {"status": data.status}})
 
-    # Cancel: release table + restore inventory + log
+    # Cancel: release table + restore inventory + log — EXACTLY ONCE.
+    # The claim update is conditional on cancel_effects_done not yet set, so a
+    # duplicated cancel transition (double-click, offline retry) or a racing
+    # retry can never restock stock or refund money twice.
     if data.status == "cancelled":
+        claim = await db.orders.update_one(
+            {"id": order_id, "restaurant_id": user["restaurant_id"],
+             "status": "cancelled", "cancel_effects_done": {"$ne": True}},
+            {"$set": {"cancel_effects_done": True}},
+        )
+        if getattr(claim, "modified_count", 0) != 1:
+            # Side effects already executed by the first transition — still
+            # return the (idempotent) cancelled order.
+            order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0}) or order
+            order["status"] = data.status
+            return OrderResponse(**{k: v for k, v in order.items() if k not in ["_id", "created_by"]})
         if order["order_type"] == "dine_in" and order.get("table_number"):
             await db.tables.update_one(
                 {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"], "current_order_id": order_id},
                 {"$set": {"status": "available", "current_order_id": None}}
             )
         if order.get("payment_status") == "paid":
-            # Refund wallet entry so day reports stay correct
-            await record_wallet_transaction(
-                user["restaurant_id"], "refund", order["total_amount"],
-                order.get("payment_method", "cash"), order_id, order.get("day_session_id")
-            )
-        _restock_inventory(user["restaurant_id"], order.get("items", []))
+            # Refund entries attributed to the ACTUAL payment methods so day
+            # reports stay correct for split bills too (not one generic row).
+            allocations, _warning = _payment_allocations(order)
+            for _method, _amount in allocations:
+                await record_wallet_transaction(
+                    user["restaurant_id"], "refund", _amount,
+                    _method, order_id, order.get("day_session_id")
+                )
+        await restock_for_cancelled_order(user["restaurant_id"], order)
         await write_audit(user, "order.cancel", "order", order_id, f"Order #{order['order_number']}", _reason,
                           f"Cancelled order #{order['order_number']} (₹{order.get('total_amount', 0):.2f}, {order.get('order_type')})")
         await log_action("order", "order_cancelled", user_id=user["id"],
@@ -2729,7 +3261,11 @@ async def add_items_to_order(order_id: str, data: OrderAddItems, user: dict = De
                   **({"status": "preparing", "status_history": (order.get("status_history") or []) + [{"status": "preparing", "reason": "items_added", "at": datetime.now(timezone.utc).isoformat()}]} if reopen_kitchen else {})}}
     )
 
-    await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items])
+    try:
+        await deduct_inventory(user["restaurant_id"], [{"menu_item_id": i.menu_item_id, "quantity": i.quantity} for i in data.items],
+                               ref_order_id=order_id)
+    except InsufficientStockError as _ise:
+        raise HTTPException(status_code=409, detail=str(_ise))
 
     updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
     return OrderResponse(**{k: v for k, v in updated.items() if k not in ["_id", "created_by"]})
@@ -2867,7 +3403,7 @@ async def update_kds_order_status(order_id: str, new_status: str, user: dict = D
 # ============== INVENTORY ROUTES ==============
 
 @api_router.post("/inventory", response_model=InventoryItemResponse)
-async def create_inventory_item(data: InventoryItemCreate, user: dict = Depends(get_current_user)):
+async def create_inventory_item(data: InventoryItemCreate, user: dict = Depends(_addon_dep("inventory"))):
     check_role(user, "inventory")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
@@ -2887,7 +3423,7 @@ async def create_inventory_item(data: InventoryItemCreate, user: dict = Depends(
     return InventoryItemResponse(**{k: v for k, v in item.items() if k != "_id"})
 
 @api_router.get("/inventory/{item_id}/movements")
-async def get_stock_movements(item_id: str, days: int = 30, limit: int = 100, user: dict = Depends(get_current_user)):
+async def get_stock_movements(item_id: str, days: int = 30, limit: int = 100, user: dict = Depends(_addon_dep("inventory"))):
     """Stock ledger for one inventory item — every purchase, sale usage,
     wastage, adjustment and restock, oldest change explains current stock."""
     check_role(user, "inventory")
@@ -2903,7 +3439,7 @@ async def get_stock_movements(item_id: str, days: int = 30, limit: int = 100, us
 
 @api_router.get("/inventory", response_model=List[InventoryItemResponse])
 async def get_inventory(low_stock_only: bool = False,
-                        skip: int = 0, limit: int = 500, user: dict = Depends(get_current_user)):
+                        skip: int = 0, limit: int = 500, user: dict = Depends(_addon_dep("inventory"))):
     check_role(user, "inventory")
     if not user.get("restaurant_id"):
         return []
@@ -2915,7 +3451,7 @@ async def get_inventory(low_stock_only: bool = False,
     return [InventoryItemResponse(**i) for i in items]
 
 @api_router.put("/inventory/{item_id}", response_model=InventoryItemResponse)
-async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: dict = Depends(get_current_user)):
+async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: dict = Depends(_addon_dep("inventory"))):
     check_role(user, "inventory")
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     # Tenant isolation: every read/write is scoped to the caller's restaurant
@@ -2936,7 +3472,7 @@ async def update_inventory_item(item_id: str, data: InventoryItemUpdate, user: d
     return InventoryItemResponse(**item)
 
 @api_router.delete("/inventory/{item_id}")
-async def delete_inventory_item(item_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def delete_inventory_item(item_id: str, reason: Optional[str] = None, user: dict = Depends(_addon_dep("inventory"))):
     check_role(user, "inventory")
     inv = await db.inventory.find_one({"id": item_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not inv:
@@ -2976,6 +3512,29 @@ async def create_table(data: TableCreate, user: dict = Depends(get_current_user)
 
 @api_router.put("/tables/{table_id}/status")
 async def update_table_status(table_id: str, status: str, user: dict = Depends(get_current_user)):
+    """Update a table's floor status (available / occupied / reserved).
+
+    Authenticated, tenant-scoped, role-checked and value-whitelisted — accepts
+    ONLY the three frontend-managed statuses. Order-driven states (occupied
+    free via pay/complete/cancel) always remain authoritative: setting a table
+    back to 'available' while an unclosed order is attached is rejected so an
+    order never dangles. Frontend callers referenced: TablesPage.jsx,
+    POSDashboard.jsx long-press actions (available/occupied/reserved only).
+    """
+    check_role(user, "tables")
+    ALLOWED_TABLE_STATUSES = {"available", "occupied", "reserved"}
+    if status not in ALLOWED_TABLE_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Invalid table status. Must be one of: {sorted(ALLOWED_TABLE_STATUSES)}")
+    table = await db.tables.find_one({"id": table_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not table:
+        raise HTTPException(status_code=404, detail="Table not found")
+    if status == "available" and table.get("current_order_id"):
+        open_order = await db.orders.find_one(
+            {"id": table["current_order_id"], "restaurant_id": user.get("restaurant_id"), "status": {"$nin": ["completed", "cancelled"]}},
+            {"_id": 0},
+        )
+        if open_order:
+            raise HTTPException(status_code=409, detail="Table has a running order — settle or transfer it before freeing the table")
     await db.tables.update_one(
         {"id": table_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"status": status}}
@@ -3115,7 +3674,7 @@ async def get_wallet_summary(period: str = "today", date: Optional[str] = None, 
 # ============== ANALYTICS ROUTES ==============
 
 @api_router.get("/analytics")
-async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def get_analytics(date: Optional[str] = None, branch_id: Optional[str] = None, user: dict = Depends(_addon_dep("analytics"))):
     check_role(user, "analytics")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
@@ -3367,10 +3926,63 @@ async def get_platform_analytics(user: dict = Depends(get_admin_user)):
         "revenue_by_day": [{"date": k, "revenue": v} for k, v in sorted(daily_revenue.items())[-30:]]
     }
 
-# ============== WEBHOOK ROUTES (Mock) ==============
+# ============== WEBHOOK ROUTES (Mock, signature-verified) ==============
+
+# Delivery-platform webhook secrets come from the environment only. These are
+# NOT real Swiggy/Zomato credentials — partners would provision their own once
+# an actual integration agreement exists. While integration remains MOCK, an
+# UNCONFIGURED secret must close the endpoint (fail closed), not open it.
+import hmac
+import hashlib
+
+WEBHOOK_TIMESTAMP_TOLERANCE = int(os.environ.get('WEBHOOK_TIMESTAMP_TOLERANCE_SECS', '300'))
+ONLINE_WEBHOOK_SECRETS = {
+    "swiggy": os.environ.get('SWIGGY_WEBHOOK_SECRET', ''),
+    "zomato": os.environ.get('ZOMATO_WEBHOOK_SECRET', ''),
+}
+
+def verify_webhook_signature(platform: str, raw_body: bytes, signature_hdr: str, timestamp_hdr: str):
+    """HMAC-SHA256 over '<timestamp>.<raw_body>' with the platform shared secret.
+
+    Baseline (mock-integration) security contract:
+      - no secret configured -> 401 (endpoint closed until a real partner
+        integration provisions credentials)
+      - missing/invalid signature or timestamp -> 401
+      - timestamp older than +-WEBHOOK_TIMESTAMP_TOLERANCE seconds -> 401
+        (blocks replay of a captured request)
+      - digest mismatch -> 401
+    A request that arrives with any of these failures NEVER reaches order
+    creation or any database write.
+    """
+    secret = ONLINE_WEBHOOK_SECRETS.get(platform, '')
+    if not secret:
+        # Fail closed. An unauthenticated webhook is a forgeable point of sale
+        # order — mock integrations must be provably closed.
+        raise HTTPException(status_code=401, detail=f"Webhook for {platform} is not configured — signature secret missing")
+    if not signature_hdr or not timestamp_hdr:
+        raise HTTPException(status_code=401, detail="Missing webhook signature")
+    try:
+        ts = int(timestamp_hdr)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    if abs(time.time() - ts) > WEBHOOK_TIMESTAMP_TOLERANCE:
+        raise HTTPException(status_code=401, detail="Webhook timestamp expired or outside tolerance")
+    expected = hmac.new(
+        secret.encode(),
+        f"{ts}.".encode() + raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected, signature_hdr.strip()):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
 @api_router.post("/webhooks/swiggy")
-async def swiggy_webhook(data: SwiggyWebhook):
+async def swiggy_webhook(data: SwiggyWebhook, request: Request):
+    raw_body = await request.body()
+    verify_webhook_signature(
+        "swiggy", raw_body,
+        request.headers.get('X-Webhook-Signature', ''),
+        request.headers.get('X-Webhook-Timestamp', ''),
+    )
     restaurant = await db.restaurants.find_one({"id": data.restaurant_id}, {"_id": 0})
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
@@ -3378,12 +3990,20 @@ async def swiggy_webhook(data: SwiggyWebhook):
     if not session:
         raise HTTPException(status_code=400, detail="Restaurant day not open")
     order_id = str(uuid.uuid4())
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    count = await db.orders.count_documents({"restaurant_id": data.restaurant_id, "order_number": {"$regex": f"^{today}"}})
+    # FIX 4: link the online order to a CRM customer when the phone matches —
+    # the same authoritative-identifier rule as POS order creation.
+    web_customer_id = None
+    if data.customer.get("phone"):
+        cust = await db.customers.find_one(
+            {"restaurant_id": data.restaurant_id, "phone": data.customer.get("phone")},
+            {"_id": 0, "id": 1})
+        if cust:
+            web_customer_id = cust["id"]
     order = {
-        "id": order_id, "order_number": f"{today}{count + 1:04d}",
+        "id": order_id,
         "restaurant_id": data.restaurant_id, "order_type": "online",
         "items": data.items, "customer_name": data.customer.get("name"),
+        "customer_id": web_customer_id,
         "customer_phone": data.customer.get("phone"),
         "subtotal": data.total_amount, "tax_amount": 0, "discount_amount": 0,
         "total_amount": data.total_amount, "payment_method": "online",
@@ -3391,11 +4011,19 @@ async def swiggy_webhook(data: SwiggyWebhook):
         "external_order_id": data.order_id, "delivery_address": data.delivery_address,
         "day_session_id": session["id"], "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.orders.insert_one(order)
+    # FIX 2: atomic counters number + duplicate-safe insert (no count_documents race)
+    order = await _insert_order_with_generated_number(data.restaurant_id, order)
+    order_id = order["id"]
     return {"message": "Order received", "order_id": order_id}
 
 @api_router.post("/webhooks/zomato")
-async def zomato_webhook(data: ZomatoWebhook):
+async def zomato_webhook(data: ZomatoWebhook, request: Request):
+    raw_body = await request.body()
+    verify_webhook_signature(
+        "zomato", raw_body,
+        request.headers.get('X-Webhook-Signature', ''),
+        request.headers.get('X-Webhook-Timestamp', ''),
+    )
     restaurant = await db.restaurants.find_one({"id": data.restaurant_id}, {"_id": 0})
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
@@ -3403,12 +4031,18 @@ async def zomato_webhook(data: ZomatoWebhook):
     if not session:
         raise HTTPException(status_code=400, detail="Restaurant day not open")
     order_id = str(uuid.uuid4())
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    count = await db.orders.count_documents({"restaurant_id": data.restaurant_id, "order_number": {"$regex": f"^{today}"}})
+    web_customer_id = None
+    if data.customer.get("phone"):
+        cust = await db.customers.find_one(
+            {"restaurant_id": data.restaurant_id, "phone": data.customer.get("phone")},
+            {"_id": 0, "id": 1})
+        if cust:
+            web_customer_id = cust["id"]
     order = {
-        "id": order_id, "order_number": f"{today}{count + 1:04d}",
+        "id": order_id,
         "restaurant_id": data.restaurant_id, "order_type": "online",
         "items": data.items, "customer_name": data.customer.get("name"),
+        "customer_id": web_customer_id,
         "customer_phone": data.customer.get("phone"),
         "subtotal": data.total_amount, "tax_amount": 0, "discount_amount": 0,
         "total_amount": data.total_amount, "payment_method": "online",
@@ -3416,7 +4050,8 @@ async def zomato_webhook(data: ZomatoWebhook):
         "external_order_id": data.order_id, "delivery_address": data.delivery_address,
         "day_session_id": session["id"], "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.orders.insert_one(order)
+    order = await _insert_order_with_generated_number(data.restaurant_id, order)
+    order_id = order["id"]
     return {"message": "Order received", "order_id": order_id}
 
 # ============== PURCHASE ORDER ROUTES ==============
@@ -3436,7 +4071,7 @@ class PurchaseOrderCreate(BaseModel):
     expected_delivery: Optional[str] = None
 
 @api_router.post("/purchase-orders")
-async def create_purchase_order(data: PurchaseOrderCreate, user: dict = Depends(get_current_user)):
+async def create_purchase_order(data: PurchaseOrderCreate, user: dict = Depends(_addon_dep("inventory"))):
     check_role(user, "inventory")
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
@@ -3461,7 +4096,7 @@ async def create_purchase_order(data: PurchaseOrderCreate, user: dict = Depends(
     return {k: v for k, v in po.items() if k != "_id"}
 
 @api_router.get("/purchase-orders")
-async def get_purchase_orders(status: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def get_purchase_orders(status: Optional[str] = None, user: dict = Depends(_addon_dep("inventory"))):
     check_role(user, "inventory")
     if not user.get("restaurant_id"):
         return []
@@ -3472,7 +4107,7 @@ async def get_purchase_orders(status: Optional[str] = None, user: dict = Depends
     return pos
 
 @api_router.put("/purchase-orders/{po_id}/receive")
-async def receive_purchase_order(po_id: str, user: dict = Depends(get_current_user)):
+async def receive_purchase_order(po_id: str, user: dict = Depends(_addon_dep("inventory"))):
     """Mark a purchase order as received and update inventory quantities."""
     check_role(user, "inventory")
     po = await db.purchase_orders.find_one({"id": po_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
@@ -3482,13 +4117,10 @@ async def receive_purchase_order(po_id: str, user: dict = Depends(get_current_us
         raise HTTPException(status_code=400, detail="Already received")
 
     for item in po["items"]:
-        inv = await db.inventory.find_one({"id": item["inventory_item_id"], "restaurant_id": user["restaurant_id"]})
+        # FIX 1: atomic $inc (was read-modify-write $set — lost updates under
+        # concurrent receipts). Ledger balance AFTER the atomic add.
+        new_qty, inv = await _stock_add(user["restaurant_id"], item["inventory_item_id"], item["quantity"])
         if inv:
-            new_qty = inv["quantity"] + item["quantity"]
-            await db.inventory.update_one(
-                {"id": item["inventory_item_id"]},
-                {"$set": {"quantity": new_qty, "is_low_stock": new_qty <= inv["min_quantity"]}}
-            )
             await record_stock_movement(user["restaurant_id"], inv["id"], inv.get("name", ""), inv.get("unit", ""),
                                         item["quantity"], "purchase", "purchase_order", po_id, user=user,
                                         note=f"PO received from {po.get('supplier', 'supplier')}", balance_after=new_qty)
@@ -3500,7 +4132,7 @@ async def receive_purchase_order(po_id: str, user: dict = Depends(get_current_us
     return {"message": "Purchase order received, inventory updated"}
 
 @api_router.put("/purchase-orders/{po_id}/cancel")
-async def cancel_purchase_order(po_id: str, reason: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def cancel_purchase_order(po_id: str, reason: Optional[str] = None, user: dict = Depends(_addon_dep("inventory"))):
     check_role(user, "inventory")
     po = await db.purchase_orders.find_one({"id": po_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
     if not po:
@@ -3554,10 +4186,16 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
     total_tax = sum(o.get("tax_amount", 0) for o in paid_orders)
     total_discount = sum(o.get("discount_amount", 0) for o in paid_orders)
 
+    # FIX 3: allocation-based per-method breakdown (split bills attributed
+    # correctly; legacy split-only orders bucketed + warned)
     payment_methods = {}
+    reconcil_warnings = []
     for o in paid_orders:
-        pm = o.get("payment_method", "unknown")
-        payment_methods[pm] = payment_methods.get(pm, 0) + o["total_amount"]
+        allocations, warn = _payment_allocations(o)
+        if warn:
+            reconcil_warnings.append(warn)
+        for _method, _amount in allocations:
+            payment_methods[_method] = round(payment_methods.get(_method, 0) + _amount, 2)
 
     order_types = {}
     for o in paid_orders:
@@ -3597,6 +4235,7 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
             "cancelled_orders": len(cancelled_orders),
         },
         "payment_breakdown": payment_methods,
+        "reconciliation_warnings": reconcil_warnings,
         "order_type_breakdown": order_types,
         "top_items": top_items,
         "hourly_breakdown": hourly_data,
@@ -4315,7 +4954,7 @@ class CustomerResponse(BaseModel):
     created_at: str
 
 @api_router.post("/customers", response_model=CustomerResponse)
-async def create_customer(data: CustomerCreate, user: dict = Depends(get_current_user)):
+async def create_customer(data: CustomerCreate, user: dict = Depends(_addon_dep("crm_loyalty"))):
     if not user.get("restaurant_id"):
         raise HTTPException(status_code=400, detail="No restaurant associated")
     existing = await db.customers.find_one({"restaurant_id": user["restaurant_id"], "phone": data.phone})
@@ -4346,7 +4985,7 @@ async def create_customer(data: CustomerCreate, user: dict = Depends(get_current
 
 @api_router.get("/customers", response_model=List[CustomerResponse])
 async def get_customers(search: Optional[str] = None, tier: Optional[str] = None,
-                        skip: int = 0, limit: int = 100, user: dict = Depends(get_current_user)):
+                        skip: int = 0, limit: int = 100, user: dict = Depends(_addon_dep("crm_loyalty"))):
     if not user.get("restaurant_id"):
         return []
     query = {"restaurant_id": user["restaurant_id"]}
@@ -4363,30 +5002,56 @@ async def get_customers(search: Optional[str] = None, tier: Optional[str] = None
     return [CustomerResponse(**c) for c in customers]
 
 @api_router.get("/customers/{customer_id}", response_model=CustomerResponse)
-async def get_customer(customer_id: str, user: dict = Depends(get_current_user)):
-    customer = await db.customers.find_one({"id": customer_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+async def get_customer(customer_id: str, user: dict = Depends(_addon_dep("crm_loyalty"))):
+    """Customer details — strictly tenant-scoped."""
+    tenant_id = user.get("restaurant_id")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="No restaurant associated")
+    customer = await db.customers.find_one({"id": customer_id, "restaurant_id": tenant_id}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     return CustomerResponse(**customer)
 
 @api_router.put("/customers/{customer_id}", response_model=CustomerResponse)
-async def update_customer(customer_id: str, data: CustomerUpdate, user: dict = Depends(get_current_user)):
+async def update_customer(customer_id: str, data: CustomerUpdate, user: dict = Depends(_addon_dep("crm_loyalty"))):
+    tenant_id = user.get("restaurant_id")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="No restaurant associated")
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if update_data:
         await db.customers.update_one(
-            {"id": customer_id, "restaurant_id": user.get("restaurant_id")},
+            {"id": customer_id, "restaurant_id": tenant_id},
             {"$set": update_data}
         )
-    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    # Tenant isolation: read-back is scoped to the caller's restaurant — an
+    # ID belonging to another tenant can never be read or updated here.
+    customer = await db.customers.find_one({"id": customer_id, "restaurant_id": tenant_id}, {"_id": 0})
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     return CustomerResponse(**customer)
 
 @api_router.get("/customers/{customer_id}/orders")
-async def get_customer_orders(customer_id: str, user: dict = Depends(get_current_user)):
+async def get_customer_orders(customer_id: str, user: dict = Depends(_addon_dep("crm_loyalty"))):
+    """Order history for one CRM customer — strictly tenant-scoped.
+
+    FIX 4: queries the SAME authoritative identifier order creation now
+    persists (customer_id), with a SAFE legacy fallback: older orders only
+    carry customer_phone, so the exact tenant-scoped phone of THIS customer
+    doc matches them too. No guessing/renaming/migration of customer data.
+    """
+    rid = user.get("restaurant_id")
+    if not rid:
+        return []
+    customer = await db.customers.find_one(
+        {"id": customer_id, "restaurant_id": rid}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    or_conditions = [{"customer_id": customer_id}]
+    if customer.get("phone"):
+        or_conditions.append({"customer_phone": customer.get("phone")})
     orders = await db.orders.find(
-        {"customer_id": customer_id, "restaurant_id": user.get("restaurant_id")},
-        {"_id": 0, "created_by": 0}
+        {"restaurant_id": rid, "$or": or_conditions},
+        {"_id": 0, "created_by": 0},
     ).sort("created_at", -1).to_list(50)
     return orders
 
@@ -4525,7 +5190,7 @@ async def donate_coins(data: CoinDonate, user: dict = Depends(get_current_user))
     return {"message": f"Donated {data.coins} Trident Coins to Seva 🙏", "balance": new_balance}
 
 @api_router.get("/coins/transactions")
-async def get_coin_transactions(customer_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def get_coin_transactions(customer_id: Optional[str] = None, user: dict = Depends(_addon_dep("crm_loyalty"))):
     if not user.get("restaurant_id"):
         return []
     query = {"restaurant_id": user["restaurant_id"]}

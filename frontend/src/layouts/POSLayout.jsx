@@ -10,7 +10,6 @@ import { initOfflineSync, syncOfflineOrders, onSyncEvent } from '../lib/offlineS
 import { getPendingCount } from '../lib/offlineOrders';
 import { toast } from 'sonner';
 import haptics from '../lib/haptics';
-import RestaurantMoments, { moment } from '../components/pos/RestaurantMoments';
 import useDragToDismiss from '../lib/useDragToDismiss';
 import DayCloseReport from '../components/pos/DayCloseReport';
 import {
@@ -41,6 +40,7 @@ import {
   Store,
   MoreHorizontal,
   Lock,
+  UserCog,
   Moon,
   Sun,
   Search,
@@ -105,18 +105,31 @@ const manageDishItems = [
   { to: '/pos/inventory', label: 'Inventory' },
 ];
 
-/* Sidebar primary items (desktop) */
+/* Sidebar primary items (desktop) — mirrors the DineDesk reference IA */
 const sidebarItems = [
   { to: '/pos', icon: Home, label: 'Home', exact: true, feature: 'dashboard' },
   { to: '/pos/orders', icon: ShoppingCart, label: 'Orders', feature: 'menu_order' },
   { to: '/pos/tables', icon: SquareStack, label: 'Tables', feature: 'tables' },
   { to: '/pos/quick-pos', icon: Monitor, label: 'POS', feature: 'menu_order' },
-  { to: '/pos/kds', icon: ChefHat, label: 'Kitchen', feature: 'kds' },
   { to: '/pos/inventory', icon: Package, label: 'Inventory', feature: 'inventory' },
   { to: '/pos/wastage', icon: Trash2, label: 'Wastage', feature: 'inventory' },
   { to: '/pos/analytics', icon: BarChart3, label: 'Analytics', feature: 'analytics' },
   { to: '/pos/customers', icon: Users, label: 'Customers', feature: 'staff' },
-  { to: '/pos/staff', icon: Users, label: 'Staff', feature: 'staff' },
+  { to: '/pos/staff', icon: UserCog, label: 'Staff', feature: 'staff' },
+  { to: '/pos/settings', icon: Settings, label: 'Settings', feature: 'settings' },
+];
+
+/* Rotating sidebar signature quotes, keyed by section (brand charm) */
+const SIDEBAR_QUOTES = [
+  { match: ['/pos/orders', '/pos/quick-pos', '/pos/order-management', '/pos/menu'], quote: 'Absorbs chaos.\nServes calm.' },
+  { match: ['/pos/tables'], quote: 'Good food\ngood people\ngreat moments.' },
+  { match: ['/pos/inventory'], quote: 'Fresh ingredients,\nhappier people.' },
+  { match: ['/pos/wastage'], quote: 'Less waste,\ntastier tomorrow.' },
+  { match: ['/pos/analytics'], quote: 'Discipline today,\nbigger tomorrows.' },
+  { match: ['/pos/customers'], quote: 'Happy Customers,\nhappier business.' },
+  { match: ['/pos/staff'], quote: 'Great Food. Great Team.\nGreater Tomorrow.' },
+  { match: ['/pos/wallet'], quote: 'Good Food,\nGood Numbers.' },
+  { match: ['/pos/kds'], quote: 'Good food\nin good time.' },
 ];
 
 /* Bottom bar: 5 core tabs */
@@ -318,7 +331,7 @@ export default function POSLayout() {
           setIsDayOpen(true); setShowDayOpenModal(false); setOpeningCash('');
           haptics.success();
           toast.info('Day opened offline — it will sync automatically when internet returns');
-          moment('no_internet', 'Day open saved — will sync when back online.');
+          toast.info('Day open saved — will sync when back online.');
         } else {
           toast.error('No internet and offline storage unavailable — cannot open the day');
         }
@@ -339,7 +352,6 @@ export default function POSLayout() {
       setCurrentSession(null); setIsDayOpen(false); setShowDayCloseModal(false); setClosingCash('');
       haptics.warning();
       toast.success(`Day closed! Total sales: ₹${res.data.total_sales.toFixed(2)}`);
-      moment('day_close');
       setReportSessionId(currentSession?.id); setShowDayReport(true);
     } catch (err) {
       const detail = err.response?.data?.detail || 'Failed to close day';
@@ -385,6 +397,10 @@ export default function POSLayout() {
     })
     .filter(Boolean);
   const restMoreItems = moreNavItems.filter(item => !CORE_TILES.some(t => t.to === item.to) && item.to !== '/pos');
+
+  /* ── sidebar footer quote (rotates by section) ── */
+  const activeQuote = SIDEBAR_QUOTES.find(q => q.match.some(p => location.pathname.startsWith(p)))?.quote
+    || 'Good food\nBuilds good moments';
 
   /* ── header time + daypart session ── */
   const now = new Date();
@@ -509,9 +525,9 @@ export default function POSLayout() {
           )}
         </nav>
 
-        {/* Sidebar footer — brand signature */}
+        {/* Sidebar footer — brand signature (rotates with the page you serve) */}
         <div className="px-4 py-4 flex-shrink-0">
-          <p className="font-script text-lg text-[#3FCE85]/70 leading-tight">Absorbs chaos.<br />Serves calm.</p>
+          <p className="font-script text-lg text-[#3FCE85]/70 leading-tight whitespace-pre-line">{activeQuote}</p>
         </div>
       </aside>
 
@@ -519,7 +535,7 @@ export default function POSLayout() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* ──────────── TOP BAR (desktop) ──────────── */}
-        <header className="hidden lg:flex h-14 items-center gap-3 px-4 bg-white dark:bg-[#12151B] border-b border-gray-200 dark:border-white/[0.07] flex-shrink-0 z-30">
+        <header className="hidden lg:flex h-16 items-center gap-4 px-5 bg-white dark:bg-[#12151B] border-b border-gray-100 dark:border-white/[0.06] flex-shrink-0 z-30">
 
           {/* Restaurant chip → quick-look popover (edit via footer button) */}
           <Popover>
@@ -529,20 +545,18 @@ export default function POSLayout() {
                 data-testid="restaurant-chip"
                 title="Restaurant quick look"
               >
-                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-base" aria-hidden="true">
-                  🍩
+                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-lg overflow-hidden" aria-hidden="true">
+                  🍛
                 </div>
                 <div className="text-left leading-tight">
-                  <p className="text-xs font-semibold text-gray-900 dark:text-white truncate max-w-[120px]">{restaurant?.name || 'Restaurant'}</p>
+                  <p className="text-[13px] font-bold text-gray-900 dark:text-white truncate max-w-[140px]">{restaurant?.name || 'Restaurant'}</p>
                   <div className="flex items-center gap-1.5">
                     <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-px rounded-full ${isDayOpen ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300' : 'bg-red-100 text-red-600 dark:bg-red-400/15 dark:text-red-300'}`}>
                       <span className={`w-1 h-1 rounded-full ${isDayOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                       {isDayOpen ? 'Open' : 'Closed'}
                     </span>
                     <span className="text-[10px] text-gray-500 dark:text-white/45 font-medium">
-                      {restaurant?.opening_time && restaurant?.closing_time
-                        ? `${restaurant.opening_time} - ${restaurant.closing_time}`
-                        : 'Details'}
+                      {isDayOpen ? `#${restaurant?.id ? String(restaurant.id).slice(-6).toUpperCase() : '—'}` : 'Details'}
                     </span>
                   </div>
                 </div>
@@ -569,14 +583,14 @@ export default function POSLayout() {
             {isDayOpen ? 'Close Day' : 'Open Day'}
           </button>
 
-          {/* Command search (visual affordance — wired to a hint for now) */}
+          {/* Search (desktop) */}
           <button
-            onClick={() => toast.info('Command search (Ctrl+K) is coming soon.')}
-            className="flex-1 max-w-md flex items-center gap-2.5 h-9 px-3.5 bg-gray-100 dark:bg-white/[0.05] border border-transparent dark:border-white/[0.07] rounded-xl text-sm text-gray-400 dark:text-white/40 hover:border-gray-300 dark:hover:border-white/15 transition-all"
+            onClick={() => toast.info('Search (Ctrl+K) is coming soon.')}
+            className="flex-1 max-w-md flex items-center gap-2.5 h-10 px-4 bg-gray-50 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.07] rounded-xl text-sm text-gray-400 dark:text-white/40 hover:border-gray-300 dark:hover:border-white/15 transition-all"
             title="Search (Ctrl+K)"
           >
             <Search className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1 text-left truncate">What do you need today?</span>
+            <span className="flex-1 text-left truncate">Search transactions, orders, or anything...</span>
             <kbd className="hidden xl:flex items-center gap-0.5 text-[10px] font-semibold text-gray-400 dark:text-white/35 bg-white dark:bg-white/[0.08] border border-gray-200 dark:border-white/10 rounded-md px-1.5 py-0.5">
               Ctrl K
             </kbd>
@@ -746,7 +760,6 @@ export default function POSLayout() {
         {/* Ask DineDesk now lives on the Dashboard page only (POSDashboard) */}
 
         {/* Restaurant Moments — living brand art on real events (all pages) */}
-        <RestaurantMoments />
       </div>
 
       {/* ──────────── BOTTOM NAV BAR (mobile only) ──────────── */}
@@ -798,7 +811,7 @@ export default function POSLayout() {
             <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-white/20" />
           </div>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-xl flex-shrink-0" aria-hidden="true">🍩</div>
+            <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-400/10 border border-amber-100 dark:border-amber-400/20 flex items-center justify-center text-xl flex-shrink-0 overflow-hidden" aria-hidden="true">🍛</div>
             <div className="min-w-0">
               <SheetTitle className="text-base font-heading font-extrabold text-gray-900 dark:text-white truncate">{restaurant?.name || 'Restaurant'}</SheetTitle>
               <p className="text-[11px] text-gray-400 dark:text-white/40 capitalize">{(restaurant?.restaurant_type || 'restaurant').replace(/_/g, ' ')} · {restaurant?.num_tables ?? '—'} tables</p>

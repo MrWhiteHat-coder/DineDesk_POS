@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { wastageAPI, inventoryAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { haptics } from '../../lib/haptics';
-import { moment } from '../../components/pos/RestaurantMoments';
 import { Button } from '../../components/ui/button';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Input } from '../../components/ui/input';
@@ -84,7 +83,7 @@ export default function WastagePage() {
     try {
       await wastageAPI.create({ inventory_item_id: invItemId, quantity: parseFloat(qty), reason, notes: notes.trim() || null });
       toast.success(`Waste logged — ${fmt(estCost)} impact recorded`);
-      moment('inventory_alert', 'Waste recorded — keep an eye on stock levels.');
+      // summary refreshes in-page
       setLogOpen(false);
       setInvItemId(''); setQty(''); setReason(''); setNotes('');
       haptics.success();
@@ -101,62 +100,78 @@ export default function WastagePage() {
 
   return (
     <div className="space-y-4 md:space-y-5 animate-fade-in" data-testid="wastage-page">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="font-heading font-extrabold text-xl md:text-2xl text-slate-900 dark:text-white flex items-center gap-2">
-            <Trash2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" /> Wastage Control
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-white/50 mt-0.5">Every rupee of waste, tracked and explained.</p>
+      {/* Header — reference style: eyebrow + big title + script quote */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(240px,340px)_auto] gap-4 items-stretch">
+        <div className="flex flex-col justify-center">
+          <p className="text-[11px] font-bold tracking-[0.14em] text-[#268A4E] dark:text-[#3FCE85] uppercase flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5" /> Wastage Control</p>
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">Small losses. Big savings. 🌱</h1>
+          <p className="text-sm text-slate-500 dark:text-white/50 mt-1">Track every bit of waste. Reduce costs. Build a more sustainable kitchen.</p>
         </div>
-        <Button
-          onClick={() => setLogOpen(true)}
-          className="h-11 rounded-xl bg-[#0F2417] dark:bg-[#2E9E5B] hover:bg-[#1a3d28] dark:hover:bg-[#2ba765] text-white font-bold px-5 shadow-md shadow-emerald-900/20 active:scale-[0.98] transition-all"
-          data-testid="log-waste-btn"
-        >
-          <Plus className="w-4 h-4 mr-1.5" /> Log Waste
-        </Button>
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50/80 dark:bg-emerald-400/[0.06] border border-emerald-100 dark:border-emerald-400/15 p-4 flex flex-col justify-center">
+          <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] leading-snug">"Good food respects ingredients."</p>
+          <p className="text-[10px] text-slate-400 dark:text-white/40 mt-1 self-end">— DineDesk</p>
+        </div>
+        <div className="flex items-center justify-end">
+          <Button
+            onClick={() => setLogOpen(true)}
+            className="h-11 rounded-xl bg-[#0F2417] dark:bg-[#2E9E5B] hover:bg-[#1a3d28] dark:hover:bg-[#2ba765] text-white font-bold px-5 shadow-md shadow-emerald-900/20 active:scale-[0.98] transition-all"
+            data-testid="log-waste-btn"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> Log Waste
+          </Button>
+        </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — reference tile style with icons */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm" data-testid="waste-total-card">
-          <p className="text-[11px] font-bold tracking-wide text-slate-400 dark:text-white/40 uppercase">Waste cost · 7d</p>
-          <p className="text-2xl font-extrabold font-numbers text-slate-900 dark:text-white mt-1.5 flex items-center gap-1">
-            <IndianRupee className="w-5 h-5 text-slate-400" />
-            <CountUp value={summary?.total_cost ?? 0} duration={800} format={(n) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
-          </p>
-          {changePct !== null && changePct !== undefined && (
-            <p className={`text-[11px] font-bold mt-1 flex items-center gap-1 ${wasteDown ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-              {wasteDown ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-              {changePct > 0 ? '+' : ''}{changePct}% vs previous week
+        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm flex items-center gap-3" data-testid="waste-total-card">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center flex-shrink-0"><IndianRupee className="w-5 h-5 text-emerald-600 dark:text-emerald-300" /></div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-white/45">Waste Cost · 7D</p>
+            <p className="text-xl font-extrabold font-numbers text-slate-900 dark:text-white">
+              <CountUp value={summary?.total_cost ?? 0} duration={800} format={(n) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
             </p>
-          )}
+            {changePct !== null && changePct !== undefined && (
+              <p className={`text-[10px] font-bold flex items-center gap-1 ${wasteDown ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                {wasteDown ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                {changePct > 0 ? '+' : ''}{changePct}% vs prev week
+              </p>
+            )}
+          </div>
         </div>
-        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm">
-          <p className="text-[11px] font-bold tracking-wide text-slate-400 dark:text-white/40 uppercase">Entries · 7d</p>
-          <p className="text-2xl font-extrabold font-numbers text-slate-900 dark:text-white mt-1.5">
-            <CountUp value={summary?.entries ?? 0} duration={600} />
-          </p>
-          <p className="text-[11px] text-slate-400 dark:text-white/40 mt-1">waste events logged</p>
+        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center flex-shrink-0"><FileWarning className="w-5 h-5 text-blue-500" /></div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-white/45">Entries · 7D</p>
+            <p className="text-xl font-extrabold font-numbers text-slate-900 dark:text-white">
+              <CountUp value={summary?.entries ?? 0} duration={600} />
+            </p>
+            <p className="text-[10px] text-slate-400 dark:text-white/40">waste events logged</p>
+          </div>
         </div>
-        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm">
-          <p className="text-[11px] font-bold tracking-wide text-slate-400 dark:text-white/40 uppercase">Top reason</p>
-          <p className="text-base font-bold text-slate-900 dark:text-white mt-2 truncate">
-            {summary?.by_reason && Object.keys(summary.by_reason).length
-              ? Object.entries(summary.by_reason).sort((a, b) => b[1] - a[1])[0][0]
-              : '—'}
-          </p>
-          <p className="text-[11px] text-slate-400 dark:text-white/40 mt-1">
-            {summary?.by_reason && Object.keys(summary.by_reason).length
-              ? `${fmt(Object.entries(summary.by_reason).sort((a, b) => b[1] - a[1])[0][1])} this week`
-              : 'No waste logged yet'}
-          </p>
+        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-400/10 flex items-center justify-center flex-shrink-0"><Sparkles className="w-5 h-5 text-amber-500" /></div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-white/45">Top Reason</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+              {summary?.by_reason && Object.keys(summary.by_reason).length
+                ? Object.entries(summary.by_reason).sort((a, b) => b[1] - a[1])[0][0]
+                : '—'}
+            </p>
+            <p className="text-[10px] text-slate-400 dark:text-white/40">
+              {summary?.by_reason && Object.keys(summary.by_reason).length
+                ? `${fmt(Object.entries(summary.by_reason).sort((a, b) => b[1] - a[1])[0][1])} this week`
+                : 'No waste logged yet'}
+            </p>
+          </div>
         </div>
-        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm">
-          <p className="text-[11px] font-bold tracking-wide text-slate-400 dark:text-white/40 uppercase">Most wasted item</p>
-          <p className="text-base font-bold text-slate-900 dark:text-white mt-2 truncate">{summary?.top_item?.[0] || '—'}</p>
-          <p className="text-[11px] text-slate-400 dark:text-white/40 mt-1">{summary?.top_item ? `${summary.top_item[1]} units · ${fmt(summary.top_item[2])} lost` : 'Nothing wasted'}</p>
+        <div className="bg-white dark:bg-white/[0.04] rounded-2xl border border-slate-100 dark:border-white/[0.06] p-4 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-400/10 flex items-center justify-center flex-shrink-0"><Trash2 className="w-5 h-5 text-red-500" /></div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-white/45">Most Wasted Item</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{summary?.top_item?.[0] || '—'}</p>
+            <p className="text-[10px] text-slate-400 dark:text-white/40">{summary?.top_item ? `${summary.top_item[1]} units · ${fmt(summary.top_item[2])} lost` : 'Nothing wasted'}</p>
+          </div>
         </div>
       </div>
 

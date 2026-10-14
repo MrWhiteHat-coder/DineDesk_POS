@@ -72,36 +72,52 @@ export default function WalletPage() {
   ];
 
   return (
-    <div data-testid="wallet-page">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <h1 className="font-heading text-xl font-bold text-slate-900">Wallet & Reconciliation</h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => handlePeriodChange(p.value)}
-              className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
-                period === p.value && !selectedDate ? 'bg-black text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
-              data-testid={`period-${p.value}`}
-            >
-              {p.label}
-            </button>
-          ))}
-          <div className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 ${selectedDate ? 'bg-black border-black' : 'bg-white border-slate-200'}`}>
-            <CalendarDays className={`w-4 h-4 ${selectedDate ? 'text-white' : 'text-slate-500'}`} />
-            <Input
-              type="date"
-              value={selectedDate}
-              max={new Date().toISOString().split('T')[0]}
-              onChange={handleDateChange}
-              className={`h-7 border-0 p-0 text-sm font-medium w-36 focus-visible:ring-0 ${selectedDate ? 'text-white' : 'text-slate-800'}`}
-              data-testid="wallet-date-picker"
-            />
+    <div className="max-w-[1400px] animate-fade-in" data-testid="wallet-page">
+      {/* Header — reference: icon tile + big title + script quote + period pills */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(240px,320px)_auto] gap-4 items-stretch mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 border border-emerald-100 dark:border-emerald-400/20 flex items-center justify-center flex-shrink-0">
+            <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-300" />
           </div>
-          <Button onClick={fetchSummary} variant="outline" className="h-9 rounded-lg gap-2" data-testid="wallet-refresh">
-            <RefreshCw className="w-4 h-4" />
-          </Button>
+          <div>
+            <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Wallet & Reconciliation</h1>
+            <p className="text-sm text-slate-500 dark:text-white/50 mt-0.5">Track every rupee. Settle with confidence.</p>
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50/80 dark:bg-emerald-400/[0.06] border border-emerald-100 dark:border-emerald-400/15 p-4 flex flex-col justify-center">
+          <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] leading-snug">"Transparent today, more tomorrow."</p>
+        </div>
+        <div className="flex flex-col items-end justify-center gap-2">
+          <div className="flex items-center gap-1.5 bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-full p-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => handlePeriodChange(p.value)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  period === p.value && !selectedDate ? 'bg-[#0F2417] dark:bg-[#2E9E5B] text-white' : 'text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white'
+                }`}
+                data-testid={`period-${p.value}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 border rounded-xl px-3 py-1.5 ${selectedDate ? 'bg-[#0F2417] border-[#0F2417] dark:bg-[#2E9E5B] dark:border-[#2E9E5B]' : 'bg-white border-slate-200 dark:bg-white/[0.04] dark:border-white/10'}`}>
+              <CalendarDays className={`w-4 h-4 ${selectedDate ? 'text-white' : 'text-slate-500 dark:text-white/50'}`} />
+              <Input
+                type="date"
+                value={selectedDate}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={handleDateChange}
+                className={`h-7 border-0 p-0 text-sm font-medium w-36 focus-visible:ring-0 bg-transparent ${selectedDate ? 'text-white' : 'text-slate-800 dark:text-white'}`}
+                data-testid="wallet-date-picker"
+              />
+            </div>
+            <Button onClick={fetchSummary} variant="outline" className="h-10 rounded-xl gap-2" data-testid="wallet-refresh">
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -113,15 +129,17 @@ export default function WalletPage() {
         </div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Summary Cards — reference tile style */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {cards.map((card) => (
-          <div key={card.label} className={`rounded-xl border p-4 ${card.color}`} data-testid={`wallet-card-${card.label.toLowerCase().replace(/\s+/g, '-')}`}>
+          <div key={card.label} className="bg-white dark:bg-[#12151B] border border-slate-200 dark:border-white/[0.07] rounded-2xl p-4" data-testid={`wallet-card-${card.label.toLowerCase().replace(/\s+/g, '-')}`}>
             <div className="flex items-center gap-3">
-              <card.icon className="w-8 h-8 opacity-70" />
-              <div>
-                <p className="text-xs opacity-70">{card.label}</p>
-                <p className="text-xl font-bold">₹{card.value.toFixed(2)}</p>
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${card.color}`}>
+                <card.icon className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-slate-500 dark:text-white/45">{card.label}</p>
+                <p className="text-xl font-bold font-numbers text-slate-900 dark:text-white">₹{card.value.toFixed(2)}</p>
               </div>
             </div>
           </div>

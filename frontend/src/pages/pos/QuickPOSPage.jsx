@@ -3,7 +3,6 @@ import { useOutletContext } from 'react-router-dom';
 import { menuAPI, orderAPI, tableAPI, receiptAPI, customerAPI } from '../../lib/api';
 import { createOrderResilient } from '../../lib/resilientOrder';
 import haptics from '../../lib/haptics';
-import { moment } from '../../components/pos/RestaurantMoments';
 import { sounds } from '../../lib/sounds';
 import { toast } from 'sonner';
 import { Zap, Search, X, Banknote, CreditCard, Smartphone, Printer, Check, User, Plus, Wallet } from 'lucide-react';
@@ -136,8 +135,8 @@ export default function QuickPOSPage() {
       const result = await createOrderResilient(payload, { total });
       haptics.success();
       sounds.done();
-      if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); moment('no_internet'); }
-      else { toast.success(`Order #${result.data.order_number} done!`); moment((customerName.trim() || customerPhone.trim()) ? 'sending_kitchen' : 'new_customer'); }
+      if (!result.online) { toast.info('Saved offline — will sync automatically when back online'); }
+      else { toast.success(`Order #${result.data.order_number} done!`); }
       if (result.online) {
         try {
           const rcpt = await receiptAPI.get(result.data.id);

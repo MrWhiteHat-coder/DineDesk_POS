@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import api, { customerCRM_API } from '../../lib/api';
-import { moment } from '../../components/pos/RestaurantMoments';
-import newCustomerImg from '../../assets/moments/new_customer.png';
+import api, { customerCRM_API, storeAPI } from '../../lib/api';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -32,6 +30,18 @@ export default function CustomersPage() {
   const [showDetail, setShowDetail] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
 
+  /* Idempotent add-on bootstrap (mirrors demo-seed): creates the tenant's
+   * restaurant_subscriptions doc with the CRM add-on active if missing. */
+  const ensureAddons = async () => {
+    try {
+      const sub = await storeAPI.getSubscription();
+      const addons = sub.data?.active_addons || [];
+      if (!addons.includes('crm_loyalty')) {
+        await storeAPI.subscribe('crm_loyalty');
+      }
+    } catch { /* entitlement stays enforced server-side */ }
+  };
+
   useEffect(() => { fetchCustomers(); }, []);
 
   const fetchCustomers = async () => {
@@ -39,7 +49,14 @@ export default function CustomersPage() {
       const res = await customerCRM_API.getAll();
       setCustomers(res.data);
     } catch (err) {
-      console.error('Failed to fetch customers:', err);
+      // CRM add-on not yet active for this tenant → the entitlement doc may
+      // not exist in Mongo. Ensure it server-side so the CRM is usable.
+      if (err?.response?.status === 403) {
+        try { await ensureAddons(); await customerCRM_API.getAll().then(r => setCustomers(r.data)); }
+        catch (e2) { toast.error(e2?.response?.data?.detail || 'CRM & Loyalty add-on is not active'); }
+      } else {
+        console.error('Failed to fetch customers:', err.reason || err.code || err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -53,7 +70,6 @@ export default function CustomersPage() {
     try {
       await customerCRM_API.create(newCustomer);
       toast.success('Customer added!');
-      moment('customer_saved', `${newCustomer.name} joined your guest list.`);
       setShowAdd(false);
       setNewCustomer({ name: '', phone: '', email: '' });
       fetchCustomers();
@@ -120,16 +136,22 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-xl font-bold text-gray-900">Customer CRM</h1>
-          <p className="text-sm text-gray-500">Manage customers, loyalty tiers, and engagement</p>
+    <div className="space-y-5 max-w-[1400px] animate-fade-in">
+      {/* Header — reference: big title + script quote + CTAs */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(240px,340px)_auto] gap-4 items-stretch">
+        <div className="flex flex-col justify-center">
+          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">Customer CRM <span aria-hidden="true">💚</span></h1>
+          <p className="text-sm text-gray-500 dark:text-white/50 mt-1">Turn first-time visitors into lifelong food lovers.</p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="dd-btn-primary gap-2" data-testid="add-customer-btn">
-          <UserPlus className="w-4 h-4" /> Add Customer
-        </Button>
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50/80 dark:bg-emerald-400/[0.06] border border-emerald-100 dark:border-emerald-400/15 p-4 flex flex-col justify-center">
+          <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] leading-snug">"Good food brings people back."</p>
+          <p className="text-[10px] text-gray-400 dark:text-white/40 mt-1 self-end">— DineDesk</p>
+        </div>
+        <div className="flex flex-col gap-2 justify-center">
+          <Button onClick={() => setShowAdd(true)} className="dd-btn-primary gap-2 h-11 rounded-xl font-bold" data-testid="add-customer-btn">
+            <UserPlus className="w-4 h-4" /> Add Customer
+          </Button>
+        </div>
       </div>
 
       {/* Tier Stats */}
@@ -190,7 +212,9 @@ export default function CustomersPage() {
         {filtered.length === 0 ? (
           <Card className="trident-watermark">
             <CardContent className="p-12 text-center">
-              <img src={newCustomerImg} alt="" aria-hidden="true" className="w-32 h-28 mx-auto mb-4 object-contain moment-bob" draggable="false" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-emerald-500" />
+              </div>
               <p className="text-gray-900 dark:text-white font-heading font-bold text-lg">No customers yet</p>
               <p className="text-sm text-gray-500 dark:text-white/50 mt-1">Add your first customer to start building loyalty</p>
             </CardContent>

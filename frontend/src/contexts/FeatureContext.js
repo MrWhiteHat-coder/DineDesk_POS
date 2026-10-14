@@ -13,12 +13,13 @@ export const useFeatures = () => {
 
 /* ── Addon → Feature mapping ── */
 const ADDON_FEATURES = {
-  // addon_id patterns (matched by name slug or id)
+  // Keys MUST match the backend STORE_ADDONS catalog ids (server.py) so that
+  // a subscription purchased in the Store actually unlocks the module here.
   crm_loyalty: ['trident_coins', 'customers'],
-  inventory: ['inventory', 'purchase_orders'],
+  inventory: ['inventory', 'purchase_orders', 'wastage'],
   whatsapp: ['notifications'],
-  branches: ['branches'],
-  analytics: ['analytics'],
+  multi_branch: ['branches'],
+  analytics_pro: ['analytics'],
   api_access: [],
   custom_branding: [],
   gift_cards: ['gift_cards'],
@@ -26,12 +27,21 @@ const ADDON_FEATURES = {
 
 /* Slug-based matching for flexible addon identification */
 function getAddonSlug(addon) {
+  // Must return catalog ids, not loose labels — the keys of ADDON_FEATURES
+  // above and the ids in backend STORE_ADDONS are what active_addons stores.
+  const id = (addon.id || '').toLowerCase();
+  if (id === 'crm_loyalty' || id === 'inventory' || id === 'whatsapp' ||
+      id === 'multi_branch' || id === 'analytics_pro' || id === 'api_access' ||
+      id === 'custom_branding' || id === 'gift_cards') return id;
+  // Legacy fallback for docs that may hold pre-catalog slugs
+  if (id === 'branches') return 'multi_branch';
+  if (id === 'analytics') return 'analytics_pro';
   const name = (addon.name || '').toLowerCase();
   if (name.includes('crm') || name.includes('loyalty')) return 'crm_loyalty';
   if (name.includes('inventory')) return 'inventory';
   if (name.includes('whatsapp') || name.includes('marketing')) return 'whatsapp';
-  if (name.includes('branch') || name.includes('multi')) return 'branches';
-  if (name.includes('analytics') || name.includes('advanced')) return 'analytics';
+  if (name.includes('branch') || name.includes('multi')) return 'multi_branch';
+  if (name.includes('analytics') || name.includes('advanced')) return 'analytics_pro';
   if (name.includes('api')) return 'api_access';
   if (name.includes('branding') || name.includes('custom')) return 'custom_branding';
   if (name.includes('gift') || name.includes('voucher')) return 'gift_cards';

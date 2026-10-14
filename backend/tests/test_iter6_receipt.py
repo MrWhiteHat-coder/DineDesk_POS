@@ -11,7 +11,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL').rstrip('/')
+BASE_URL = (os.environ.get('REACT_APP_BACKEND_URL') or 'http://localhost:8000').rstrip('/')  # conftest skips when this is unreachable
 
 
 @pytest.fixture(scope="module")

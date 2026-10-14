@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Skeleton } from '../../components/ui/skeleton';
-import { ChefWorried } from '../../components/illustrations/ChefBot';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -32,9 +31,23 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { Plus, Pencil, Trash2, AlertTriangle, Package, History } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertTriangle, Package, History, CheckCircle2, Boxes, IndianRupee, Quote } from 'lucide-react';
 
 const units = ['kg', 'g', 'l', 'ml', 'pieces'];
+
+/* Reference-style stock progress meter */
+function StockBar({ item }) {
+  const pct = item.min_quantity > 0 ? Math.min(100, Math.round((item.quantity / (item.min_quantity * 3)) * 100)) : (item.quantity > 0 ? 100 : 0);
+  const barColor = item.quantity <= 0 ? 'bg-red-500' : item.is_low_stock ? 'bg-amber-500' : 'bg-emerald-500';
+  return (
+    <div className="flex items-center gap-2 min-w-[130px]">
+      <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-white/[0.08] overflow-hidden">
+        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.max(4, pct)}%` }} />
+      </div>
+      <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 w-8 text-right">{pct}%</span>
+    </div>
+  );
+}
 
 export default function InventoryPage() {
   const navigate = useNavigate();
@@ -162,6 +175,9 @@ export default function InventoryPage() {
   };
 
   const lowStockCount = inventory.filter((i) => i.is_low_stock).length;
+  const outOfStockCount = inventory.filter((i) => (i.quantity ?? 0) <= 0).length;
+  const inStockCount = inventory.length - lowStockCount - outOfStockCount > 0 ? inventory.length - Math.max(lowStockCount, outOfStockCount) : inventory.filter((i) => !i.is_low_stock && (i.quantity ?? 0) > 0).length;
+  const inventoryValue = inventory.reduce((a, i) => a + ((i.quantity || 0) * (i.cost_per_unit || 0)), 0);
 
   if (loading) {
     return (
@@ -173,56 +189,76 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6" data-testid="inventory-page">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-bold text-slate-900">Inventory</h1>
-          {lowStockCount > 0 && (
-            <p className="text-sm text-amber-600 flex items-center gap-1 mt-1">
-              <AlertTriangle className="w-4 h-4" />
-              {lowStockCount} items low on stock
-            </p>
-          )}
+    <div className="space-y-5 max-w-[1400px] animate-fade-in" data-testid="inventory-page">
+      {/* ── Reference header: brand title + script quote + actions ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_minmax(240px,340px)_auto] gap-4 items-stretch">
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 border border-emerald-100 dark:border-emerald-400/20 flex items-center justify-center"><Boxes className="w-6 h-6 text-emerald-600 dark:text-emerald-300" /></div>
+            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Inventory</h1>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-white/50 mt-2">Track. Control. Never run out.</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant={showLowStock ? 'default' : 'outline'}
-            onClick={() => setShowLowStock(!showLowStock)}
-            className={showLowStock ? 'bg-amber-500 hover:bg-amber-600' : ''}
-          >
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Low Stock ({lowStockCount})
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50/80 dark:bg-emerald-400/[0.06] border border-emerald-100 dark:border-emerald-400/15 p-4 flex items-center gap-3">
+          <Quote className="w-5 h-5 text-emerald-400/60 flex-shrink-0" aria-hidden="true" />
+          <div>
+            <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] leading-snug">"Good food starts with great ingredients."</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 justify-center">
+          <Button onClick={() => openModal()} className="h-11 rounded-xl bg-[#0F2417] hover:bg-[#1a3d28] dark:bg-[#2E9E5B] dark:hover:bg-[#288A50] text-white font-bold" data-testid="add-inventory-btn">
+            <Plus className="w-4 h-4 mr-2" /> Add Item
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/pos/wastage')}
-            data-testid="wastage-link-btn"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Wastage
-          </Button>
-          <Button
-            onClick={() => openModal()}
-            className="bg-[#0F2417] hover:bg-[#1a3d28]"
-            data-testid="add-inventory-btn"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
+          <Button variant="outline" onClick={() => navigate('/pos/wastage')} className="h-11 rounded-xl border-slate-200 dark:border-white/10 font-bold" data-testid="wastage-link-btn">
+            <Trash2 className="w-4 h-4 mr-2" /> Wastage
           </Button>
         </div>
       </div>
 
+      {/* Stats — reference 5-tile strip */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label: 'Total Items', value: inventory.length, icon: Package, tone: 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-400/10' },
+          { label: 'In Stock', value: inStockCount, icon: CheckCircle2, tone: 'text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-400/10' },
+          { label: 'Low Stock', value: lowStockCount, icon: AlertTriangle, tone: 'text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-400/10' },
+          { label: 'Out of Stock', value: outOfStockCount, icon: Package, tone: 'text-red-500 bg-red-50 dark:bg-red-400/10' },
+          { label: 'Inventory Value', value: `₹${inventoryValue.toFixed(0)}`, icon: IndianRupee, tone: 'text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-400/10' },
+        ].map(s => (
+          <Card key={s.label} className="bg-white dark:bg-[#12151B] border-slate-200 dark:border-white/[0.07]">
+            <CardContent className="p-3.5 flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${s.tone}`}><s.icon className="w-4.5 h-4.5" /></div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-slate-500 dark:text-white/45 truncate">{s.label}</p>
+                <p className="font-numbers text-xl font-bold text-slate-900 dark:text-white leading-tight">{s.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Low-stock toggle */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          variant={showLowStock ? 'default' : 'outline'}
+          onClick={() => setShowLowStock(!showLowStock)}
+          className={showLowStock ? 'bg-amber-500 hover:bg-amber-600 rounded-full' : 'rounded-full'}
+        >
+          <AlertTriangle className="w-4 h-4 mr-2" />
+          Low Stock ({lowStockCount})
+        </Button>
+      </div>
+
       {/* Inventory Table */}
       {inventory.length > 0 ? (
-        <Card>
+        <Card className="bg-white dark:bg-[#12151B] border-slate-200 dark:border-white/[0.07]">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Item Name</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Min. Quantity</TableHead>
-                <TableHead>Cost/Unit</TableHead>
+                <TableHead>Item</TableHead>
+                <TableHead>Current Stock</TableHead>
+                <TableHead className="hidden md:table-cell">Level</TableHead>
+                <TableHead className="hidden md:table-cell">Min. Stock</TableHead>
+                <TableHead className="hidden sm:table-cell">Cost / Unit</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -230,26 +266,31 @@ export default function InventoryPage() {
             <TableBody>
               {inventory.map((item) => (
                 <TableRow key={item.id} data-testid={`inventory-row-${item.id}`}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
-                    <span className="font-numbers">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0"><Package className="w-4 h-4 text-slate-500 dark:text-white/50" /></div>
+                      <span className="font-medium text-slate-900 dark:text-white">{item.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-numbers font-semibold text-slate-900 dark:text-white">
                       {formatQty(item.quantity)} {item.unit}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell"><StockBar item={item} /></TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <span className="font-numbers text-slate-500">
                       {formatQty(item.min_quantity)} {item.unit}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <span className="font-numbers">₹{item.cost_per_unit.toFixed(2)}</span>
                   </TableCell>
                   <TableCell>
-                    {item.is_low_stock ? (
-                      <Badge className="bg-amber-100 text-amber-700">
-                        <AlertTriangle className="w-3 h-3 mr-1" />
-                        Low Stock
-                      </Badge>
+                    {(item.quantity ?? 0) <= 0 ? (
+                      <Badge className="bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300">Out of Stock</Badge>
+                    ) : item.is_low_stock ? (
+                      <Badge className="bg-amber-100 text-amber-700">Low Stock</Badge>
                     ) : (
                       <Badge className="bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300">In Stock</Badge>
                     )}
@@ -290,10 +331,12 @@ export default function InventoryPage() {
         </Card>
       ) : (
         <Card className="p-12 text-center animate-fade-in">
-          <ChefWorried className="w-28 h-28 mx-auto mb-4" />
-          <p className="text-lg font-heading font-bold text-slate-600 mb-1">No inventory items</p>
-          <p className="text-sm text-slate-400 mb-4">Track raw materials and stock levels</p>
-          <Button onClick={() => openModal()} className="bg-[#0F2417] hover:bg-[#1a3d28] rounded-xl">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mx-auto mb-4">
+            <Boxes className="w-8 h-8 text-emerald-500" />
+          </div>
+          <p className="text-lg font-heading font-bold text-slate-600 dark:text-white/80 mb-1">No inventory items</p>
+          <p className="text-sm text-slate-400 dark:text-white/40 mb-4">Track raw materials and stock levels</p>
+          <Button onClick={() => openModal()} className="bg-[#0F2417] hover:bg-[#1a3d28] dark:bg-[#2E9E5B] rounded-xl">
             <Plus className="w-4 h-4 mr-2" />
             Add Your First Item
           </Button>

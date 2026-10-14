@@ -103,3 +103,8 @@ frontend/node_modules/.cache/default-development/16.pack
 credentials.json
 *.key
 .credentials
+
+# Agent/runtime artifacts and outsized build output (GitHub rejects files >100MB)
+.freebuff/
+release/windows/win-unpacked/
+desktop/_exe_icon_check.png

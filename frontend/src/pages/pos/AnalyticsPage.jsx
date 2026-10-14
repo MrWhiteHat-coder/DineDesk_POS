@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { analyticsAPI, branchAPI, intelligenceAPI } from '../../lib/api';
-import { moment } from '../../components/pos/RestaurantMoments';
+import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -69,7 +69,15 @@ export default function AnalyticsPage() {
       const res = await analyticsAPI.get(selectedDate, selectedBranch);
       setAnalytics(res.data);
     } catch (err) {
-      console.error('Failed to fetch analytics:', err);
+      const detail = err?.response?.data?.detail;
+      if (err?.response?.status === 403) {
+        // Entitlement enforcement (403) surfaces a specific message, not a
+        // silent console line.
+        toast.error(typeof detail === 'string' ? detail : 'Advanced Analytics add-on is not active');
+      } else {
+        // Unexpected failure: log minimal diagnostic info only (no payload dumps).
+        console.error('Analytics fetch failed: HTTP', err?.response?.status || 'network');
+      }
     } finally {
       setLoading(false);
     }
@@ -80,7 +88,7 @@ export default function AnalyticsPage() {
     try {
       const res = await intelligenceAPI.getInsights();
       setAiInsights(res.data);
-      if (res.data?.insights?.length > 0) moment('ai_insight');
+      // (insights render in-page; no popup)
     } catch (err) {
       console.error('AI insights error:', err);
       setAiInsights({ insights: [], ai_generated: false, snapshot_summary: { has_data: false } });
