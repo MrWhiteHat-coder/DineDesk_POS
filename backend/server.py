@@ -3199,6 +3199,83 @@ async def update_order_status(order_id: str, data: OrderUpdate, cancel_reason: O
     order["status"] = data.status
     return OrderResponse(**{k: v for k, v in order.items() if k not in ["_id", "created_by"]})
 
+class OrderRefund(BaseModel):
+    """Full refund/void of a PAID order (P0-6: previous 'process a refund/void'
+    error message pointed at a workflow that did not exist)."""
+    reason: str  # why — audited, never optional for money movement
+    manager_pin: Optional[str] = None
+    restock: bool = True  # False when food is NOT returned to sellable stock (waste)
+
+@api_router.post("/orders/{order_id}/refund", response_model=OrderResponse)
+async def refund_order(order_id: str, data: OrderRefund, user: dict = Depends(get_current_user)):
+    """Void a PAID order: money back, stock restored or written off — once.
+
+    Business rules (documented decision):
+    • FULL void only — the payment_status flips atomically to 'refunded', so a
+      double-click/retry finds the order 'refunded' and is REJECTED (a second
+      refund can never mint more money or restock twice). Partial refunds are
+      deferred: how to attribute returned items is an open business question
+      and silently splitting money across methods would be guesswork.
+    • Money is returned to the ACTUAL payment methods (split bills refunded
+      per allocation) as wallet 'refund' rows — day-close stays correct.
+    • Stock returns only if restock=true (returned to sellable inventory);
+      restock=false records the physical disposition as 'no restock — treat as
+      waste' in the audit. Recipe-aware restore, exactly once.
+    • Authorization: reason required, manager PIN enforced when configured,
+      owners/managers only, audit row always written.
+    """
+    check_role(user, "menu_order")
+    if user.get("role") not in ("owner", "manager", "admin"):
+        raise HTTPException(status_code=403, detail="Only owners/managers can process refunds")
+    _reason = require_reason(data.reason, "refund an order")
+    require_manager_pin(data.manager_pin)
+    order = await db.orders.find_one({"id": order_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("payment_status") != "paid":
+        raise HTTPException(status_code=400, detail="Only paid orders can be refunded")
+    if order["status"] == "cancelled":
+        raise HTTPException(status_code=400, detail="Cancelled orders have no payment to refund")
+
+    # ATOMIC VOID CLAIM: this conditional update is the single gate — the first
+    # request flips payment_status to 'refunded'; any retry loses the match
+    # and gets a clean 400 instead of duplicating wallet/stock effects.
+    claim = await db.orders.find_one_and_update(
+        {"id": order_id, "restaurant_id": user.get("restaurant_id"), "payment_status": "paid"},
+        {"$set": {"payment_status": "refunded",
+                  "refunded_at": datetime.now(timezone.utc).isoformat(),
+                  "refund_reason": _reason}},
+        return_document=True,
+    )
+    if claim is None:
+        raise HTTPException(status_code=409, detail="Order was already refunded")
+    order = claim
+
+    # Refund money to the ACTUAL methods used (split bills refund per method).
+    allocations, _warning = _payment_allocations(order)
+    for _method, _amount in allocations:
+        await record_wallet_transaction(
+            user["restaurant_id"], "refund", _amount, _method,
+            order_id, order.get("day_session_id"))
+
+    # Stock: restore to sellable inventory exactly once, or record the
+    # deliberate no-restock disposition.
+    if data.restock:
+        await restock_for_cancelled_order(user["restaurant_id"], order)
+
+    if order["order_type"] == "dine_in" and order.get("table_number"):
+        await db.tables.update_one(
+            {"restaurant_id": user["restaurant_id"], "table_number": order["table_number"],
+             "current_order_id": order_id},
+            {"$set": {"status": "available", "current_order_id": None}})
+
+    await write_audit(user, "order.refund", "order", order_id, f"Order #{order['order_number']}", _reason,
+                      f"Refunded order #{order['order_number']} (₹{order.get('total_amount', 0):.2f}, "
+                      f"restock={'yes' if data.restock else 'no — waste'})")
+    await log_action("order", "order_refunded", user_id=user["id"],
+                     restaurant_id=user["restaurant_id"], details=f"Order {order['order_number']} refunded")
+    return OrderResponse(**{k: v for k, v in order.items() if k not in ["_id", "created_by"]})
+
 @api_router.post("/orders/{order_id}/add-items", response_model=OrderResponse)
 async def add_items_to_order(order_id: str, data: OrderAddItems, user: dict = Depends(get_current_user)):
     """Add more items to a running dine-in order."""
@@ -3543,8 +3620,20 @@ async def update_table_status(table_id: str, status: str, user: dict = Depends(g
 
 @api_router.put("/tables/{table_id}/release")
 async def release_table(table_id: str, user: dict = Depends(get_current_user)):
-    """Release an occupied table (marks table as available, doesn't affect order)."""
+    """Release a table (mark available). NEVER frees a table that still has a
+    running order attached — the order would dangle with no table while its
+    bill keeps running (P0-7 audit finding)."""
     check_role(user, "tables")
+    table = await db.tables.find_one({"id": table_id, "restaurant_id": user.get("restaurant_id")}, {"_id": 0})
+    if not table:
+        raise HTTPException(status_code=404, detail="Table not found")
+    if table.get("current_order_id"):
+        open_order = await db.orders.find_one(
+            {"id": table["current_order_id"], "restaurant_id": user.get("restaurant_id"), "status": {"$nin": ["completed", "cancelled"]}},
+            {"_id": 0},
+        )
+        if open_order:
+            raise HTTPException(status_code=409, detail="Table has a running order — settle or transfer it before freeing the table")
     await db.tables.update_one(
         {"id": table_id, "restaurant_id": user.get("restaurant_id")},
         {"$set": {"status": "available", "current_order_id": None}}
