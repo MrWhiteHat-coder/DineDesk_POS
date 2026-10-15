@@ -5,7 +5,6 @@ import { analyticsAPI, orderAPI, daySessionAPI, receiptAPI, inventoryAPI, tableA
 import { toast } from 'sonner';
 import haptics from '../../lib/haptics';
 import AskDineDesk from '../../components/pos/AskDineDesk';
-import { Card, CardContent } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import CountUp from '../../components/ui/CountUp';
 import {
@@ -14,49 +13,51 @@ import {
 import {
   Printer,
   ArrowRight,
-  TrendingUp,
   Banknote,
   CreditCard,
   Smartphone,
   Clock,
   CheckCircle,
   UtensilsCrossed,
-  Bell,
   MoreHorizontal,
   Flame,
   ConciergeBell,
-  CalendarPlus,
   Receipt,
-  Sparkles,
   Users,
-  Gift,
-  ChevronDown,
-  Maximize2,
-  ArrowRightLeft,
   AlertTriangle,
   Package,
   Timer,
   CircleDollarSign,
   Monitor,
-  CalendarDays,
   XCircle,
-  Zap,
   Plus,
   IndianRupee,
   ShoppingCart,
   BarChart3,
   ClipboardList,
+  Zap,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-/* ───────── helpers ───────── */
+/* ───────── design tokens (dark-first) ─────────
+   #101412 bg · #141915 sidebar · #191F1B surface · #202721 input
+   #303832 border · #F4F1E8 text · #A5ADA5 secondary · #F4A261 accent
+   #78C091 success · #82B4E8 info · #E76F51 error · #20170F on-accent */
+
+const SURFACE = 'bg-white dark:bg-[#191F1B]';
+const BORDER = 'border-gray-200 dark:border-[#303832]';
+const TEXT = 'text-gray-900 dark:text-[#F4F1E8]';
+const SUBTEXT = 'text-gray-500 dark:text-[#A5ADA5]';
+const FAINT = 'text-gray-400 dark:text-[#A5ADA5]/60';
+const AMBER_BTN = 'bg-[#F4A261] text-[#20170F] hover:bg-[#e8955a]';
 
 const STATUS_STYLES = {
-  ready: { bg: 'bg-blue-50 dark:bg-blue-400/10', text: 'text-blue-600 dark:text-blue-300', label: 'Ready' },
-  completed: { bg: 'bg-emerald-50 dark:bg-emerald-400/10', text: 'text-emerald-600 dark:text-emerald-300', label: 'Completed' },
-  preparing: { bg: 'bg-amber-50 dark:bg-amber-400/10', text: 'text-amber-600 dark:text-amber-300', label: 'Preparing' },
-  pending: { bg: 'bg-gray-100 dark:bg-white/[0.07]', text: 'text-gray-600 dark:text-white/60', label: 'Pending' },
-  cancelled: { bg: 'bg-red-50 dark:bg-red-400/10', text: 'text-red-600 dark:text-red-300', label: 'Cancelled' },
+  ready: { bg: 'bg-[#82B4E8]/10 border border-[#82B4E8]/30', text: 'text-[#82B4E8]', label: 'Ready' },
+  completed: { bg: 'bg-[#78C091]/10 border border-[#78C091]/30', text: 'text-[#78C091]', label: 'Completed' },
+  preparing: { bg: 'bg-[#F4A261]/10 border border-[#F4A261]/30', text: 'text-[#F4A261]', label: 'Preparing' },
+  pending: { bg: 'bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-[#303832]', text: 'text-gray-600 dark:text-[#A5ADA5]', label: 'Pending' },
+  cancelled: { bg: 'bg-[#E76F51]/10 border border-[#E76F51]/30', text: 'text-[#E76F51]', label: 'Cancelled' },
+  refunded: { bg: 'bg-[#E76F51]/10 border border-[#E76F51]/30', text: 'text-[#E76F51]', label: 'Refunded' },
 };
 
 function getOrderTime(order) {
@@ -72,28 +73,33 @@ function minutesSince(dateStr) {
   catch { return 0; }
 }
 
-/* Live floor tile colors per table state (reference palette) */
+/* Floor tile visual per table state — semantic, not status-quo green:
+   amber = live service, info = ready to deliver, error = payment issue,
+   green reserved for genuinely positive states (availability). */
 function tableVisual(table, order) {
   if (order && order.status === 'ready') {
-    return { ring: 'ring-blue-500/70 bg-blue-50 dark:bg-blue-500/15', dot: 'bg-blue-500', label: 'Ready', chip: 'bg-blue-500' };
+    return { ring: 'ring-[#82B4E8]/70', tile: 'bg-[#82B4E8]/10', dot: 'bg-[#82B4E8]', label: 'Ready', labelTone: 'text-[#82B4E8]' };
   }
   if (order && order.payment_status !== 'paid' && order.status === 'completed') {
-    return { ring: 'ring-red-500/70 bg-red-50 dark:bg-red-500/15', dot: 'bg-red-500', label: 'Payment', chip: 'bg-red-500' };
+    return { ring: 'ring-[#E76F51]/70', tile: 'bg-[#E76F51]/10', dot: 'bg-[#E76F51]', label: 'Payment', labelTone: 'text-[#E76F51]' };
   }
   if (order && (order.status === 'pending' || order.status === 'preparing')) {
-    return { ring: 'ring-[#2E9E5B]/70 bg-emerald-50 dark:bg-emerald-500/15', dot: 'bg-[#2E9E5B]', label: order.status === 'preparing' ? 'Preparing' : 'Seated', chip: 'bg-[#2E9E5B]' };
+    return { ring: 'ring-[#F4A261]/70', tile: 'bg-[#F4A261]/10', dot: 'bg-[#F4A261]', label: order.status === 'preparing' ? 'Preparing' : 'Seated', labelTone: 'text-[#F4A261]' };
   }
   if (table.status === 'reserved') {
-    return { ring: 'ring-blue-400/60 bg-blue-50/60 dark:bg-blue-400/10', dot: 'bg-blue-400', label: 'Reserved', chip: 'bg-blue-400' };
+    return { ring: 'ring-[#82B4E8]/40', tile: 'bg-[#82B4E8]/5', dot: 'bg-[#82B4E8]', label: 'Reserved', labelTone: 'text-[#82B4E8]' };
   }
   if (table.status === 'occupied') {
-    return { ring: 'ring-[#2E9E5B]/50 bg-emerald-50/70 dark:bg-emerald-500/10', dot: 'bg-[#2E9E5B]', label: 'Dining', chip: 'bg-[#2E9E5B]' };
+    return { ring: 'ring-[#F4A261]/50', tile: 'bg-[#F4A261]/5', dot: 'bg-[#F4A261]', label: 'Dining', labelTone: 'text-[#F4A261]' };
   }
-  return { ring: 'ring-gray-300/70 dark:ring-white/15 bg-gray-100 dark:bg-white/[0.05]', dot: 'bg-gray-400 dark:bg-white/30', label: 'Available', chip: 'bg-gray-400 dark:bg-white/30' };
+  return {
+    ring: 'ring-[#303832]', tile: 'bg-[#202721] dark:bg-[#202721]',
+    dot: 'bg-gray-400 dark:bg-[#A5ADA5]/40', label: 'Available', labelTone: 'text-[#78C091]',
+  };
 }
 
 /* ═══════════════════════════════════════════════════════
-   CONTROL ROOM DASHBOARD
+   OPERATIONS COMMAND CENTRE DASHBOARD
    ═══════════════════════════════════════════════════════ */
 export default function POSDashboard() {
   const { user, restaurant } = useAuth();
@@ -172,7 +178,9 @@ export default function POSDashboard() {
   const delayedOrders = activeOrders.filter(o => minutesSince(o.created_at) > 10 && o.status !== 'ready');
 
   const occupiedTables = tables.filter(t => t.status === 'occupied' || (todayOrders.some(o => String(o.table_number) === String(t.table_number) && ['pending', 'preparing', 'ready'].includes(o.status))));
-  const occupancyPct = tables.length > 0 ? Math.round((occupiedTables.length / tables.length) * 100) : 0;
+  const availableTables = tables.filter(t => t.status !== 'occupied' && t.status !== 'reserved');
+  const reservedTables = tables.filter(t => t.status === 'reserved');
+  const tableFreeCount = tables.length - occupiedTables.length - reservedTables.filter(t => !occupiedTables.includes(t)).length;
 
   const outOfStockItems = lowStockItems.filter(i => (i.quantity ?? 0) <= 0);
   const lowStockOnly = lowStockItems.filter(i => (i.quantity ?? 0) > 0);
@@ -186,12 +194,12 @@ export default function POSDashboard() {
   const prevOrdersCount = ordersHistory[ordersHistory.length - 2]?.v ?? 0;
   const ordersDelta = prevOrdersCount > 0 ? Math.round(((lastOrdersCount - prevOrdersCount) / prevOrdersCount) * 100) : null;
 
-  /* Compact delta chip — hides the confusing "↑ -100%" case entirely when flat (new restaurant) */
+  /* Delta chip — hidden entirely when there is no valid comparison */
   const deltaChip = (delta) => {
     if (delta === null || delta === 0) return null;
     const up = delta > 0;
     return (
-      <span className={`font-bold ${up ? 'text-emerald-500' : 'text-red-500'}`}>
+      <span className={`font-semibold ${up ? 'text-[#78C091]' : 'text-[#E76F51]'}`}>
         {up ? '↑' : '↓'} {Math.abs(delta)}%
       </span>
     );
@@ -199,7 +207,7 @@ export default function POSDashboard() {
 
   const hasData = todayOrders.length > 0 || tables.length > 0 || lastSales > 0;
 
-  /* Kitchen health line under the greeting */
+  /* One-line operational summary under the heading (real data only) */
   const attentionCount = delayedOrders.length + unpaidCompleted.length + outOfStockItems.length + lowStockOnly.length;
   const kitchenLine = preparingOrders.length > 0
     ? `kitchen is cooking ${preparingOrders.length} order${preparingOrders.length > 1 ? 's' : ''}`
@@ -213,7 +221,7 @@ export default function POSDashboard() {
     delayedOrders.slice(0, 2).forEach(o => items.push({
       key: `delay-${o.id}`,
       icon: Flame,
-      tone: 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-400/10',
+      tone: 'text-[#E76F51] bg-[#E76F51]/10',
       title: o.table_number ? `Table ${o.table_number}` : `Order #${o.order_number}`,
       desc: `Order waiting for ${minutesSince(o.created_at)} min`,
       action: 'View',
@@ -223,7 +231,7 @@ export default function POSDashboard() {
     preparingOrders.slice(0, 1).forEach(o => items.push({
       key: `kot-${o.id}`,
       icon: ConciergeBell,
-      tone: 'text-amber-500 dark:text-amber-300 bg-amber-50 dark:bg-amber-400/10',
+      tone: 'text-[#F4A261] bg-[#F4A261]/10',
       title: `Order #${o.order_number}`,
       desc: 'In the kitchen now',
       action: 'Mark Ready',
@@ -239,7 +247,7 @@ export default function POSDashboard() {
     unpaidCompleted.slice(0, 1).forEach(o => items.push({
       key: `pay-${o.id}`,
       icon: CircleDollarSign,
-      tone: 'text-blue-500 dark:text-blue-300 bg-blue-50 dark:bg-blue-400/10',
+      tone: 'text-[#82B4E8] bg-[#82B4E8]/10',
       title: o.table_number ? `Table ${o.table_number}` : `Order #${o.order_number}`,
       desc: 'Payment pending',
       action: 'Take Payment',
@@ -249,7 +257,7 @@ export default function POSDashboard() {
     if (outOfStockItems.length > 0) items.push({
       key: 'oos',
       icon: Package,
-      tone: 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-400/10',
+      tone: 'text-[#E76F51] bg-[#E76F51]/10',
       title: outOfStockItems[0].name,
       desc: outOfStockItems.length > 1 ? `Out of stock + ${outOfStockItems.length - 1} more item${outOfStockItems.length > 2 ? 's' : ''}` : 'Out of stock',
       action: 'Restock',
@@ -259,7 +267,7 @@ export default function POSDashboard() {
     if (lowStockOnly.length > 0) items.push({
       key: 'low',
       icon: AlertTriangle,
-      tone: 'text-amber-500 dark:text-amber-300 bg-amber-50 dark:bg-amber-400/10',
+      tone: 'text-[#F4A261] bg-[#F4A261]/10',
       title: lowStockOnly[0].name,
       desc: `Low stock (${lowStockOnly[0].quantity} ${lowStockOnly[0].unit || 'left'})`,
       action: 'Restock',
@@ -270,18 +278,9 @@ export default function POSDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayOrders, lowStockItems]);
 
-  /* ── Service Flow (real counts) ── */
-  const avgKitchenMin = preparingOrders.length > 0
-    ? Math.round(preparingOrders.reduce((a, o) => a + minutesSince(o.created_at), 0) / preparingOrders.length)
-    : 0;
-  const avgServeMin = readyOrders.length > 0
-    ? Math.round(readyOrders.reduce((a, o) => a + minutesSince(o.created_at), 0) / readyOrders.length)
-    : 0;
-
   /* ── table <-> order join ── */
   const orderForTable = (table) =>
     todayOrders.find(o => String(o.table_number) === String(table.table_number) && ['pending', 'preparing', 'ready', 'completed'].includes(o.status));
-
 
   /* ── receipt (preserved logic) ── */
   const openReceipt = async (order) => {
@@ -341,54 +340,53 @@ export default function POSDashboard() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = (user?.name || 'Chef').split(' ')[0];
   const dateLabel = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const branchLabel = restaurant?.name || 'Your restaurant';
 
-  /* ═════════ SKELETON (z2-style structured placeholders) ═════════ */
+  /* ═════════ SKELETON (matches the real layout) ═════════ */
   if (loading) {
     return (
-      <div className="space-y-5 animate-fade-in" data-testid="pos-dashboard-skeleton">
-        {/* Greeting block */}
-        <div className="space-y-2">
-          <Skeleton className="h-7 w-52 rounded-lg" />
-          <Skeleton className="h-4 w-72 max-w-full rounded-md" />
+      <div className="animate-fade-in max-w-[1440px] space-y-3.5" data-testid="pos-dashboard-skeleton">
+        {/* Heading */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-64 max-w-full rounded-lg" />
+            <Skeleton className="h-4 w-52 max-w-full rounded-md" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-md hidden sm:block" />
         </div>
-        {/* Metric cards — same 3-col grid as real content */}
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-3 md:p-3.5 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <Skeleton className="w-7 h-7 rounded-lg" />
-                <Skeleton className="w-14 h-6 rounded-md hidden sm:block" />
-              </div>
-              <Skeleton className="h-6 w-20 rounded-md" />
+        {/* Glance strip */}
+        <div className="rounded-2xl border border-gray-200 dark:border-[#303832] p-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="space-y-1.5">
               <Skeleton className="h-3 w-16 rounded-sm" />
+              <Skeleton className="h-6 w-20 rounded-md" />
+              <Skeleton className="h-3 w-14 rounded-sm" />
             </div>
           ))}
         </div>
-        {/* Promo banner slot (matches new promo banner) */}
-        <Skeleton className="h-24 md:h-28 rounded-2xl" />
-        {/* Service map + side column */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4 md:p-5 lg:col-span-2 space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-2"><Skeleton className="h-5 w-36 rounded-md" /><Skeleton className="h-3 w-28 rounded-sm" /></div>
-              <Skeleton className="h-9 w-44 rounded-xl" />
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[74px] rounded-2xl" />)
-              }
+        {/* Workspace */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+          <div className="lg:col-span-7 space-y-3.5">
+            <div className="rounded-2xl bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-[#303832] p-4 space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 rounded-xl" />)}</div>
+            <div className="rounded-2xl bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-[#303832] p-4 space-y-4">
+              <Skeleton className="h-5 w-32 rounded-md" />
+              <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 gap-2">
+                {[...Array(7)].map((_, i) => <Skeleton key={i} className="h-[64px] rounded-xl" />)}
+              </div>
             </div>
           </div>
-          <div className="space-y-4"><Skeleton className="h-44 rounded-2xl" /><Skeleton className="h-72 rounded-2xl" /></div>
+          <div className="lg:col-span-5 space-y-3.5">
+            <div className="rounded-2xl bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-[#303832] p-4 space-y-2.5">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-9 rounded-xl" />)}</div>
+            <div className="rounded-2xl bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-[#303832] p-4 space-y-2.5">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-9 rounded-xl" />)}</div>
+          </div>
         </div>
-        <Skeleton className="h-28 rounded-2xl" />
       </div>
     );
   }
 
   /* ═════════ RENDER ═════════ */
 
-  /* Hourly sales (real orders → local-time buckets). Plain derivation —
-     runs after the loading gate, so hooks must live above it. */
+  /* Hourly sales (real orders → local-time buckets). */
   const computeHourlySales = (orders) => {
     const buckets = Array.from({ length: 24 }, (_, h) => ({ hour: h, sales: 0 }));
     orders.forEach(o => {
@@ -402,8 +400,8 @@ export default function POSDashboard() {
   };
   const hourlySales = computeHourlySales(todayOrders);
 
-  const todaySales = todayOrders.filter(o => o.status !== 'cancelled').reduce((a, o) => a + (o.total_amount || 0), 0);
-  const avgOrderValue = todayOrders.length > 0 ? todaySales / todayOrders.length : 0;
+  const todaySales = todayOrders.filter(o => o.status !== 'cancelled' && o.payment_status !== 'refunded').reduce((a, o) => a + (o.total_amount || 0), 0);
+  const avgOrderValue = todaySales > 0 && todayOrders.length > 0 ? todaySales / Math.max(1, todayOrders.filter(o => o.status !== 'cancelled').length) : 0;
   const cancelledOrders = todayOrders.filter(o => o.status === 'cancelled');
   const servedOrders = todayOrders.filter(o => o.status === 'completed');
   const newOrders = todayOrders.filter(o => o.status === 'pending');
@@ -423,8 +421,6 @@ export default function POSDashboard() {
   };
   const topItems = computeTopItems(todayOrders);
 
-  const availableTables = tables.filter(t => t.status !== 'occupied' && t.status !== 'reserved');
-  const reservedTables = tables.filter(t => t.status === 'reserved');
   const filteredTables = tableFilter === 'occupied' ? occupiedTables
     : tableFilter === 'available' ? availableTables
     : tableFilter === 'reserved' ? reservedTables
@@ -433,94 +429,70 @@ export default function POSDashboard() {
   const fmtHour = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'AM' : 'PM'}`;
   const fmtAxis = (v) => (v >= 1000 ? `₹${(v / 1000).toFixed(1).replace(/\.0$/, '')}K` : `₹${v}`);
 
+  /* ── glance metrics (label, value, context — comparison only when valid) ── */
+  const glance = [
+    { label: 'Net Sales', value: <CountUp value={todaySales} prefix="₹" />, sub: <>vs. yesterday {deltaChip(salesDelta) || '—'}</>, href: '/pos/analytics', testid: 'sales-today-card' },
+    { label: 'Orders', value: <CountUp value={todayOrders.length} />, sub: <>vs. yesterday {deltaChip(ordersDelta) || '—'}</>, href: '/pos/order-management', testid: 'total-orders-card' },
+    { label: 'Avg Order', value: `₹${avgOrderValue.toFixed(0)}`, sub: 'per bill', testid: 'aov-today-card' },
+    { label: 'Active Now', value: activeOrders.length, sub: unpaidCompleted.length > 0 ? `${unpaidCompleted.length} awaiting payment` : `${readyOrders.length} ready to serve`, testid: 'active-orders-card' },
+    { label: 'Floor', value: `${occupiedTables.length}/${tables.length}`, sub: `${Math.max(tableFreeCount, 0)} free`, testid: 'active-tables-card' },
+  ];
+
   const statusRows = [
-    { key: 'new', label: 'New Orders', count: newOrders.length, icon: ClipboardList, tone: 'bg-emerald-50 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-300' },
-    { key: 'prep', label: 'Preparing', count: preparingOrders.length, icon: Flame, tone: 'bg-amber-50 dark:bg-amber-400/10 text-amber-600 dark:text-amber-300' },
-    { key: 'ready', label: 'Ready', count: readyOrders.length, icon: CheckCircle, tone: 'bg-blue-50 dark:bg-blue-400/10 text-blue-600 dark:text-blue-300' },
-    { key: 'served', label: 'Served', count: servedOrders.length, icon: ConciergeBell, tone: 'bg-gray-100 dark:bg-white/[0.07] text-gray-500 dark:text-white/60' },
-    { key: 'cancelled', label: 'Cancelled', count: cancelledOrders.length, icon: XCircle, tone: 'bg-red-50 dark:bg-red-400/10 text-red-600 dark:text-red-300' },
+    { key: 'new', label: 'New Orders', count: newOrders.length, icon: ClipboardList, tone: 'text-[#82B4E8] bg-[#82B4E8]/10' },
+    { key: 'prep', label: 'Preparing', count: preparingOrders.length, icon: Flame, tone: 'text-[#F4A261] bg-[#F4A261]/10' },
+    { key: 'ready', label: 'Ready', count: readyOrders.length, icon: CheckCircle, tone: 'text-[#78C091] bg-[#78C091]/10' },
+    { key: 'served', label: 'Served', count: servedOrders.length, icon: ConciergeBell, tone: 'text-gray-500 dark:text-[#A5ADA5] bg-gray-100 dark:bg-white/[0.06]' },
+    { key: 'cancelled', label: 'Cancelled', count: cancelledOrders.length, icon: XCircle, tone: 'text-[#E76F51] bg-[#E76F51]/10' },
   ];
 
   const quickLinks = [
+    { label: 'New Bill', icon: Receipt, to: '/pos/order-management' },
+    { label: 'Kitchen', icon: ConciergeBell, to: '/pos/kds' },
+    { label: 'Tables', icon: Monitor, to: '/pos/tables' },
     { label: 'Add Menu', icon: UtensilsCrossed, to: '/pos/menu' },
-    { label: 'Manage Tables', icon: Monitor, to: '/pos/tables' },
-    { label: 'Inventory', icon: Package, to: '/pos/inventory' },
-    { label: 'Create Bill', icon: Receipt, to: '/pos/order-management' },
-    { label: 'Add Customer', icon: Users, to: '/pos/customers' },
-    { label: 'View Reports', icon: BarChart3, to: '/pos/analytics' },
+    { label: 'Customers', icon: Users, to: '/pos/customers' },
+    { label: 'Reports', icon: BarChart3, to: '/pos/analytics' },
   ];
 
+  const recentOrders = [...todayOrders]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 4);
+
   return (
-    <div className="space-y-4 md:space-y-5 animate-fade-in max-w-[1400px]" data-testid="pos-dashboard">
+    <div className="space-y-3.5 animate-fade-in max-w-[1440px]" data-testid="pos-dashboard">
 
-      {/* ═══ GREETING + HERO BRAND BANNER ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(280px,400px)] gap-4 items-stretch">
-        <div className="flex flex-col justify-center">
-          <h1 className="font-heading text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-            {greeting}, {firstName} <span aria-hidden="true">🌱</span>
+      {/* ═══ COMPACT OPERATIONAL HEADING ═══ */}
+      <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3" data-testid="dashboard-heading">
+        <div className="min-w-0">
+          <h1 className={`font-heading text-xl md:text-2xl font-bold tracking-tight ${TEXT} truncate`}>
+            {greeting}, {firstName} <span aria-hidden="true">·</span>{' '}
+            <span className="text-gray-500 dark:text-[#A5ADA5] font-semibold">{branchLabel}</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-white/50 mt-1.5">
-            {isDayOpen ? "Everything looks good. Here's what's happening today." : 'Day is not open yet — open the day to start billing.'}
+          <p className={`text-xs md:text-[13px] ${SUBTEXT} mt-0.5 flex items-center gap-1.5 flex-wrap`}>
+            <span className="truncate">{dateLabel}</span>
+            <span aria-hidden="true">·</span>
+            <span className="truncate">{kitchenLine}</span>
           </p>
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full ${hasData ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-white/45'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${hasData ? 'bg-emerald-500 animate-calm-pulse' : 'bg-gray-400'}`} />
-              {hasData ? 'Live data' : 'No service yet'}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border ${hasData ? 'border-[#78C091]/40 bg-[#78C091]/10 text-[#78C091]' : 'border-[#303832] bg-[#202721] text-[#A5ADA5]'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${hasData ? 'bg-[#78C091]' : 'bg-[#A5ADA5]/50'}`} />
+            {isDayOpen ? (hasData ? 'Live service' : 'Day open · no orders yet') : 'Day closed'}
+          </span>
+          {attentionCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full border border-[#E76F51]/40 bg-[#E76F51]/10 text-[#E76F51]">
+              <AlertTriangle className="w-3 h-3" /> {attentionCount} need attention
             </span>
-            {attentionCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-full bg-red-50 text-red-600 dark:bg-red-400/10 dark:text-red-300">
-                <AlertTriangle className="w-3 h-3" /> {attentionCount} need attention
-              </span>
-            )}
-          </div>
+          )}
         </div>
+      </header>
 
-        {/* Brand hero */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F2417] via-[#1B5A38] to-[#2E9E5B] text-white p-5 md:p-6 min-h-[128px] flex flex-col justify-center" data-testid="hero-banner">
-          <div className="absolute -right-8 -top-12 w-44 h-44 rounded-full bg-white/[0.07] pointer-events-none" aria-hidden="true" />
-          <div className="absolute right-20 -bottom-16 w-40 h-40 rounded-full bg-white/[0.05] pointer-events-none" aria-hidden="true" />
-          <h3 className="relative font-heading font-extrabold text-xl md:text-2xl leading-snug">Great food<br />brings people together.</h3>
-          <p className="relative text-xs md:text-sm text-white/70 mt-1.5">Let's make today amazing!</p>
-          <p className="relative font-script text-base md:text-lg text-emerald-200/85 self-end text-right leading-tight mt-1" aria-hidden="true">Good Food, Better People</p>
-        </div>
-      </div>
-
-      {/* ═══ STAT CARDS ═══ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3.5">
-        <button onClick={() => navigate('/pos/analytics')} className="text-left bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="sales-today-card">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mb-2.5"><IndianRupee className="w-5 h-5 text-emerald-600 dark:text-emerald-300" /></div>
-          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Today's Sales</p>
-          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight"><CountUp value={todaySales} prefix="₹" /></p>
-          <p className="text-[10px] mt-0.5 flex items-center gap-1 text-gray-400 dark:text-white/40">vs. yesterday {deltaChip(salesDelta)}</p>
-        </button>
-
-        <button onClick={() => setShowOrdersDetail(true)} className={`text-left bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all ${newOrderPulse ? 'live-pulse' : ''}`} data-testid="total-orders-card">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center mb-2.5"><ShoppingCart className="w-5 h-5 text-blue-600 dark:text-blue-300" /></div>
-          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Total Orders</p>
-          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight"><CountUp value={todayOrders.length} /></p>
-          <p className="text-[10px] mt-0.5 flex items-center gap-1 text-gray-400 dark:text-white/40">vs. yesterday {deltaChip(ordersDelta)}</p>
-        </button>
-
-        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4" data-testid="active-tables-card">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mb-2.5"><Users className="w-5 h-5 text-emerald-600 dark:text-emerald-300" /></div>
-          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Active Tables</p>
-          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{occupiedTables.length} / {tables.length}</p>
-          <p className="text-[10px] mt-0.5 text-gray-400 dark:text-white/40 truncate">{occupiedTables.length} occupied · {availableTables.length} available</p>
-        </div>
-
-        <button onClick={() => navigate('/pos/inventory')} className="text-left bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="low-stock-card">
-          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-400/10 flex items-center justify-center mb-2.5"><Package className="w-5 h-5 text-red-500" /></div>
-          <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Low Stock Items</p>
-          <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{lowStockItems.length}</p>
-          <p className="text-[10px] mt-0.5 text-gray-400 dark:text-white/40">{lowStockItems.length > 0 ? 'Need attention' : 'All stocked up'}</p>
-        </button>
-      </div>
-
-      {/* ═══ DAY CLOSED NOTE ═══ */}
+      {/* ═══ DAY CONTROL (only when closed) ═══ */}
       {!isDayOpen && (
-        <div className="bg-amber-50/70 dark:bg-amber-400/[0.07] border border-amber-200/70 dark:border-amber-400/20 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm" data-testid="day-closed-banner">
-          <Timer className="w-5 h-5 text-amber-500 flex-shrink-0" />
-          <p className="text-amber-800 dark:text-amber-200 flex-1 min-w-0">Day is not open yet — billing is paused until you open the day.</p>
+        <div className="bg-[#F4A261]/10 dark:bg-[#F4A261]/[0.08] border border-[#F4A261]/30 dark:border-[#F4A261]/25 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3" data-testid="day-closed-banner">
+          <Timer className="w-5 h-5 text-[#F4A261] flex-shrink-0 hidden sm:block" />
+          <p className="text-[13px] text-[#F4A261] flex-1 min-w-0 font-medium">Day is not open — billing is paused until you open the day.</p>
           <button
             onClick={async () => {
               try {
@@ -530,7 +502,7 @@ export default function POSDashboard() {
                 refreshSession();
               } catch { toast.error('Could not open the day — try again'); }
             }}
-            className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#0F2417] dark:bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-110 active:scale-[0.97] transition-all min-h-[40px]"
+            className={`flex-shrink-0 px-4 py-2 rounded-lg ${AMBER_BTN} text-xs font-bold active:scale-[0.97] transition-all min-h-[38px]`}
             data-testid="open-day-banner-btn"
           >
             Open Day
@@ -538,227 +510,268 @@ export default function POSDashboard() {
         </div>
       )}
 
-      {/* ═══ SALES OVERVIEW + ORDER STATUS + QUICK ACTIONS ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Sales Overview */}
-        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="sales-overview-card">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div>
-              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Sales Overview</h2>
-              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Real-time sales movement</p>
-            </div>
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-white/50 border border-gray-200 dark:border-white/[0.08] rounded-lg px-2.5 py-1"><CalendarDays className="w-3.5 h-3.5" /> Today</span>
-          </div>
-          <div className="h-40 mt-2" data-testid="sales-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlySales.filter(b => b.hour >= 7 && b.hour <= 23)} margin={{ top: 8, right: 4, left: -14, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
-                <XAxis dataKey="hour" tickFormatter={(h) => fmtHour(h)} tick={{ fontSize: 9 }} interval={3} axisLine={false} tickLine={false} stroke="#9CA3AF" />
-                <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 9 }} axisLine={false} tickLine={false} stroke="#9CA3AF" />
-                <Tooltip
-                  formatter={(v) => [`₹${Number(v).toFixed(2)}`, 'Sales']}
-                  labelFormatter={(h) => fmtHour(h)}
-                  contentStyle={{ borderRadius: 12, border: '1px solid rgba(128,128,128,0.2)', fontSize: 12, background: '#0F2417', color: '#fff' }}
-                  cursor={{ fill: 'rgba(46,158,91,0.08)' }}
-                />
-                <Bar dataKey="sales" fill="#2E9E5B" radius={[5, 5, 0, 0]} maxBarSize={22} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          {/* Summary tiles */}
-          <div className="space-y-2 mt-3">
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-white/[0.04] rounded-xl px-3.5 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center"><Receipt className="w-4 h-4 text-emerald-600 dark:text-emerald-300" /></div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-white/50">Total Sales</span>
-              </div>
-              <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">₹{todaySales.toFixed(0)}</span>
-            </div>
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-white/[0.04] rounded-xl px-3.5 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center"><ShoppingCart className="w-4 h-4 text-blue-600 dark:text-blue-300" /></div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-white/50">Total Orders</span>
-              </div>
-              <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">{todayOrders.length}</span>
-            </div>
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-white/[0.04] rounded-xl px-3.5 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-400/10 flex items-center justify-center"><IndianRupee className="w-4 h-4 text-amber-600 dark:text-amber-300" /></div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-white/50">Avg. Order Value</span>
-              </div>
-              <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">₹{avgOrderValue.toFixed(0)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Order Status */}
-        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="order-status-card">
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div>
-              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><ClipboardList className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Order Status</h2>
-              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Live kitchen updates</p>
-            </div>
-            <button onClick={() => setShowOrdersDetail(true)} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
-          </div>
-          <div className="space-y-1">
-            {statusRows.map(row => (
-              <button key={row.key} onClick={() => navigate('/pos/kds')} className="w-full flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors text-left" data-testid={`status-row-${row.key}`}>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${row.tone}`}><row.icon className="w-5 h-5" strokeWidth={1.9} /></div>
-                <span className="text-sm font-semibold text-gray-800 dark:text-white/85 flex-1">{row.label}</span>
-                <span className="font-numbers text-base font-bold text-gray-900 dark:text-white">{row.count}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="quick-actions-card">
-          <div className="mb-3">
-            <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Zap className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Quick Actions</h2>
-            <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Get things done faster</p>
-          </div>
-          <button onClick={() => navigate('/pos/orders')} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#2E9E5B] text-white hover:brightness-105 active:scale-[0.98] transition-all mb-3" data-testid="quick-new-order">
-            <span className="flex items-center gap-3"><span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center"><Plus className="w-5 h-5" /></span><span className="text-sm font-bold">New Order</span></span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <div className="grid grid-cols-3 gap-2">
-            {quickLinks.map(l => (
-              <button key={l.label} onClick={() => navigate(l.to)} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-white/[0.08] hover:border-[#2E9E5B]/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-400/[0.06] active:scale-[0.97] transition-all" data-testid={`quick-${l.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                <l.icon className="w-5 h-5 text-gray-600 dark:text-white/60" strokeWidth={1.8} />
-                <span className="text-[10px] font-bold text-gray-700 dark:text-white/70 text-center leading-tight">{l.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* ═══ TODAY AT A GLANCE — one compact strip, divided ═══ */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-0 rounded-2xl bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-[#303832] divide-x divide-y md:divide-y-0 divide-gray-100 dark:divide-[#303832] overflow-hidden" data-testid="glance-strip">
+        {glance.map((m, i) => {
+          const Comp = m.href ? 'button' : 'div';
+          return (
+            <Comp
+              key={m.label}
+              onClick={m.href ? () => navigate(m.href) : undefined}
+              className={`text-left p-3 md:p-3.5 bg-inherit ${m.href ? 'hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors' : ''}`}
+              data-testid={m.testid}
+            >
+              <p className={`text-[10px] font-bold uppercase tracking-wider ${FAINT}`}>{m.label}</p>
+              <p className={`font-numbers text-xl md:text-[22px] font-bold ${TEXT} leading-tight mt-1 ${m.testid === 'total-orders-card' && newOrderPulse ? 'live-pulse rounded-md' : ''}`}>{m.value}</p>
+              <p className={`text-[10px] mt-1 ${FAINT} truncate`}>{m.sub}</p>
+            </Comp>
+          );
+        })}
       </div>
 
-      {/* ═══ ACTIVE TABLES + TOP SELLING + INVENTORY ALERTS ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* ═══ MAIN WORKSPACE ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
 
-        {/* Active Tables */}
-        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="active-tables-panel">
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div>
-              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Monitor className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Active Tables</h2>
-              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Live table status</p>
-            </div>
-            <button onClick={() => navigate('/pos/tables')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
-          </div>
-          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-            {[{ k: 'all', l: `All (${tables.length})` }, { k: 'occupied', l: `Occupied (${occupiedTables.length})` }, { k: 'available', l: `Available (${availableTables.length})` }, { k: 'reserved', l: `Reserved (${reservedTables.length})` }].map(f => (
-              <button key={f.k} onClick={() => setTableFilter(f.k)} className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all ${tableFilter === f.k ? 'bg-[#0F2417] dark:bg-[#2E9E5B] text-white' : 'bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-white/60 hover:bg-gray-200 dark:hover:bg-white/[0.1]'}`} data-testid={`table-filter-${f.k}`}>{f.l}</button>
-            ))}
-          </div>
-          {tables.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No tables yet</p>
-              <p className="text-xs text-gray-400 dark:text-white/40 mt-1 mb-3">Add tables to see your live floor.</p>
-              <button onClick={() => navigate('/pos/tables')} className="px-4 py-2 rounded-xl bg-[#2E9E5B] text-white text-xs font-bold hover:brightness-105 transition-all">Go to Tables</button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5" data-testid="active-tables-grid">
-              {filteredTables.slice(0, 8).map((table) => {
-                const vis = tableVisual(table, orderForTable(table));
-                return (
-                  <div
-                    key={table.id}
-                    onContextMenu={(e) => { e.preventDefault(); setLongPressTable(table); }}
-                    onTouchStart={() => startTableLongPress(table)}
-                    onTouchEnd={cancelTableLongPress}
-                    onTouchMove={cancelTableLongPress}
-                    className={`relative rounded-2xl p-3 ring-1 ${vis.ring} cursor-pointer select-none`}
-                    data-testid={`table-card-${table.table_number}`}
-                    title="Long-press / right-click for quick actions"
-                  >
-                    <div className="flex items-start justify-between">
-                      <p className="font-numbers font-bold text-sm text-gray-900 dark:text-white leading-none">T{String(table.table_number).padStart(2, '0')}</p>
-                      <MoreHorizontal className="w-3.5 h-3.5 text-gray-400 dark:text-white/30" />
+        {/* ───── PRIMARY: attention + floor ───── */}
+        <div className="lg:col-span-7 space-y-3.5 min-w-0">
+
+          {/* Attention Now — only real events, each leading somewhere */}
+          {attentionItems.length > 0 && (
+            <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="attention-panel">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2`}>
+                  <Zap className="w-4 h-4 text-[#F4A261]" /> Needs Attention
+                </h2>
+                <span className={`text-[10px] font-bold ${FAINT}`}>{attentionItems.length} item{attentionItems.length > 1 ? 's' : ''}</span>
+              </div>
+              <div className="space-y-1" >
+                {attentionItems.map(item => (
+                  <div key={item.key} className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors" data-testid={item.testid}>
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.tone}`}><item.icon className="w-4 h-4" strokeWidth={1.9} /></span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] font-bold ${TEXT} truncate`}>{item.title}</p>
+                      <p className={`text-[11px] ${FAINT} truncate`}>{item.desc}</p>
                     </div>
-                    <p className="text-[10px] text-gray-500 dark:text-white/40 mt-1">{table.capacity} seats</p>
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <span className={`w-1.5 h-1.5 rounded-full ${vis.chip}`} />
-                      <span className={`text-[10px] font-bold ${vis.label === 'Available' ? 'text-emerald-600 dark:text-emerald-300' : vis.label === 'Payment' ? 'text-red-500' : 'text-gray-700 dark:text-white/70'}`}>{vis.label}</span>
-                    </div>
+                    <button onClick={item.run} className={`flex-shrink-0 px-3 py-1.5 rounded-lg border border-[#303832] text-[11px] font-bold text-gray-700 dark:text-[#F4F1E8] hover:border-[#F4A261]/60 hover:text-[#F4A261] active:scale-95 transition-all`}>
+                      {item.action}
+                    </button>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            </section>
           )}
-        </div>
 
-        {/* Top Selling Items */}
-        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="top-items-panel">
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div>
-              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><UtensilsCrossed className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Top Selling Items</h2>
-              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Today's most ordered items</p>
+          {/* Live Service Map — real tables only, compact tiles, legend */}
+          <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="active-tables-panel">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div>
+                <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2`}><Monitor className="w-4 h-4 text-[#F4A261]" /> Live Floor</h2>
+                <p className={`text-[11px] ${FAINT} mt-0.5`}>{occupiedTables.length} of {tables.length} tables in service</p>
+              </div>
+              <button onClick={() => navigate('/pos/tables')} className={`text-xs font-semibold text-[#F4A261] hover:underline flex items-center gap-0.5`}>Manage <ArrowRight className="w-3 h-3" /></button>
             </div>
-            <button onClick={() => navigate('/pos/analytics')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
-          </div>
-          {topItems.length === 0 ? (
-            <div className="py-10 text-center" data-testid="top-items-empty">
-              <p className="text-sm font-semibold text-gray-700 dark:text-white/70">No sales yet today</p>
-              <p className="text-xs text-gray-400 dark:text-white/40 mt-1">Your best sellers will show up here.</p>
-            </div>
-          ) : (
-            <div className="space-y-1" data-testid="top-items-list">
-              {topItems.map((item, idx) => (
-                <div key={item.name} className="flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300' : idx === 1 ? 'bg-blue-50 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300' : idx === 2 ? 'bg-orange-50 text-orange-600 dark:bg-orange-400/10 dark:text-orange-300' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.07] dark:text-white/50'}`}>{idx + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-gray-900 dark:text-white truncate">{item.name}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-white/40">{item.qty} orders</p>
-                  </div>
-                  <span className="font-numbers text-sm font-bold text-gray-900 dark:text-white">₹{item.revenue.toFixed(0)}</span>
-                </div>
+
+            {/* legend */}
+            <div className="flex items-center gap-3 mb-3 flex-wrap text-[10px] font-semibold" data-testid="floor-legend">
+              {[
+                ['bg-[#F4A261]', 'Dining / Preparing'],
+                ['bg-[#82B4E8]', 'Ready / Reserved'],
+                ['bg-[#E76F51]', 'Payment due'],
+                ['bg-gray-400 dark:bg-[#A5ADA5]/40', 'Available'],
+              ].map(([dot, label]) => (
+                <span key={label} className={`flex items-center gap-1.5 ${SUBTEXT}`}>
+                  <span className={`w-2 h-2 rounded-full ${dot}`} /> {label}
+                </span>
               ))}
             </div>
-          )}
-        </div>
 
-        {/* Inventory Alerts */}
-        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="inventory-alerts-panel">
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div>
-              <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Package className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Inventory Alerts</h2>
-              <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Items running low</p>
-            </div>
-            <button onClick={() => navigate('/pos/inventory')} className="text-xs font-semibold text-[#268A4E] dark:text-[#3FCE85] hover:underline flex items-center gap-0.5">View All <ArrowRight className="w-3 h-3" /></button>
-          </div>
-          {lowStockItems.length === 0 ? (
-            <div className="py-10 text-center" data-testid="inventory-alerts-empty">
-              <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-gray-700 dark:text-white/70">Everything stocked</p>
-              <p className="text-xs text-gray-400 dark:text-white/40 mt-1">No low stock alerts right now.</p>
-            </div>
-          ) : (
-            <div className="space-y-1" data-testid="inventory-alerts-list">
-              {lowStockItems.slice(0, 5).map(item => (
-                <div key={item.id} className="flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center flex-shrink-0"><Package className="w-4 h-4 text-red-500" /></div>
-                  <p className="text-[13px] font-bold text-gray-900 dark:text-white flex-1 truncate">{item.name}</p>
-                  <span className="font-numbers text-xs font-bold text-red-500">{item.quantity} {item.unit || ''} left</span>
-                </div>
+            <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+              {[{ k: 'all', l: `All (${tables.length})` }, { k: 'occupied', l: `Occupied (${occupiedTables.length})` }, { k: 'available', l: `Available (${availableTables.length})` }, { k: 'reserved', l: `Reserved (${reservedTables.length})` }].map(f => (
+                <button key={f.k} onClick={() => setTableFilter(f.k)} className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${tableFilter === f.k ? 'bg-[#F4A261] text-[#20170F] border-[#F4A261]' : 'border-[#303832] bg-transparent text-gray-600 dark:text-[#A5ADA5] hover:border-[#F4A261]/50'}`} data-testid={`table-filter-${f.k}`}>{f.l}</button>
               ))}
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* ═══ FOOTER STRIP ═══ */}
-      <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl px-4 md:px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-3" data-testid="dashboard-footer">
-        <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] flex-1">🌿 A well-run kitchen is a happy kitchen.</p>
-        <div className="flex items-center gap-2.5 text-xs">
-          <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0"><CheckCircle className="w-3.5 h-3.5 text-white" /></span>
-          <div className="leading-tight">
-            <p className="font-bold text-gray-900 dark:text-white">All Systems Operational</p>
-            <p className="text-[10px] text-gray-400 dark:text-white/40">POS · Kitchen · Inventory · Online Orders</p>
+            {tables.length === 0 ? (
+              <div className="py-8 text-center" data-testid="floor-empty">
+                <p className={`text-sm font-semibold ${SUBTEXT}`}>No tables yet</p>
+                <p className={`text-xs ${FAINT} mt-1 mb-3`}>Add tables to see your live floor.</p>
+                <button onClick={() => navigate('/pos/tables')} className={`px-4 py-2 rounded-lg ${AMBER_BTN} text-xs font-bold transition-all`}>Go to Tables</button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-7 gap-2" data-testid="active-tables-grid">
+                {filteredTables.map((table) => {
+                  const vis = tableVisual(table, orderForTable(table));
+                  return (
+                    <div
+                      key={table.id}
+                      onContextMenu={(e) => { e.preventDefault(); setLongPressTable(table); }}
+                      onTouchStart={() => startTableLongPress(table)}
+                      onTouchEnd={cancelTableLongPress}
+                      onTouchMove={cancelTableLongPress}
+                      onClick={() => { const o = orderForTable(table); if (o) openReceipt(o); else navigate('/pos/tables'); }}
+                      className={`relative rounded-xl p-2.5 ring-1 ${vis.ring} ${vis.tile} cursor-pointer select-none hover:scale-[1.03] active:scale-95 transition-transform`}
+                      data-testid={`table-card-${table.table_number}`}
+                      title="Click: open bill · Long-press / right-click: quick actions"
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <p className={`font-numbers font-bold text-[13px] ${TEXT} leading-none`}>T{String(table.table_number).padStart(2, '0')}</p>
+                        <MoreHorizontal className={`w-3 h-3 ${FAINT} flex-shrink-0`} />
+                      </div>
+                      <p className={`text-[9px] ${FAINT} mt-1`}>{table.capacity} seats</p>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${vis.dot}`} />
+                        <span className={`text-[9px] font-bold ${vis.labelTone}`}>{vis.label}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Top sellers + hourly flow */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="top-items-panel">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2`}><UtensilsCrossed className="w-4 h-4 text-[#F4A261]" /> Top Sellers</h2>
+                <button onClick={() => navigate('/pos/analytics')} className={`text-xs font-semibold text-[#F4A261] hover:underline flex items-center gap-0.5`}>All <ArrowRight className="w-3 h-3" /></button>
+              </div>
+              {topItems.length === 0 ? (
+                <div className="py-6 text-center" data-testid="top-items-empty">
+                  <p className={`text-sm font-semibold ${SUBTEXT}`}>No sales yet today</p>
+                  <p className={`text-xs ${FAINT} mt-1`}>Best sellers show up here.</p>
+                </div>
+              ) : (
+                <div className="space-y-1" data-testid="top-items-list">
+                  {topItems.map((item, idx) => (
+                    <div key={item.name} className="flex items-center gap-2.5 py-1.5 px-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors">
+                      <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${idx === 0 ? 'bg-[#F4A261]/15 text-[#F4A261]' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-[#A5ADA5]'}`}>{idx + 1}</span>
+                      <div className="flex-1 min-w-0 truncate">
+                        <p className={`text-[12.5px] font-bold ${TEXT} truncate`}>{item.name}</p>
+                        <p className={`text-[10px] ${FAINT}`}>{item.qty} ordered</p>
+                      </div>
+                      <span className={`font-numbers text-xs font-bold ${TEXT}`}>₹{item.revenue.toFixed(0)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="sales-flow-panel">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2`}><BarChart3 className="w-4 h-4 text-[#F4A261]" /> Sales Flow</h2>
+                <span className={`text-[10px] font-bold ${FAINT} flex items-center gap-1`}><Clock className="w-3 h-3" /> today</span>
+              </div>
+              <div className="h-32" data-testid="sales-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={hourlySales.filter(b => b.hour >= 7 && b.hour <= 23)} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.15)" />
+                    <XAxis dataKey="hour" tickFormatter={(h) => fmtHour(h)} tick={{ fontSize: 8 }} interval={4} axisLine={false} tickLine={false} stroke="#A5ADA5" />
+                    <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 8 }} axisLine={false} tickLine={false} stroke="#A5ADA5" />
+                    <Tooltip
+                      formatter={(v) => [`₹${Number(v).toFixed(2)}`, 'Sales']}
+                      labelFormatter={(h) => fmtHour(h)}
+                      contentStyle={{ borderRadius: 10, border: '1px solid #303832', fontSize: 11, background: '#191F1B', color: '#F4F1E8' }}
+                      cursor={{ fill: 'rgba(244,162,97,0.08)' }}
+                    />
+                    <Bar dataKey="sales" fill="#F4A261" radius={[3, 3, 0, 0]} maxBarSize={18} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
           </div>
         </div>
-        <div className="text-right leading-tight md:ml-4">
-          <p className="font-heading font-extrabold text-sm text-gray-900 dark:text-white">DineDesk</p>
-          <p className="text-[10px] text-gray-400 dark:text-white/40">Version 1.0.0</p>
+
+        {/* ───── SECONDARY: actions + order status + latest ───── */}
+        <div className="lg:col-span-5 space-y-3.5 min-w-0">
+
+          {/* Quick Actions — one primary amber action + compact links */}
+          <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="quick-actions-card">
+            <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2 mb-3`}>
+              <Zap className="w-4 h-4 text-[#F4A261]" /> Quick Actions
+            </h2>
+            <button onClick={() => navigate('/pos/orders')} className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-[#F4A261] text-[#20170F] hover:bg-[#e8955a] active:scale-[0.98] transition-all mb-2.5" data-testid="quick-new-order">
+              <span className="flex items-center gap-2.5"><span className="w-8 h-8 rounded-lg bg-[#20170F]/10 flex items-center justify-center"><Plus className="w-4.5 h-4.5" /></span><span className="text-sm font-bold">New Order</span></span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <div className="grid grid-cols-3 gap-1.5">
+              {quickLinks.map(l => (
+                <button key={l.label} onClick={() => navigate(l.to)} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-[#303832] hover:border-[#F4A261]/50 hover:bg-[#F4A261]/[0.06] active:scale-[0.97] transition-all" data-testid={`quick-${l.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <l.icon className="w-4 h-4 text-gray-600 dark:text-[#A5ADA5]" strokeWidth={1.8} />
+                  <span className="text-[10px] font-bold text-gray-700 dark:text-[#F4F1E8]/80 text-center leading-tight">{l.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Order status — live kitchen counts */}
+          <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="order-status-card">
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2`}><ClipboardList className="w-4 h-4 text-[#F4A261]" /> Order Status</h2>
+              <button onClick={() => setShowOrdersDetail(true)} className={`text-xs font-semibold text-[#F4A261] hover:underline flex items-center gap-0.5`}>View All <ArrowRight className="w-3 h-3" /></button>
+            </div>
+            <div className="space-y-0.5" >
+              {statusRows.map(row => (
+                <button key={row.key} onClick={() => navigate('/pos/kds')} className="w-full flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors text-left" data-testid={`status-row-${row.key}`}>
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${row.tone}`}><row.icon className="w-4 h-4" strokeWidth={1.9} /></span>
+                  <span className={`text-[13px] font-semibold text-gray-800 dark:text-[#F4F1E8]/85 flex-1`}>{row.label}</span>
+                  <span className={`font-numbers text-sm font-bold ${TEXT}`}>{row.count}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Latest orders — live, clickable */}
+          <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="recent-orders-panel">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2`}><Receipt className="w-4 h-4 text-[#F4A261]" /> Latest Orders</h2>
+              <span className={`text-[10px] font-bold ${FAINT}`}>today</span>
+            </div>
+            {recentOrders.length === 0 ? (
+              <div className="py-5 text-center" data-testid="recent-orders-empty">
+                <p className={`text-[13px] font-semibold ${SUBTEXT}`}>No orders yet — open the POS to take the first one.</p>
+                <button onClick={() => navigate('/pos/orders')} className={`mt-2 px-3.5 py-1.5 rounded-lg ${AMBER_BTN} text-[11px] font-bold transition-all`}>Open POS</button>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-[#303832]">
+                {recentOrders.map(order => {
+                  const PmIcon = order.payment_method === 'cash' ? Banknote : order.payment_method === 'card' ? CreditCard : order.payment_method === 'upi' ? Smartphone : Clock;
+                  const st = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
+                  return (
+                    <button key={order.id} onClick={() => openReceipt(order)} className="w-full flex items-center gap-2.5 py-2 text-left hover:bg-gray-50 dark:hover:bg-white/[0.03] px-1.5 -mx-1.5 rounded-lg transition-colors" data-testid={`recent-order-${order.id}`}>
+                      <PmIcon className={`w-3.5 h-3.5 ${FAINT} flex-shrink-0`} />
+                      <span className={`font-numbers text-[12px] font-bold ${TEXT}`}>#{order.order_number}</span>
+                      {order.table_number && <span className={`text-[10px] ${FAINT}`}>T{order.table_number}</span>}
+                      <span className="flex-1" />
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${st.bg} ${st.text}`}>{st.label}</span>
+                      <span className={`font-numbers text-[12px] font-bold ${TEXT} w-14 text-right`}>₹{order.total_amount?.toFixed(0)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Stock alerts — compact, merged with attention restock entries */}
+          {lowStockItems.length > 0 && (
+            <section className={`${SURFACE} ${BORDER} rounded-2xl p-3.5 md:p-4`} data-testid="inventory-alerts-panel">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className={`font-heading font-bold text-sm ${TEXT} flex items-center gap-2`}><Package className="w-4 h-4 text-[#E76F51]" /> Stock Alerts</h2>
+                <button onClick={() => navigate('/pos/inventory')} className={`text-xs font-semibold text-[#F4A261] hover:underline flex items-center gap-0.5`}>All <ArrowRight className="w-3 h-3" /></button>
+              </div>
+              <div className="space-y-0.5" data-testid="inventory-alerts-list">
+                {lowStockItems.slice(0, 4).map(item => (
+                  <button key={item.id} onClick={() => navigate('/pos/inventory')} className="w-full flex items-center gap-2.5 py-1.5 px-1.5 -mx-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/[0.03] text-left transition-colors">
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${(item.quantity ?? 0) <= 0 ? 'bg-[#E76F51]/10 text-[#E76F51]' : 'bg-[#F4A261]/10 text-[#F4A261]'}`}><Package className="w-3.5 h-3.5" /></span>
+                    <p className={`text-[12.5px] font-bold ${TEXT} flex-1 truncate`}>{item.name}</p>
+                    <span className={`font-numbers text-[11px] font-bold flex-shrink-0 ${(item.quantity ?? 0) <= 0 ? 'text-[#E76F51]' : 'text-[#F4A261]'}`}>
+                      {(item.quantity ?? 0) <= 0 ? 'OUT' : `${item.quantity} ${item.unit || ''} left`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </div>
 
@@ -772,41 +785,41 @@ export default function POSDashboard() {
           </DialogHeader>
           <div className="space-y-3 mt-2">
             {todayOrders.length === 0 ? (
-              <p className="text-gray-400 dark:text-white/40 text-center py-8">No orders today yet.</p>
+              <p className="text-gray-400 dark:text-[#A5ADA5] text-center py-8">No orders today yet.</p>
             ) : (
               todayOrders.map((order) => {
                 const PmIcon = order.payment_method === 'cash' ? Banknote : order.payment_method === 'card' ? CreditCard : order.payment_method === 'upi' ? Smartphone : Clock;
                 const st = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
                 return (
-                  <div key={order.id} className="bg-gray-50 dark:bg-white/[0.04] rounded-xl border border-gray-200 dark:border-white/[0.07] p-4" data-testid={`order-detail-${order.id}`}>
+                  <div key={order.id} className="bg-gray-50 dark:bg-[#202721] rounded-xl border border-gray-200 dark:border-[#303832] p-4" data-testid={`order-detail-${order.id}`}>
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-numbers text-sm font-bold text-gray-900 dark:text-white">#{order.order_number}</span>
+                          <span className={`font-numbers text-sm font-bold ${TEXT}`}>#{order.order_number}</span>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${st.bg} ${st.text}`}>{st.label}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${order.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-gray-200 text-gray-600 dark:bg-white/[0.08] dark:text-white/60'}`}>{order.payment_status === 'paid' ? 'Paid' : 'Unpaid'}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${order.payment_status === 'paid' ? 'bg-[#78C091]/10 text-[#78C091]' : 'bg-gray-200 text-gray-600 dark:bg-white/[0.08] dark:text-[#A5ADA5]'}`}>{order.payment_status === 'paid' ? 'Paid' : order.payment_status === 'refunded' ? 'Refunded' : 'Unpaid'}</span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-white/45">
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-[#A5ADA5]">
                           <PmIcon className="w-3 h-3" />
                           <span className="capitalize">{order.payment_method || 'pending'}</span>
                           {order.table_number && <span>· Table {order.table_number}</span>}
                           <span>· {getOrderTime(order)}</span>
                         </div>
                       </div>
-                      <p className="text-lg font-bold font-numbers text-gray-900 dark:text-white">₹{order.total_amount?.toFixed(2)}</p>
+                      <p className={`text-lg font-bold font-numbers ${TEXT}`}>₹{order.total_amount?.toFixed(2)}</p>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 mb-3">
                       {(order.items || []).map((item, idx) => (
-                        <div key={`${item.name}-${item.quantity}-${idx}`} className="bg-white dark:bg-white/[0.05] rounded-lg px-2.5 py-1.5 text-xs border border-gray-100 dark:border-white/[0.06]">
-                          <span className="font-semibold text-gray-800 dark:text-white/85">{item.quantity}x</span>{' '}
-                          <span className="text-gray-600 dark:text-white/60">{item.name}</span>
-                          <span className="text-gray-400 dark:text-white/35 ml-1">₹{item.total?.toFixed(0)}</span>
+                        <div key={`${item.name}-${item.quantity}-${idx}`} className="bg-white dark:bg-white/[0.05] rounded-lg px-2.5 py-1.5 text-xs border border-gray-100 dark:border-[#303832]">
+                          <span className={`font-semibold text-gray-800 dark:text-[#F4F1E8]/85`}>{item.quantity}x</span>{' '}
+                          <span className="text-gray-600 dark:text-[#A5ADA5]">{item.name}</span>
+                          <span className="text-gray-400 dark:text-[#A5ADA5]/50 ml-1">₹{item.total?.toFixed(0)}</span>
                         </div>
                       ))}
                     </div>
                     <button
                       onClick={() => openReceipt(order)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-[#2E9E5B] text-white text-xs font-semibold hover:bg-gray-800 dark:hover:bg-[#288A50] transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-[#303832] text-white dark:text-[#F4F1E8] text-xs font-semibold hover:bg-gray-800 dark:hover:bg-[#3d4540] transition-colors"
                       data-testid={`view-receipt-${order.id}`}
                     >
                       <Printer className="w-3.5 h-3.5" /> View / Print Bill
@@ -887,10 +900,10 @@ export default function POSDashboard() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-2 py-2" data-testid="table-quick-actions">
             {[
-              { action: 'available', label: 'Free up', tone: 'bg-gray-50 dark:bg-white/[0.05] text-gray-700 dark:text-white/70 border-gray-200 dark:border-white/[0.08]' },
-              { action: 'occupied', label: 'Seat now', tone: 'bg-emerald-50 dark:bg-emerald-400/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-400/20' },
-              { action: 'reserved', label: 'Reserve', tone: 'bg-blue-50 dark:bg-blue-400/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-400/20' },
-              { action: 'available', label: 'Reset', tone: 'bg-amber-50 dark:bg-amber-400/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-400/20' },
+              { action: 'available', label: 'Free up', tone: 'bg-gray-50 dark:bg-[#202721] text-gray-700 dark:text-[#F4F1E8]/80 border-gray-200 dark:border-[#303832]' },
+              { action: 'occupied', label: 'Seat now', tone: 'bg-[#F4A261]/10 text-[#F4A261] border-[#F4A261]/30' },
+              { action: 'reserved', label: 'Reserve', tone: 'bg-[#82B4E8]/10 text-[#82B4E8] border-[#82B4E8]/30' },
+              { action: 'available', label: 'Reset', tone: 'bg-[#78C091]/10 text-[#78C091] border-[#78C091]/30' },
             ].map(({ action, label, tone }) => (
               <button
                 key={label}
