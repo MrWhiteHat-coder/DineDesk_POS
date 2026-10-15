@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api, { customerCRM_API, storeAPI } from '../../lib/api';
 import { toast } from 'sonner';
@@ -32,7 +32,7 @@ export default function CustomersPage() {
 
   /* Idempotent add-on bootstrap (mirrors demo-seed): creates the tenant's
    * restaurant_subscriptions doc with the CRM add-on active if missing. */
-  const ensureAddons = async () => {
+  const ensureAddons = useCallback(async () => {
     try {
       const sub = await storeAPI.getSubscription();
       const addons = sub.data?.active_addons || [];
@@ -40,27 +40,36 @@ export default function CustomersPage() {
         await storeAPI.subscribe('crm_loyalty');
       }
     } catch { /* entitlement stays enforced server-side */ }
-  };
+  }, []);
 
-  useEffect(() => { fetchCustomers(); }, []);
+  const ensureAddonsRef = useRef(ensureAddons);
+  useEffect(() => { ensureAddonsRef.current = ensureAddons; }, [ensureAddons]);
 
-  const fetchCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
+    let cancelled = false;
     try {
       const res = await customerCRM_API.getAll();
-      setCustomers(res.data);
+      if (!cancelled) setCustomers(res.data);
     } catch (err) {
       // CRM add-on not yet active for this tenant → the entitlement doc may
       // not exist in Mongo. Ensure it server-side so the CRM is usable.
       if (err?.response?.status === 403) {
-        try { await ensureAddons(); await customerCRM_API.getAll().then(r => setCustomers(r.data)); }
-        catch (e2) { toast.error(e2?.response?.data?.detail || 'CRM & Loyalty add-on is not active'); }
+        try {
+          await ensureAddonsRef.current();
+          const r2 = await customerCRM_API.getAll();
+          if (!cancelled) setCustomers(r2.data);
+        } catch (e2) {
+          if (!cancelled) toast.error(e2?.response?.data?.detail || 'CRM & Loyalty add-on is not active');
+        }
       } else {
         console.error('Failed to fetch customers:', err.reason || err.code || err.message);
       }
     } finally {
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { loadCustomers(); }, [loadCustomers]);
 
   const handleAddCustomer = async () => {
     if (!newCustomer.name || !newCustomer.phone) {
@@ -72,7 +81,7 @@ export default function CustomersPage() {
       toast.success('Customer added!');
       setShowAdd(false);
       setNewCustomer({ name: '', phone: '', email: '' });
-      fetchCustomers();
+      loadCustomers();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to add customer');
     }
