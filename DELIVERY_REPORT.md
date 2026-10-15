@@ -4,6 +4,33 @@
 
 ---
 
+## 0. Second-round refresh (same day, 2026-10-15)
+
+A re-audit against an expanded workflow brief found and fixed two more real defects:
+
+1. **Refunded orders blocked day close entirely** (server.py `close_day` guard):
+   the guard counted a refunded order as "running + unpaid", so after voiding a
+   paid bill the day couldn't be closed without `force`. Refunded now counts as
+   terminal in both guard queries.
+2. **Cash refunds were invisible to the drawer** (`close_day` / report / PDF):
+   `expected_cash = opening + cash collected − cash refunds` is now the
+   authoritative formula everywhere; the session stores a `refund_breakdown`
+   snapshot (per method) with a live-wallet fallback for open/legacy sessions,
+   and the DayCloseReport modal shows the refund row. Regression suite:
+   [test_p0_batch5.py](backend/tests/test_p0_batch5.py) (5 tests).
+3. **Theme sweep completion**: the remaining off-token stale dark hexes
+   (`#12151B` cards, `#161A20`/`#1A1F26` panels, `#0D100E` root) were replaced
+   with the mandated tokens (`#191F1B`, `#101412`) across every remaining POS
+   screen, layout and shared component — dark mode (the default) is now fully
+   on-palette.
+4. **Order & money workflow map** added as an authoritative reference:
+   [audit/Workflow_Map.md](audit/Workflow_Map.md) (sole owners for billing,
+   deductions, payment allocation, refunds, day-close formulas; documents—not
+   invents—open decisions: partial refunds, table transfer/merge, coupons).
+
+Re-verified: backend **130 passed / 110 skipped**, frontend **16 passed**,
+production build exit 0, installer rebuilt (see §7) and smoke-launched.
+
 ## 1. UI/UX Changes
 
 - **Theme tokens** ([index.css](frontend/src/index.css), [tailwind.config.js](frontend/tailwind.config.js)): unified CSS variables + static Tailwind palette retuned to the mandated warm-charcoal scheme — backgrounds `#101412` / `#141915` / `#191F1B`, inputs `#202721`, borders `#303832`, text `#F4F1E8`/`#A5ADA5`, accent `#F4A261` with `#20170F` button text, semantic `#78C091` / `#82B4E8` / `#E76F51`. Hardcoded off-palette colors were swept from POS screens; dark is the default look.
