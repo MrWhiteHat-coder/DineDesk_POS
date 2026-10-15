@@ -723,6 +723,7 @@ class DaySessionResponse(BaseModel):
     # FIX 3: allocation-derived totals + explicit legacy-warning surfacing
     payment_breakdown: Optional[Dict[str, float]] = None
     reconciliation_warnings: Optional[List[str]] = None
+    refund_breakdown: Optional[Dict[str, float]] = None
 
 # Inventory Models
 class InventoryItemCreate(BaseModel):
@@ -2816,11 +2817,11 @@ async def close_day(closing_cash: float = 0, force: bool = False, user: dict = D
     if not force:
         open_orders = await db.orders.count_documents({
             "day_session_id": session["id"],
-            "status": {"$nin": ["completed", "cancelled"]}
+            "status": {"$nin": ["completed", "cancelled", "refunded"]}
         })
         unpaid_orders = await db.orders.count_documents({
             "day_session_id": session["id"],
-            "payment_status": {"$ne": "paid"},
+            "payment_status": {"$nin": ["paid", "refunded"]},
             "status": {"$ne": "cancelled"}
         })
         if open_orders or unpaid_orders:
@@ -2858,6 +2859,21 @@ async def close_day(closing_cash: float = 0, force: bool = False, user: dict = D
             else:
                 bucket_other[_method] = round(bucket_other.get(_method, 0) + _amount, 2)
     payment_breakdown = {**(bucket_other or {}), "cash": cash_sales, "card": card_sales, "upi": upi_sales}
+
+    # FIX: cash refunds mutate the drawer, not just revenue. The refund workflow
+    # already records per-method wallet 'refund' rows under this session — aggregate
+    # them so expected closing cash is opening + cash collected − cash refunded.
+    # (Revenue stays correct: refunded orders are excluded from the 'paid' set above.)
+    refund_rows = await db.wallet_transactions.find(
+        {"restaurant_id": user["restaurant_id"], "day_session_id": session["id"],
+         "transaction_type": "refund"},
+        {"_id": 0, "amount": 1, "payment_method": 1}
+    ).to_list(None)
+    refund_breakdown = {}
+    for r in refund_rows:
+        m = r.get("payment_method", "unknown")
+        refund_breakdown[m] = round(refund_breakdown.get(m, 0) + float(r.get("amount", 0)), 2)
+
     now = datetime.now(timezone.utc)
     await db.day_sessions.update_one(
         {"id": session["id"]},
@@ -2865,6 +2881,7 @@ async def close_day(closing_cash: float = 0, force: bool = False, user: dict = D
                   "total_sales": total_sales, "total_orders": len(orders),
                   "cash_sales": cash_sales, "card_sales": card_sales, "upi_sales": upi_sales,
                   "payment_breakdown": payment_breakdown,
+                  "refund_breakdown": refund_breakdown,
                   "reconciliation_warnings": reconcil_warnings}}
     )
     updated = await db.day_sessions.find_one({"id": session["id"]}, {"_id": 0})
@@ -4291,6 +4308,20 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
         ot = o.get("order_type", "unknown")
         order_types[ot] = order_types.get(ot, 0) + 1
 
+    # Refunds: prefer the snapshot stored at close; for a still-open session (or
+    # a session closed before this field existed) aggregate live wallet rows.
+    if session.get("refund_breakdown") is not None:
+        refund_breakdown = session["refund_breakdown"]
+    else:
+        refund_breakdown = {}
+        refund_rows = await db.wallet_transactions.find(
+            {"restaurant_id": user["restaurant_id"], "day_session_id": session_id,
+             "transaction_type": "refund"},
+            {"_id": 0, "amount": 1, "payment_method": 1}).to_list(None)
+        for r in refund_rows:
+            m = r.get("payment_method", "unknown")
+            refund_breakdown[m] = round(refund_breakdown.get(m, 0) + float(r.get("amount", 0)), 2)
+
     item_counts = {}
     item_revenue = {}
     for o in paid_orders:
@@ -4325,15 +4356,21 @@ async def get_day_close_report(session_id: str, user: dict = Depends(get_current
         },
         "payment_breakdown": payment_methods,
         "reconciliation_warnings": reconcil_warnings,
+        "refund_breakdown": refund_breakdown,
         "order_type_breakdown": order_types,
         "top_items": top_items,
         "hourly_breakdown": hourly_data,
         "cash_summary": {
             "opening_cash": session.get("opening_cash", 0),
             "cash_sales": payment_methods.get("cash", 0),
-            "expected_cash": session.get("opening_cash", 0) + payment_methods.get("cash", 0),
+            "cash_refunds": refund_breakdown.get("cash", 0),
+            "expected_cash": round(session.get("opening_cash", 0) + payment_methods.get("cash", 0)
+                                   - refund_breakdown.get("cash", 0), 2),
             "closing_cash": session.get("closing_cash"),
-            "difference": (session.get("closing_cash") or 0) - (session.get("opening_cash", 0) + payment_methods.get("cash", 0)) if session.get("closing_cash") is not None else None,
+            "difference": (round((session.get("closing_cash") or 0)
+                                 - (session.get("opening_cash", 0) + payment_methods.get("cash", 0)
+                                    - refund_breakdown.get("cash", 0)), 2)
+                           if session.get("closing_cash") is not None else None),
         }
     }
 
@@ -4482,6 +4519,19 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
     for o in paid:
         pm = o.get("payment_method", "unknown")
         payment_methods[pm] = round(payment_methods.get(pm, 0) + o["total_amount"], 2)
+
+    # Cash refunds leave the drawer — same policy as the JSON report.
+    if session.get("refund_breakdown") is not None:
+        refund_breakdown = session["refund_breakdown"]
+    else:
+        refund_breakdown = {}
+        _refund_rows = await db.wallet_transactions.find(
+            {"restaurant_id": rid, "day_session_id": session_id, "transaction_type": "refund"},
+            {"_id": 0, "amount": 1, "payment_method": 1}).to_list(None)
+        for r in _refund_rows:
+            _m = r.get("payment_method", "unknown")
+            refund_breakdown[_m] = round(refund_breakdown.get(_m, 0) + float(r.get("amount", 0)), 2)
+    cash_refunds = refund_breakdown.get("cash", 0)
 
     item_counts, item_revenue = {}, {}
     for o in paid:
@@ -4875,13 +4925,15 @@ async def get_day_close_report_pdf(session_id: str, token: Optional[str] = None,
     opening_cash = session.get("opening_cash", 0) or 0
     closing_cash = session.get("closing_cash")
     cash_sales = payment_methods.get("cash", 0)
-    expected = opening_cash + cash_sales
+    expected = round(opening_cash + cash_sales - cash_refunds, 2)
     section_title("CASH DRAWER")
     cash_rows = [
         ("Opening cash", f"Rs.{opening_cash:,.2f}"),
         ("Cash sales", f"Rs.{cash_sales:,.2f}"),
-        ("Expected cash in drawer", f"Rs.{expected:,.2f}"),
     ]
+    if cash_refunds:
+        cash_rows.append(("Cash refunds", f"-Rs.{cash_refunds:,.2f}"))
+    cash_rows.append(("Expected cash in drawer", f"Rs.{expected:,.2f}"))
     if closing_cash is not None:
         cash_rows.append(("Counted closing cash", f"Rs.{closing_cash:,.2f}"))
         diff = round(closing_cash - expected, 2)
