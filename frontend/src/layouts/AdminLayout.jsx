@@ -110,7 +110,7 @@ export default function AdminLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="h-16 bg-white dark:bg-[#161A20] border-b border-slate-200 dark:border-white/[0.07] flex items-center justify-between px-6">
+        <header className="h-16 bg-white dark:bg-[#191F1B] border-b border-slate-200 dark:border-white/[0.07] flex items-center justify-between px-6">
           <div>
             <h1 className="font-heading font-semibold text-lg text-slate-900 dark:text-white">
               DineDesk Platform Admin

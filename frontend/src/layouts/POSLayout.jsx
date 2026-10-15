@@ -414,7 +414,7 @@ export default function POSLayout() {
   /* ═══════════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════════ */
-  return (      <div className="h-screen flex overflow-hidden bg-[#F4F7F3] dark:bg-[#0D100E]" data-testid="pos-layout">
+  return (      <div className="h-screen flex overflow-hidden bg-[#F4F7F3] dark:bg-[#101412]" data-testid="pos-layout">
 
       {/* ──────────── LEFT SIDEBAR (desktop, always dark — brand signature) ──────────── */}
       <aside className="hidden lg:flex w-[190px] xl:w-[212px] flex-col bg-[#0F2417] flex-shrink-0 overflow-y-auto">
@@ -537,7 +537,7 @@ export default function POSLayout() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* ──────────── TOP BAR (desktop) ──────────── */}
-        <header className="hidden lg:flex h-16 items-center gap-4 px-5 bg-white dark:bg-[#12151B] border-b border-gray-100 dark:border-white/[0.06] flex-shrink-0 z-30">
+        <header className="hidden lg:flex h-16 items-center gap-4 px-5 bg-white dark:bg-[#191F1B] border-b border-gray-100 dark:border-white/[0.06] flex-shrink-0 z-30">
 
           {/* Restaurant chip → quick-look popover (edit via footer button) */}
           <Popover>
@@ -643,7 +643,7 @@ export default function POSLayout() {
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-white/40" />
               </button>
-              <div className="absolute top-full right-0 mt-1 bg-white dark:bg-[#1A1F26] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-lg py-1.5 w-44 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <div className="absolute top-full right-0 mt-1 bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.08] rounded-xl shadow-lg py-1.5 w-44 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                 {hasAccess('settings') && (
                   <button onClick={() => navigate('/pos/settings')} className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-600 dark:text-white/60 hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-all">
                     <Settings className="w-4 h-4" /> Settings
@@ -766,7 +766,7 @@ export default function POSLayout() {
       </div>
 
       {/* ──────────── BOTTOM NAV BAR (mobile only) ──────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#12151B] border-t border-gray-200 dark:border-white/[0.07] z-40 pb-[env(safe-area-inset-bottom)]" data-testid="bottom-nav">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#191F1B] border-t border-gray-200 dark:border-white/[0.07] z-40 pb-[env(safe-area-inset-bottom)]" data-testid="bottom-nav">
         <div className="flex items-stretch justify-around h-16 px-1 max-w-md mx-auto">
           {bottomTabs.filter(navVisible).map((item) => {
             const active = isBottomTabActive(item);
@@ -809,7 +809,7 @@ export default function POSLayout() {
 
       {/* ──────────── RESTAURANT QUICK-LOOK SHEET (mobile) ──────────── */}
       <Sheet open={restSheetOpen} onOpenChange={setRestSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl bg-white dark:bg-[#161A20] px-5 pt-2 pb-8" data-testid="restaurant-quicklook-sheet">
+        <SheetContent side="bottom" className="rounded-t-2xl bg-white dark:bg-[#191F1B] px-5 pt-2 pb-8" data-testid="restaurant-quicklook-sheet">
           <div className="flex justify-center pb-2" aria-hidden="true">
             <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-white/20" />
           </div>
@@ -827,7 +827,7 @@ export default function POSLayout() {
 
       {/* ──────────── MORE SHEET (mobile) ──────────── */}
       <Sheet open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto bg-white dark:bg-[#161A20] px-4 pt-1 pb-7" data-testid="more-sheet">
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto bg-white dark:bg-[#191F1B] px-4 pt-1 pb-7" data-testid="more-sheet">
           {/* Grab handle — swipe down to dismiss */}
           <div ref={moreDragRef} {...moreDragHandlers} className="flex justify-center pt-2 pb-1 -mx-4 cursor-grab active:cursor-grabbing" aria-hidden="true">
             <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-white/20" />

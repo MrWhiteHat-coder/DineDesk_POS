@@ -111,7 +111,7 @@ export default function StaffPage() {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-[#161A20] border border-slate-100 dark:border-white/[0.06] rounded-2xl p-4 space-y-3">
+            <div key={i} className="bg-white dark:bg-[#191F1B] border border-slate-100 dark:border-white/[0.06] rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-3">
                 <Skeleton className="w-11 h-11 rounded-full flex-shrink-0" />
                 <div className="flex-1 space-y-1.5">

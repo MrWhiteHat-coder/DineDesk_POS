@@ -109,7 +109,7 @@ export default function CustomersPage() {
         {/* Tier stats — same 4-col grid as real content */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-[#161A20] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-4 space-y-2.5">
+            <div key={i} className="bg-white dark:bg-[#191F1B] border border-gray-100 dark:border-white/[0.06] rounded-2xl p-4 space-y-2.5">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-24 rounded-md" />
                 <Skeleton className="w-5 h-5 rounded-md" />

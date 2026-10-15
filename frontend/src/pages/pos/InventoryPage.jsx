@@ -224,7 +224,7 @@ export default function InventoryPage() {
           { label: 'Out of Stock', value: outOfStockCount, icon: Package, tone: 'text-red-500 bg-red-50 dark:bg-red-400/10' },
           { label: 'Inventory Value', value: `₹${inventoryValue.toFixed(0)}`, icon: IndianRupee, tone: 'text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-400/10' },
         ].map(s => (
-          <Card key={s.label} className="bg-white dark:bg-[#12151B] border-slate-200 dark:border-white/[0.07]">
+          <Card key={s.label} className="bg-white dark:bg-[#191F1B] border-slate-200 dark:border-white/[0.07]">
             <CardContent className="p-3.5 flex items-center gap-3">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${s.tone}`}><s.icon className="w-4.5 h-4.5" /></div>
               <div className="min-w-0">
@@ -250,7 +250,7 @@ export default function InventoryPage() {
 
       {/* Inventory Table */}
       {inventory.length > 0 ? (
-        <Card className="bg-white dark:bg-[#12151B] border-slate-200 dark:border-white/[0.07]">
+        <Card className="bg-white dark:bg-[#191F1B] border-slate-200 dark:border-white/[0.07]">
           <Table>
             <TableHeader>
               <TableRow>

@@ -164,6 +164,9 @@ export default function DayCloseReport({ sessionId, open, onClose }) {
               <div className="bg-slate-50 rounded-lg p-3 space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-slate-600">Opening Cash</span><span className="font-semibold">₹{report.cash_summary.opening_cash.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-600">Cash Sales</span><span className="font-semibold text-green-600">+₹{report.cash_summary.cash_sales.toFixed(2)}</span></div>
+                {report.cash_summary.cash_refunds > 0 && (
+                <div className="flex justify-between"><span className="text-slate-600">Cash Refunds</span><span className="font-semibold text-red-600">−₹{(report.cash_summary.cash_refunds || 0).toFixed(2)}</span></div>
+                )}
                 <div className="flex justify-between border-t border-slate-200 pt-1"><span className="text-slate-600">Expected Cash</span><span className="font-bold">₹{report.cash_summary.expected_cash.toFixed(2)}</span></div>
                 {report.cash_summary.closing_cash !== null && (
                   <>

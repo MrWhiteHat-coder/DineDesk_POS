@@ -354,7 +354,7 @@ export default function POSDashboard() {
         {/* Metric cards — same 3-col grid as real content */}
         <div className="grid grid-cols-3 gap-2 md:gap-3">
           {[0, 1, 2].map(i => (
-            <div key={i} className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-3 md:p-3.5 space-y-2.5">
+            <div key={i} className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-3 md:p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
                 <Skeleton className="w-7 h-7 rounded-lg" />
                 <Skeleton className="w-14 h-6 rounded-md hidden sm:block" />
@@ -368,7 +368,7 @@ export default function POSDashboard() {
         <Skeleton className="h-24 md:h-28 rounded-2xl" />
         {/* Service map + side column */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4 md:p-5 lg:col-span-2 space-y-4">
+          <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4 md:p-5 lg:col-span-2 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-2"><Skeleton className="h-5 w-36 rounded-md" /><Skeleton className="h-3 w-28 rounded-sm" /></div>
               <Skeleton className="h-9 w-44 rounded-xl" />
@@ -487,28 +487,28 @@ export default function POSDashboard() {
 
       {/* ═══ STAT CARDS ═══ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3.5">
-        <button onClick={() => navigate('/pos/analytics')} className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="sales-today-card">
+        <button onClick={() => navigate('/pos/analytics')} className="text-left bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="sales-today-card">
           <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mb-2.5"><IndianRupee className="w-5 h-5 text-emerald-600 dark:text-emerald-300" /></div>
           <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Today's Sales</p>
           <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight"><CountUp value={todaySales} prefix="₹" /></p>
           <p className="text-[10px] mt-0.5 flex items-center gap-1 text-gray-400 dark:text-white/40">vs. yesterday {deltaChip(salesDelta)}</p>
         </button>
 
-        <button onClick={() => setShowOrdersDetail(true)} className={`text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all ${newOrderPulse ? 'live-pulse' : ''}`} data-testid="total-orders-card">
+        <button onClick={() => setShowOrdersDetail(true)} className={`text-left bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all ${newOrderPulse ? 'live-pulse' : ''}`} data-testid="total-orders-card">
           <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-400/10 flex items-center justify-center mb-2.5"><ShoppingCart className="w-5 h-5 text-blue-600 dark:text-blue-300" /></div>
           <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Total Orders</p>
           <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight"><CountUp value={todayOrders.length} /></p>
           <p className="text-[10px] mt-0.5 flex items-center gap-1 text-gray-400 dark:text-white/40">vs. yesterday {deltaChip(ordersDelta)}</p>
         </button>
 
-        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4" data-testid="active-tables-card">
+        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4" data-testid="active-tables-card">
           <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-400/10 flex items-center justify-center mb-2.5"><Users className="w-5 h-5 text-emerald-600 dark:text-emerald-300" /></div>
           <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Active Tables</p>
           <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{occupiedTables.length} / {tables.length}</p>
           <p className="text-[10px] mt-0.5 text-gray-400 dark:text-white/40 truncate">{occupiedTables.length} occupied · {availableTables.length} available</p>
         </div>
 
-        <button onClick={() => navigate('/pos/inventory')} className="text-left bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="low-stock-card">
+        <button onClick={() => navigate('/pos/inventory')} className="text-left bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-3.5 md:p-4 hover:shadow-card-hover dark:hover:shadow-card-dark active:scale-[0.97] transition-all" data-testid="low-stock-card">
           <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-400/10 flex items-center justify-center mb-2.5"><Package className="w-5 h-5 text-red-500" /></div>
           <p className="text-[11px] font-semibold text-gray-500 dark:text-white/45">Low Stock Items</p>
           <p className="font-numbers text-2xl font-bold text-gray-900 dark:text-white leading-tight">{lowStockItems.length}</p>
@@ -542,7 +542,7 @@ export default function POSDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Sales Overview */}
-        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="sales-overview-card">
+        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="sales-overview-card">
           <div className="flex items-start justify-between gap-2 mb-1">
             <div>
               <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><BarChart3 className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Sales Overview</h2>
@@ -593,7 +593,7 @@ export default function POSDashboard() {
         </div>
 
         {/* Order Status */}
-        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="order-status-card">
+        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="order-status-card">
           <div className="flex items-start justify-between gap-2 mb-3">
             <div>
               <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><ClipboardList className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Order Status</h2>
@@ -613,7 +613,7 @@ export default function POSDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="quick-actions-card">
+        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="quick-actions-card">
           <div className="mb-3">
             <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Zap className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Quick Actions</h2>
             <p className="text-[11px] text-gray-400 dark:text-white/40 mt-0.5">Get things done faster</p>
@@ -637,7 +637,7 @@ export default function POSDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Active Tables */}
-        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="active-tables-panel">
+        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="active-tables-panel">
           <div className="flex items-start justify-between gap-2 mb-3">
             <div>
               <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Monitor className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Active Tables</h2>
@@ -688,7 +688,7 @@ export default function POSDashboard() {
         </div>
 
         {/* Top Selling Items */}
-        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="top-items-panel">
+        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="top-items-panel">
           <div className="flex items-start justify-between gap-2 mb-3">
             <div>
               <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><UtensilsCrossed className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Top Selling Items</h2>
@@ -718,7 +718,7 @@ export default function POSDashboard() {
         </div>
 
         {/* Inventory Alerts */}
-        <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="inventory-alerts-panel">
+        <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl p-4 md:p-5" data-testid="inventory-alerts-panel">
           <div className="flex items-start justify-between gap-2 mb-3">
             <div>
               <h2 className="font-heading font-bold text-gray-900 dark:text-white text-base flex items-center gap-2"><Package className="w-4 h-4 text-[#268A4E] dark:text-[#3FCE85]" /> Inventory Alerts</h2>
@@ -747,7 +747,7 @@ export default function POSDashboard() {
       </div>
 
       {/* ═══ FOOTER STRIP ═══ */}
-      <div className="bg-white dark:bg-[#12151B] border border-gray-200 dark:border-white/[0.07] rounded-2xl px-4 md:px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-3" data-testid="dashboard-footer">
+      <div className="bg-white dark:bg-[#191F1B] border border-gray-200 dark:border-white/[0.07] rounded-2xl px-4 md:px-5 py-3.5 flex flex-col md:flex-row md:items-center gap-3" data-testid="dashboard-footer">
         <p className="font-script text-lg text-[#1B5A38] dark:text-[#3FCE85] flex-1">🌿 A well-run kitchen is a happy kitchen.</p>
         <div className="flex items-center gap-2.5 text-xs">
           <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0"><CheckCircle className="w-3.5 h-3.5 text-white" /></span>

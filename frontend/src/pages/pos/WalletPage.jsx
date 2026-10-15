@@ -132,7 +132,7 @@ export default function WalletPage() {
       {/* Summary Cards — reference tile style */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {cards.map((card) => (
-          <div key={card.label} className="bg-white dark:bg-[#12151B] border border-slate-200 dark:border-white/[0.07] rounded-2xl p-4" data-testid={`wallet-card-${card.label.toLowerCase().replace(/\s+/g, '-')}`}>
+          <div key={card.label} className="bg-white dark:bg-[#191F1B] border border-slate-200 dark:border-white/[0.07] rounded-2xl p-4" data-testid={`wallet-card-${card.label.toLowerCase().replace(/\s+/g, '-')}`}>
             <div className="flex items-center gap-3">
               <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${card.color}`}>
                 <card.icon className="w-5 h-5" />

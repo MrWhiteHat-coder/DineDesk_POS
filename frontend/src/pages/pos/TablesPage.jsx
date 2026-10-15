@@ -210,7 +210,7 @@ export default function TablesPage() {
       {/* Tables Grid */}
       {tables.length > 0 ? (
         view === 'floor' ? (
-          <div className="rounded-2xl border border-slate-200 dark:border-white/[0.07] bg-white dark:bg-[#12151B] p-4 md:p-6" data-testid="floor-canvas">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/[0.07] bg-white dark:bg-[#191F1B] p-4 md:p-6" data-testid="floor-canvas">
             {/* Entrance marker + kitchen strip like the reference floor */}
             <div className="flex items-center justify-between mb-4 px-1">
               <span className="text-[11px] font-bold text-slate-400 dark:text-white/35 uppercase tracking-wider flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Entrance</span>
@@ -258,7 +258,7 @@ export default function TablesPage() {
           </div>
         ) : (
           /* List view — compact rows */
-          <Card className="bg-white dark:bg-[#12151B] border-slate-200 dark:border-white/[0.07]">
+          <Card className="bg-white dark:bg-[#191F1B] border-slate-200 dark:border-white/[0.07]">
             <CardContent className="p-2 md:p-3">
               <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
                 {filtered.map((table) => (

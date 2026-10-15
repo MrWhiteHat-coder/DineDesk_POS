@@ -56,10 +56,10 @@ export const MOMENT_TYPES = {
 };
 
 const TONES = {
-  emerald: 'border-emerald-200/80 dark:border-emerald-400/20 bg-white/95 dark:bg-[#161A20]/95',
-  amber: 'border-amber-200/80 dark:border-amber-400/20 bg-white/95 dark:bg-[#161A20]/95',
-  slate: 'border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#161A20]/95',
-  rose: 'border-rose-200/80 dark:border-rose-400/20 bg-white/95 dark:bg-[#161A20]/95',
+  emerald: 'border-emerald-200/80 dark:border-emerald-400/20 bg-white/95 dark:bg-[#191F1B]/95',
+  amber: 'border-amber-200/80 dark:border-amber-400/20 bg-white/95 dark:bg-[#191F1B]/95',
+  slate: 'border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#191F1B]/95',
+  rose: 'border-rose-200/80 dark:border-rose-400/20 bg-white/95 dark:bg-[#191F1B]/95',
 };
 
 const SHOW_MS = 3400;
